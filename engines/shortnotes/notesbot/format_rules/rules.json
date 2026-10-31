@@ -1,0 +1,37 @@
+{
+  "subject_labels": {
+    "science": "Science",
+    "mathematics": "Maths",
+    "physics": "Physics",
+    "chemistry": "Chemistry",
+    "biology": "Biology",
+    "social_science": "Social Science (SST)",
+    "english": "English",
+    "hindi": "Hindi",
+    "sanskrit": "Sanskrit"
+  },
+  "category_subjects": {
+    "foundation": [
+      "science",
+      "mathematics",
+      "physics",
+      "chemistry",
+      "biology",
+      "social_science",
+      "english",
+      "hindi",
+      "sanskrit"
+    ]
+  },
+  "formats": {
+    "foundation/mathematics": {
+      "summary": "Class 9-10 Maths: theory plus the teacher's solved examples (question, steps, answer).",
+      "solved_examples": true
+    },
+    "foundation/sanskrit": {
+      "summary": "श्लोक + हिन्दी अर्थ; only the lesson's verses, one शब्दार्थ table, no mind map.",
+      "mind_map": false,
+      "one_word_table": true
+    }
+  }
+}

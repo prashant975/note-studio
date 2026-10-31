@@ -1,0 +1,113 @@
+{#-
+  Generic "something on this computer got in the way" page.
+
+  Only local problems land here - a file that could not be opened or written.
+  Nothing has been sent to the portal, so the page says so plainly and then
+  points at the one thing the reader can do next.
+
+  Context, in full: headline, detail. The handler that renders this page is
+  @app.exception_handler(PermissionError) and it passes nothing else, so
+  nothing else may be named here.
+-#}
+{% extends "base.html" %}
+{% block title %}{{ headline }} - QBG One{% endblock %}
+
+{% block crumb %}
+  <a href="/">Batches</a>
+  <span class="sl">/</span>
+  <span class="now">Stopped</span>
+{% endblock %}
+
+{% block wrapclass %}narrow{% endblock %}
+
+{% block body %}
+{% import "_icons.html" as ico with context %}
+
+{#-
+  detail is str(exc) for whatever raised. The deliberate raises in
+  pipeline_bridge carry a sentence written for a person. An unhandled
+  operating-system PermissionError does not - on Windows it reads
+  "[WinError 32] The process cannot access the file ...: 'C:\...'", which is
+  an error number and a full path aimed at nobody. Machine text is replaced
+  with the plain-language version of the same fact, and the original is put
+  behind a disclosure rather than into the flow.
+-#}
+{% set machine = (not detail) or detail.startswith("[") or ("Errno" in detail) %}
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Something got in the way</h1>
+    <p class="sub">
+      Nothing was lost. Fix the point below and carry on where you left off.
+    </p>
+    <div class="meta">
+      <span class="chip ok">{{ ico.i('shield', 13) }} Nothing sent to the portal</span>
+      <span class="small muted">This happened on this computer only</span>
+    </div>
+  </div>
+</div>
+
+{#- ================================================== what actually failed -#}
+<div class="note danger">
+  <span class="nico">{{ ico.i('alert-circle', 18) }}</span>
+  <div class="ntext">
+    <div class="hd">{{ headline }}</div>
+    <div class="bd">
+      {%- if machine -%}
+        A file this step needed is being held open by another program.
+      {%- else -%}
+        {{ detail }}
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+
+{% if machine and detail %}
+  <details class="raw">
+    <summary>What the computer reported</summary>
+    <pre>{{ detail | redact }}</pre>
+  </details>
+{% endif %}
+
+{#- ====================================================== what to do next -#}
+<div class="card">
+  <div class="hd">
+    <div class="grow">
+      <h2>What to do next</h2>
+      <p class="d">
+        The usual cause is the review sheet still being open in Excel.
+      </p>
+    </div>
+  </div>
+  <div class="bd">
+    <ol>
+      <li>Close the review sheet in Excel, and in anything else holding it.</li>
+      <li>Go back to the screen you were on.</li>
+      <li>Run the same step again - it carries on from where it stopped.</li>
+    </ol>
+  </div>
+  <div class="ft">
+    <a class="btn primary" href="/">{{ ico.i('layers', 14) }} All batches</a>
+    <span class="small muted">Nothing needs undoing before you try again.</span>
+  </div>
+</div>
+
+{#- =========================================================== the details -#}
+<details class="helpbox">
+  <summary>Why nothing reached the live question bank</summary>
+  <div class="bd">
+    <p>
+      <strong>Nothing was created or changed on the portal.</strong>
+      This kind of problem happens entirely on this computer, before anything
+      is sent, so no question was added to the live question bank and no
+      question already there was touched.
+    </p>
+    <p>
+      Windows will not let two programs write the same file at once. While the
+      review sheet is open in Excel, QBG One cannot save into it - so it
+      stops rather than losing half of what it was writing.
+    </p>
+  </div>
+</details>
+
+{% endblock %}

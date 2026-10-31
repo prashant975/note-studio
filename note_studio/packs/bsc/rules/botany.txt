@@ -1,0 +1,4 @@
+For every genus, begin with its systematic position (Division, Class, Order, Family, Genus) as points in a definition or concept box.
+Describe habitat, plant body (thallus), cell structure, reproduction (vegetative, asexual, sexual) and life cycle in that order, when the lecture covers them.
+Add a labelled figure for the structure and one for the life cycle when the lecture shows them.
+For a laboratory technique, give its steps as a numbered protocol in a note box.

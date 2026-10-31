@@ -1,0 +1,20 @@
+{
+  "_comment": "Copied by Settings -> Categories -> Add category. The Studio fills it from the form; nobody should need to edit this by hand. See docs/07_CATEGORIES_AND_TYPES.md.",
+  "id": "new_category",
+  "label": "New category",
+  "enabled": false,
+  "subjects": [
+    {"id": "general", "label": "All subjects"}
+  ],
+  "languages": ["english", "hindi"],
+  "language_required": false,
+  "note_types": ["concise_handdrawn"],
+  "default_note_type": "concise_handdrawn",
+  "inputs": ["pdf_upload", "pdf_link"],
+  "branding": {"signature_label": "Faculty", "footer": "", "logo": "", "watermark": true},
+  "rules_dir": "rules",
+  "qc_rules": "",
+  "automation": {"sheet_layouts": []},
+  "output_naming": "{title} - {type_label}.{ext}",
+  "models": {}
+}

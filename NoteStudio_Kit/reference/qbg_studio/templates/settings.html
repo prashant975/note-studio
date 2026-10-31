@@ -1,0 +1,846 @@
+{% extends "base.html" %}
+{% block title %}Settings - QBG One{% endblock %}
+
+{% block crumb %}
+  <a href="/dashboard">System</a>
+  <span class="sl">/</span>
+  <span class="now">Settings</span>
+{% endblock %}
+
+{% block body %}
+{#-
+  A reference screen. Four values can be changed here, all in the one form;
+  everything else is a read-out of what this computer is able to do.
+
+  Order: state first, then the controls, then the read-outs, then the
+  explanations. Nothing on this page touches the live portal, so the tone
+  stays calm and factual throughout.
+-#}
+{% import "_icons.html" as ico with context %}
+
+{% set has_hindi = C.LANGUAGE_IDS and 'hindi' in C.LANGUAGE_IDS %}
+{% set type_names = {
+     'SCQ': 'Single correct answer',
+     'MCQ': 'More than one correct answer',
+     'NUMERICAL': 'Numerical answer',
+     'TF': 'True or false',
+     'FIB': 'Fill in the blank',
+     'AR': 'Assertion and reason',
+     'SUB': 'Written answer'
+   } %}
+{% set type_codes = C.TYPE_CODES or {} %}
+{% set types_ready = type_codes.values() | reject('none') | list | length %}
+
+<div class="page-head">
+  <div class="grow">
+    <h1>Settings</h1>
+    <p class="sub">Connections and values used when QBG One works with QBG.</p>
+    <div class="meta">
+      {% if link_ok %}
+        <span class="chip ok">{{ ico.i('check-circle', 13) }} Portal link set</span>
+      {% else %}
+        <span class="chip warn">{{ ico.i('alert-triangle', 13) }} Portal link not set</span>
+      {% endif %}
+
+      <span class="chip ok">{{ ico.i('languages', 13) }} Hindi ready</span>
+
+      {% if health.ready %}
+        <span class="chip ok">{{ ico.i('check-circle', 13) }} Connections ready</span>
+      {% else %}
+        <span class="chip danger">
+          {{ ico.i('alert-circle', 13) }}
+          {{ health.bad }} connection{{ '' if health.bad == 1 else 's' }} to fix
+        </span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if saved is defined and saved %}
+  <div class="note ok" role="status" aria-live="polite">
+    <span class="nico">{{ ico.i('check-circle', 18) }}</span>
+    <div class="ntext">
+      <div class="hd">Saved</div>
+      <div class="bd">
+        Every batch created from now on uses the new value. If the value below
+        still looks like the old one, close QBG One and open it again - your
+        change is already written down, the screen is just showing what it read
+        when it started.
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% if error is defined and error %}
+  <div class="note danger">
+    <span class="nico">{{ ico.i('alert-circle', 18) }}</span>
+    <div class="ntext">
+      <div class="hd">That could not be saved</div>
+      <div class="bd">{{ error }}</div>
+    </div>
+  </div>
+{% endif %}
+
+<div class="card" id="qbg-connection">
+  <div class="hd"><div class="grow">
+    <h2>QBG portal connection</h2>
+    <p class="d">Connect with your own QBG Authorization. Debug Chrome remains available as a fallback.</p>
+  </div></div>
+  <div class="bd stack">
+    <div id="authpanel">{% include "_auth.html" %}</div>
+    {% include "_portal_connection_form.html" %}
+    {% if auth.source == 'saved' %}
+      <form method="post" action="/settings/portal-authorization/clear"
+            data-confirm="Remove the saved QBG connection from this computer?">
+        <button class="btn" type="submit">Remove saved connection</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+{#- ==================================================== things you can set -#}
+<form method="post" action="/settings"
+      data-confirm="Save these settings? If the test run size is changing, every batch that is already approved for preview or for a test run has to be approved again.">
+  <div class="card">
+    <div class="hd">
+      <div class="grow">
+        <h2>Values you can change</h2>
+        <p class="d">
+          Saving writes these down on this computer. Nothing is sent to the
+          portal from this screen.
+        </p>
+      </div>
+    </div>
+
+    <div class="bd">
+      {#- ----------------------------------------------- portal link format -#}
+      <div class="stack">
+        <div class="row">
+          <h3>Portal link format</h3>
+          {% if link_ok %}
+            <span class="chip ok">{{ ico.i('check-circle', 12) }} Set</span>
+          {% else %}
+            <span class="chip warn">{{ ico.i('alert-triangle', 12) }} Not set yet</span>
+          {% endif %}
+        </div>
+
+        {% if link_ok %}
+          <p class="small muted">
+            In use now: <span class="mono">{{ C.LINK_TEMPLATE }}</span>
+          </p>
+        {% else %}
+          <div class="note warn">
+            <span class="nico">{{ ico.i('alert-triangle', 18) }}</span>
+            <div class="ntext">
+              <div class="hd">The review sheet is getting a stand-in link</div>
+              <div class="bd">
+                <p>
+                  Creating questions still works perfectly well. What a stand-in
+                  stops is the next step: the Translation and Solution bots read
+                  the Portal Link column to find each question, and they cannot
+                  follow a stand-in.
+                </p>
+                <p class="mono">{{ C.LINK_TEMPLATE }}</p>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        <label class="field">
+          <span>
+            Paste the address here
+            <span class="hint">
+              A real question address with its own id swapped for
+              <span class="mono">{qbg_id}</span>. Leave empty to keep what is
+              there now.
+            </span>
+          </span>
+          <input type="text" name="link_template" spellcheck="false"
+                 placeholder="https://qbg-admin.penpencil.co/question-details?question={qbg_id}">
+        </label>
+      </div>
+
+      <div class="sep"></div>
+
+      {#- -------------------------------------------------- hindi language -#}
+      <div class="stack">
+        <div class="row">
+          <h3>Hindi language id</h3>
+          <span class="chip ok">{{ ico.i('check-circle', 12) }} Hindi is ready</span>
+        </div>
+
+        <p class="small muted">
+          Hindi papers upload without any setup here: when a run starts, the
+          portal's own language registry supplies the id for the category.
+          {% if has_hindi %}
+            A code is also saved on this computer
+            (<span class="mono">{{ C.LANGUAGE_IDS.get('hindi') }}</span>); the
+            portal's answer is what a live run uses.
+          {% endif %}
+        </p>
+
+        <label class="field">
+          <span>
+            Hindi code (optional)
+            <span class="hint">
+              Not needed for uploading. Leave empty to keep what is there now.
+            </span>
+          </span>
+          <input type="text" name="hindi_language_id" spellcheck="false"
+                 placeholder="Paste the code copied from the portal">
+        </label>
+      </div>
+
+      <div class="sep"></div>
+
+      {#- The pilot is a safety step, not a law. On a small approved set the
+          two-step dance is friction, so it can be sized or switched off - but
+          the preview stays compulsory either way. -#}
+      <div class="stack">
+        <div class="row">
+          <h3>Test run size</h3>
+          {% if pilot_size %}
+            <span class="chip info">
+              {{ ico.i('shield', 12) }} {{ pilot_size }} first, then the rest
+            </span>
+          {% else %}
+            <span class="chip">{{ ico.i('play', 12) }} Test run off</span>
+          {% endif %}
+        </div>
+
+        <p class="small muted">
+          <strong>5</strong> is the default: create five, check them on the
+          portal, then create the rest. <strong>0</strong> switches the test run
+          off and creates every approved question in one step. The preview is
+          always required either way.
+        </p>
+
+        <div class="note warn flush">
+          <span class="nico">{{ ico.i('alert-triangle', 18) }}</span>
+          <div class="ntext">
+            <div class="hd">Changing this size resets approvals</div>
+            <div class="bd">
+              Every batch that is already approved for preview or for a test
+              run has to be approved again, because that approval was given for
+              a different group size. Questions already created on the portal
+              stay as they are.
+            </div>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>
+            How many questions Step 2 sends before the rest
+            <span class="hint">A whole number between 0 and 200.</span>
+          </span>
+          <input type="number" name="pilot_size" min="0" max="200" step="1"
+                 value="{{ pilot_size }}">
+        </label>
+      </div>
+    </div>
+  </div>
+
+  {#- ------------------------------------------- parallel translation speed -#}
+  {#- Inside the same form on purpose. This card used to sit below the end
+      of the form, so Save never sent translation_workers and the box could
+      not be changed from the screen at all. One form, one Save, at the
+      bottom. -#}
+  <div class="card">
+    {#- The classic Translation Bot's speed setting was removed with the bot
+        (19 September 2026). The card stays for the form's Save button. -#}
+    {% if false %}
+    <div class="hd">
+      <div class="grow">
+        <h2>Translation speed</h2>
+        <p class="d">
+          How many questions the Translation Bot works on at the same time.
+        </p>
+      </div>
+      <div class="acts">
+        <span class="chip">{{ workers }} at once</span>
+      </div>
+    </div>
+    <div class="bd">
+      <label class="field" for="translation_workers">
+        <span>
+          Questions at once
+          <span class="hint">
+            Between 1 and {{ workers_max }}. Each one is a separate program with
+            its own QBG tab, so higher values use more memory and portal capacity.
+          </span>
+        </span>
+        <input type="number" id="translation_workers" name="translation_workers"
+               min="1" max="{{ workers_max }}" step="1" value="{{ workers }}"
+               style="max-width:120px">
+      </label>
+
+      <div class="note info" style="margin:0">
+        <span class="nico">{{ ico.i('info', 18) }}</span>
+        <div class="ntext">
+          <div class="hd">More is not always faster</div>
+          <div class="bd">
+            Past runs on this computer took about two minutes per question with
+            two at a time. Doubling the workers halves that only while the AI
+            and Google Sheets keep up; past that point the extra work comes back
+            as questions needing review rather than as saved time.
+            <strong>Raise it one step at a time</strong> and compare the
+            &ldquo;need review&rdquo; count on the Translation screen before
+            going further.
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="ft">
+      <button class="btn primary" type="submit">{{ ico.i('check', 14) }} Save</button>
+      <span class="small muted">
+        An empty box keeps the value that is there now.
+      </span>
+    </div>
+  </div>
+</form>
+
+<details class="helpbox">
+  <summary>Where to find the portal link format and the Hindi code</summary>
+  <div class="bd">
+    <p>
+      <strong>Portal link format.</strong> Open any question you have already
+      created, in the portal, in your browser. Copy the whole address out of the
+      address bar and paste it above - then replace that question's own id in
+      the address with <span class="mono">{qbg_id}</span>. QBG One puts each
+      new question's id in that spot and writes the finished address into the
+      review sheet.
+    </p>
+    <p>
+      <strong>Hindi code.</strong> The portal labels every question with the
+      language it is written in, and it does that with a short code of its own.
+      English is already known. The Hindi code has to be copied out of the
+      portal one time, by someone who can watch what the portal sends while a
+      Hindi question is being created.
+    </p>
+  </div>
+</details>
+
+{#- ---------------------------------------------------------- PW sign-in -#}
+{#- The one thing on this page that is an action rather than a reading. -#}
+<div class="card">
+  <div class="hd">
+    <div class="grow">
+      <h2>PW sign-in</h2>
+      <p class="d">
+        Reading equations and translating questions run on PW's shared AI keys,
+        charged to <span class="mono">{{ preflight.pw.app }}</span>. This
+        computer holds no AI key of its own, so those steps need a PW account
+        that is on the allowlist for this app.
+      </p>
+    </div>
+  </div>
+  <div class="bd">
+    {% with pw = preflight.pw %}{% include "_pw.html" %}{% endwith %}
+  </div>
+  <div class="ft">
+    <span class="small muted">
+      QBG One never shows or keeps your portal sign-in - only how long it has
+      left.
+    </span>
+  </div>
+</div>
+
+{#- --------------------------------------------------------- usage sheet -#}
+<div class="card">
+  <div class="hd">
+    <div class="grow">
+      <h2>Usage sheet</h2>
+      <p class="d">
+        PW's proxy already records every AI request this app makes, and rolls it
+        up into PW's own cost sheet. The same rows - one per task and model -
+        also go to the team's sheet, so the team lead sees every QBG One's AI
+        usage in one place. You can switch it off, or send it to a sheet of
+        your own instead.
+      </p>
+    </div>
+    {% if usage.on %}
+      <span class="chip ok">{{ ico.i('check-circle', 12) }} On</span>
+    {% else %}
+      <span class="chip">Off</span>
+    {% endif %}
+  </div>
+  <div class="bd stack">
+    {% if usage.error %}
+      <div class="note warn">
+        <span class="nico">{{ ico.i('alert-triangle', 18) }}</span>
+        <div class="ntext">
+          <div class="hd">The last send did not go through</div>
+          <div class="bd">{{ usage.error }}</div>
+        </div>
+      </div>
+    {% endif %}
+    <form method="post" action="/settings/usage-sheet" class="stack">
+      <label class="field">
+        Send usage to a sheet
+        <select name="on">
+          <option value="1" {% if usage.on %}selected{% endif %}>Yes</option>
+          <option value="0" {% if not usage.on %}selected{% endif %}>No</option>
+        </select>
+      </label>
+      <label class="field">
+        Spreadsheet (leave empty for the team's sheet)
+        <input type="text" name="sheet_id" value="{% if usage.own_sheet %}{{ usage.sheet_id }}{% endif %}"
+               placeholder="Paste the spreadsheet address or its id">
+      </label>
+      <label class="field">
+        Tab
+        <input type="text" name="tab" value="{{ usage.tab }}">
+      </label>
+      <p class="small muted">
+        The tab is created with the same 18 columns as <span class="mono">Usage Cost 2.0</span>,
+        so it can be combined with PW's tabs later, then <strong>Install ID</strong> and
+        <strong>Source</strong>, which say which QBG One wrote each line. The team's sheet is
+        written with the account shown on the Team data card; a sheet of your own must be
+        shared with the service account. <strong>Cost (INR)</strong> is the
+        proxy's own figure for each call, summed per task (recorded since 24 September 2026);
+        older calls leave it empty, to be filled from PW's own row for the same
+        <span class="mono">task_key</span>.
+      </p>
+      <div class="btn-row"><button class="btn sm" type="submit">Save</button></div>
+    </form>
+    <table class="tbl">
+      <tbody>
+        <tr><td>Calls recorded on this computer</td><td>{{ usage.calls }}</td></tr>
+        <tr><td>Tasks waiting to be sent</td><td>{{ usage.waiting }}</td></tr>
+        <tr><td>Last sent</td>
+            <td>{% if usage.sent_at %}{{ usage.sent_at }} ({{ usage.sent_rows }} rows){% else %}Not yet{% endif %}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="ft">
+    <form method="post" action="/settings/usage-sheet/send">
+      <button class="btn sm" type="submit" {% if not usage.sheet_id %}disabled{% endif %}>Send now</button>
+    </form>
+    <span class="small muted">
+      A task is sent once it has been quiet for ten minutes, so one job stays one row.
+      <em>Send now</em> does not wait.
+    </span>
+  </div>
+</div>
+
+{#- ------------------------------------------------------------ team data -#}
+{% include "_team_data.html" %}
+
+{#- --------------------------------------------------------- team support -#}
+{% include "_team_support.html" %}
+
+{#- ------------------------------------------------------------ AI models -#}
+{% if models %}
+<div class="card" id="ai-models">
+  <div class="hd">
+    <div class="grow">
+      <h2>AI models</h2>
+      <p class="d">
+        The order in which each stage tries its models, what the PW proxy says is live, and how
+        each model has done on this computer. Gemini 3.6 Flash was confirmed through
+        the proxy on 24 September 2026 and leads every stage: reading, the independent
+        check, answers and solutions, translation and tagging.
+      </p>
+    </div>
+  </div>
+  <div class="bd stack">
+    {% if models.error %}
+      <div class="note warn"><div class="ntext"><div class="bd">{{ models.error }}</div></div></div>
+    {% endif %}
+    {% if models.gemini_budget and models.gemini_budget.using_gpt %}
+      <div class="note warn">
+        <span class="nico">{{ ico.i('alert-triangle', 18) }}</span>
+        <div class="ntext">
+          <div class="hd">Gemini's budget is spent - GPT is standing in</div>
+          <div class="bd">Every Gemini request goes to the first available GPT model until
+            {{ models.gemini_budget.until_text }}, then Gemini is tried again. GPT is used only
+            for a spent budget, never for an ordinary busy moment.</div>
+        </div>
+      </div>
+    {% endif %}
+    <p class="small muted">
+      QBG One chooses the models itself; there is nothing to pick. A stage moves to the next
+      model in its order only after a rate limit or a failure, and GPT stands in for Gemini
+      while Gemini's budget is spent. The independent check is a separate request with the
+      pages in front of it, made with Gemini 3.6 Flash like the rest. Gemini 2.5 Pro comes
+      last in every order: it costs about three times as much for each request.
+    </p>
+    <table class="tbl">
+      <thead><tr><th>Stage</th><th>Order tried</th></tr></thead>
+      <tbody>
+        {% for role, chain in models.chains.items() %}
+          <tr><td>{{ models.role_labels.get(role, role) }}</td>
+              <td>{% for m in chain %}{{ models.labels.get(m, m) }}{% if not loop.last %} → {% endif %}{% endfor %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if models.catalog.lists or models.catalog.errors %}
+      <div class="stack">
+        <strong>Live catalogue</strong>
+        {% for path, found in models.catalog.lists.items() %}
+          <p class="small"><span class="mono">{{ path }}</span>:
+            {% if found %}{{ found|join(', ') }}{% else %}nothing listed{% endif %}</p>
+        {% endfor %}
+        {% for line in models.catalog.errors %}<p class="small muted">{{ line }}</p>{% endfor %}
+      </div>
+    {% else %}
+      <p class="small muted">
+        The live catalogue has not been checked yet. The proxy lists its GPT models; it has
+        no Gemini listing, so Gemini is confirmed with the test button instead.
+      </p>
+    {% endif %}
+    {% if models.test %}
+      <p class="small">Last test: <strong>{{ models.labels.get(models.test.model, models.test.model) }}</strong> -
+        {% if models.test.ok %}<span class="chip ok">answered</span> in {{ models.test.seconds }} s{% else %}<span class="chip danger">failed</span> {{ models.test.error }}{% endif %}
+      </p>
+    {% endif %}
+    {% if models.comparison %}
+      <table class="tbl">
+        <thead><tr><th>Model</th><th>Papers read</th><th>Questions</th><th>Flagged on reading</th><th>Calls</th><th>Tokens</th><th>Seconds / call</th><th>Cost (INR)</th></tr></thead>
+        <tbody>
+          {% for r in models.comparison %}
+            <tr><td>{{ r.label }}</td><td>{{ r.papers }}</td><td>{{ r.questions }}</td>
+              <td>{% if r.flagged_pct is not none %}{{ r.flagged_pct }}%{% else %}-{% endif %}</td>
+              <td>{{ r.calls }}</td><td>{{ r.tokens }}</td>
+              <td>{% if r.seconds_per_call is not none %}{{ r.seconds_per_call }}{% else %}-{% endif %}</td>
+              <td>{% if r.cost %}{{ '%.2f'|format(r.cost) }}{% else %}-{% endif %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="small muted">
+        Flagged on reading is the share of questions the reader itself marked for correction,
+        before any repair. Cost is the proxy's own figure, recorded since 24 September 2026.
+      </p>
+    {% endif %}
+  </div>
+  <div class="ft">
+    <form method="post" action="/settings/models/check"><button class="btn sm" type="submit">Check the live catalogue</button></form>
+    <form method="post" action="/settings/models/test"><input type="hidden" name="model" value="gemini-3.6-flash"><button class="btn sm" type="submit">Test Gemini 3.6 Flash now</button></form>
+    <span class="small muted">The test is one small billed request through the PW proxy.</span>
+  </div>
+</div>
+{% endif %}
+
+{#- -------------------------------------------------------------- updates -#}
+{% if updates %}
+<div class="card" id="updates">
+  <div class="hd">
+    <div class="grow">
+      <h2>Updates</h2>
+      <p class="d">
+        QBG One looks in the team's release folder on Google Drive for a newer version and
+        can install it from here. Nothing new is stored on this computer: the folder is read
+        with the key it already has for the team sheet.
+      </p>
+    </div>
+    {% if updates.available %}
+      <span class="chip ok">{{ updates.latest.version }} available</span>
+    {% elif updates.latest %}
+      <span class="chip">Up to date</span>
+    {% endif %}
+  </div>
+  <div class="bd stack">
+    {% if updates.last_error %}
+      <div class="note warn"><div class="ntext"><div class="bd">{{ updates.last_error }}</div></div></div>
+    {% endif %}
+    {% if updates.error %}
+      <div class="note warn"><div class="ntext"><div class="hd">The last check did not go through</div><div class="bd">{{ updates.error }}</div></div></div>
+    {% endif %}
+    <table class="tbl">
+      <tbody>
+        <tr><td>Installed</td><td>{{ updates.current or 'unknown' }}{% if not updates.installed %} (running from source: updates are installed with the installer){% endif %}</td></tr>
+        <tr><td>Newest in the folder</td>
+            <td>{% if updates.latest %}{{ updates.latest.version }}{% if updates.latest.released %} · {{ updates.latest.released }}{% endif %}{% if updates.latest.notes %} · {{ updates.latest.notes }}{% endif %}{% else %}Not checked yet{% endif %}</td></tr>
+        <tr><td>Release folder</td>
+            <td>{% if updates.source.folder_id %}<a href="https://drive.google.com/drive/folders/{{ updates.source.folder_id }}" target="_blank" rel="noopener">{{ 'This computer\'s choice' if updates.source.own else 'The team folder built into this release' }}</a>{% else %}None yet{% endif %}</td></tr>
+        {% if updates.state and updates.state.state %}
+          <tr><td>Last update</td><td>{{ updates.state.message or updates.state.error }}</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+    <div class="btn-row">
+      <form method="post" action="/update/check"><button class="btn sm" type="submit">Check for updates</button></form>
+      {% if updates.available and updates.installed %}
+        <form method="post" action="/update/install"><button class="btn sm primary" type="submit">Update to {{ updates.latest.version }}</button></form>
+      {% endif %}
+    </div>
+    <p class="small muted">
+      Update downloads the installer through Google Drive, checks it against the SHA-256 Drive
+      reports, closes QBG One, installs silently and starts QBG One again - about a minute,
+      mostly the download. Saved work stays.
+    </p>
+    <details class="helpbox">
+      <summary>Publishing a release, and choosing another folder</summary>
+      <p class="small">
+        To publish, put <span class="mono">QBG_Studio_Setup_&lt;version&gt;.exe</span> (the build
+        makes that file next to the installer) into the release folder. Every QBG One offers
+        it within about half an hour; <em>Check for updates</em> sees it at once. The file's description in
+        Drive is shown as the release note.
+      </p>
+      <form method="post" action="/settings/updates" class="stack">
+        <label class="field">
+          Release folder for this computer (leave empty for the folder built into this release)
+          <input type="text" name="folder" value="{% if updates.source.own %}https://drive.google.com/drive/folders/{{ updates.source.folder_id }}{% endif %}" placeholder="Paste a Google Drive folder link">
+        </label>
+        <div class="btn-row"><button class="btn sm" type="submit">Save</button></div>
+      </form>
+    </details>
+  </div>
+</div>
+{% endif %}
+
+<details class="helpbox">
+<summary>Advanced configuration</summary>
+<div class="bd stack">
+{#- ====================================================== question types -#}
+<div class="card">
+  <div class="hd">
+    <div class="grow">
+      <h2>Question types</h2>
+      <p class="d">
+        The portal knows each kind of question by a number, and a type can only
+        be created once that number is written down here.
+      </p>
+    </div>
+    <div class="acts">
+      {% if type_codes and types_ready == type_codes | length %}
+        <span class="chip ok">
+          {{ ico.i('check-circle', 12) }}
+          {% if types_ready == 1 %}The one type is ready{% else %}All {{ types_ready }} types ready{% endif %}
+        </span>
+      {% elif type_codes %}
+        <span class="chip">
+          {{ ico.i('list-checks', 12) }}
+          {{ types_ready }} of {{ type_codes | length }} ready
+        </span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if type_codes %}
+    <div class="tablewrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Short name</th>
+            <th>Number the portal uses</th>
+            <th>Can be created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tname, tnum in type_codes.items() %}
+            <tr>
+              <td>{{ type_names.get(tname, tname) }}</td>
+              <td><span class="mono">{{ tname }}</span></td>
+              <td>
+                {% if tnum is not none %}
+                  <span class="mono">{{ tnum }}</span>
+                {% else %}
+                  <span class="muted">not noted down yet</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if tnum is not none %}
+                  <span class="chip ok">{{ ico.i('check', 12) }} Yes</span>
+                {% else %}
+                  <span class="chip">{{ ico.i('clock', 12) }} Not yet</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if types_ready != type_codes | length %}
+      <div class="ft">
+        <span class="small muted">
+          A type without a number is simply not set up yet. No paper is harmed
+          by it - questions of that type are left alone.
+        </span>
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="bd">
+      <div class="empty">
+        <div class="eico">{{ ico.i('list-checks', 20) }}</div>
+        <div class="big">No question types are set up yet</div>
+        <p>
+          Until one type has a number written down, no question can be created.
+          Whoever installed QBG One adds them in the pipeline set-up.
+        </p>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<details class="helpbox">
+  <summary>Adding a question type to this list</summary>
+  <div class="bd">
+    <p>
+      Someone creates one question of that type by hand in the portal, watches
+      which number the portal uses for it, and notes that number down in the
+      pipeline set-up. It is a one-time job per type, and the person who
+      installed QBG One can do it.
+    </p>
+  </div>
+</details>
+
+{#- ======================================================= word papers -#}
+<div class="card" id="word-reader">
+  <div class="hd">
+    <div class="grow">
+      <h2>How Word papers are read</h2>
+      <p class="d">A PDF is always read from pictures of its pages. A Word file can be read the same way, or from its own text.</p>
+    </div>
+  </div>
+  <form method="post" action="/settings/word-reader" class="stack">
+    <label class="field">
+      <input type="radio" name="word_reader" value="pages" {% if word_reader != 'word' %}checked{% endif %}>
+      Convert it and read the pages as images, like a PDF (the current rule: the Word reader was not reading papers correctly, 25 September 2026). Needs LibreOffice on this computer; without it the Word reader is used and the preview says so.
+    </label>
+    <label class="field">
+      <input type="radio" name="word_reader" value="word" {% if word_reader == 'word' %}checked{% endif %}>
+      Read the Word file's own text first (no page images, almost no AI cost) and fall back to page images only when you choose "Read as page images" on the preview.
+    </label>
+    <div class="btn-row"><button class="btn sm" type="submit">Save</button></div>
+  </form>
+</div>
+
+<div class="card" id="celebrations">
+  <div class="hd">
+    <div class="grow">
+      <h2>Celebrations &amp; greetings</h2>
+      <p class="d">A friendly welcome, a greeting by the time of day, and a small cheer when a batch,
+        translation or tagging finishes. Nothing pops up over work in progress, and mistakes are never celebrated.</p>
+    </div>
+  </div>
+  <form method="post" action="/settings/celebrations" class="stack">
+    <label class="field">
+      <input type="checkbox" name="celebrations_on" value="1" {% if celebrations_on %}checked{% endif %}>
+      Show the welcome, greetings and celebrations.
+    </label>
+    <label class="field">
+      Language of the messages
+      <select name="celebrations_language">
+        <option value="english" {% if celebrations_language != 'hinglish' %}selected{% endif %}>English</option>
+        <option value="hinglish" {% if celebrations_language == 'hinglish' %}selected{% endif %}>Hinglish</option>
+      </select>
+    </label>
+    <div class="btn-row"><button class="btn sm" type="submit">Save</button></div>
+  </form>
+</div>
+
+{#- ======================================================= fixed settings -#}
+<div class="card">
+  <div class="hd">
+    <div class="grow">
+      <h2>How questions get created</h2>
+      <p class="d">
+        These are fixed. They are here so you know what to expect, not to be
+        changed from this screen.
+      </p>
+    </div>
+  </div>
+
+  <div class="tablewrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Rule</th>
+          <th>What happens</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Who</td>
+          <td class="wrap-cell">
+            <form method="post" action="/settings" class="stack">
+              <label class="field">
+                Portal identity for created and updated questions
+                <select name="identity_from_token">
+                  <option value="1" {% if identity_from_token|default(true) %}selected{% endif %}>
+                    Whoever is signed in to the portal, read from that session
+                  </option>
+                  <option value="0" {% if not identity_from_token|default(true) %}selected{% endif %}>
+                    Always {{ C.USER_DISPLAY_NAME }} ({{ C.USER_ROLE_NAME }})
+                  </option>
+                </select>
+              </label>
+              <p class="small muted">
+                The session's user and role are used when they can be read from it.
+                When they cannot, the fixed identity <strong>{{ C.USER_DISPLAY_NAME }}</strong>
+                ({{ C.USER_ROLE_NAME }}) is sent, as before.
+              </p>
+              <div class="btn-row"><button class="btn sm" type="submit">Save</button></div>
+            </form>
+          </td>
+        </tr>
+        <tr>
+          <td>Pace</td>
+          <td class="wrap-cell">
+            About {{ C.DELAY_BETWEEN_CREATES_S }} seconds between one question
+            and the next, so the portal is never rushed.
+          </td>
+        </tr>
+        <tr>
+          <td>Ceiling</td>
+          <td class="wrap-cell">
+            At most {{ C.MAX_CREATES_PER_RUN }} questions in a single run. A
+            bigger batch is done in more than one run.
+          </td>
+        </tr>
+        <tr>
+          <td>Session</td>
+          <td class="wrap-cell">
+            A run will not be started with less than
+            {{ C.TOKEN_MIN_HOURS_LEFT }} hours left on your portal sign-in, so
+            it cannot stop halfway through.
+          </td>
+        </tr>
+        {% if C.CATEGORY_CONFIGURATION_IDS %}
+          <tr>
+            <td>Exams</td>
+            <td class="wrap-cell">
+              Set up for:
+              {% for cat in C.CATEGORY_CONFIGURATION_IDS %}{{ cat }}{% if not loop.last %}, {% endif %}{% endfor %}.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="note warn">
+  <span class="nico">{{ ico.i('alert-triangle', 18) }}</span>
+  <div class="ntext">
+    <div class="hd">Every question sent is a brand new question</div>
+    <div class="bd">
+      The portal has no way to update or replace a question QBG One has
+      already sent, so sending the same one twice puts two copies in front of
+      students. That is why the Create screen makes you preview first, then send
+      a handful, and why a question that was interrupted mid-send is never sent
+      again on its own - it is set aside for you to look up in the portal by
+      hand.
+    </div>
+  </div>
+</div>
+</div>
+</details>
+
+<details class="helpbox" id="older-tools">
+  <summary>Older tools</summary>
+  <div class="bd">
+    <p>These came before Autopilot, bulk translation and Smart Queue. They still work, and are kept here out of the menu.</p>
+    <div class="btn-row">
+      <a class="btn sm" href="/bots/solution">Solution Addition Bot (from the sheet)</a>
+      <a class="btn sm" href="/queue">Send to bots</a>
+      <a class="btn sm" href="/translation-runs">Past Translation Bot runs</a>
+      <a class="btn sm" href="/created">Created questions</a>
+    </div>
+  </div>
+</details>
+{% endblock %}

@@ -1,0 +1,16 @@
+# NoteCraft (the Studio) - what its own process needs.
+# Installed only with the user's go (Phase 1 question 5). Today it runs on the global
+# Python 3.13, which already has all of these.
+fastapi>=0.110
+uvicorn>=0.29
+jinja2>=3.1
+python-multipart>=0.0.9
+PyMuPDF>=1.24.11
+# The hand-drawn notes engine runs inside NoteCraft, so its packages come too:
+-r engines/shortnotes/requirements.txt
+# Tests
+pytest>=8
+httpx>=0.27
+pyflakes>=3
+# Child-process engines (UPSC, later PW Books and Notes check) use their own list,
+# e.g. engines/upsc/requirements.txt, in their own runtime.

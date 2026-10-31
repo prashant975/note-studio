@@ -1,0 +1,183 @@
+# Machine-readable form of the PW OnlyIAS "Notes QC Framework".
+# Human-readable policy source: reference_documents/notes_qc_framework.md
+# Loaded and validated by src/qc/qc_config.py — malformed config fails loudly.
+
+version: "1.0"
+prompt_version: "upsc-qc-v1"
+
+# Operational limits (spec §31). Tune here, not in code or the frontend.
+limits:
+  # Sized to cover a whole note rather than to sample one. A note is capped at
+  # 15 pages (~5,300 words) and cannot hold more checkable claims than this, so
+  # in practice every extracted claim is verified. It stays a number rather than
+  # "unlimited" because a malformed note that extracts thousands of claims
+  # should be stopped by something.
+  max_claims_verified: 200
+  sources_per_claim: 3
+  passages_per_source: 3
+  retry_attempts: 1
+  max_download_bytes: 15728640      # 15 MB
+  request_timeout_seconds: 20
+  max_concurrent_requests: 4
+  # One more than the page limit, so the visual check covers the document
+  # instead of its first six pages.
+  max_visual_check_pages: 16
+
+categories:
+  factual:
+    display_name: "Factual Errors"
+    rules:
+      - id: "FACT-LEGAL-001"
+        name: "Legal and constitutional reference verification"
+        severity: "high"
+        external_verification: true
+        auto_correct_allowed: true
+        description: >
+          Verify Articles, Schedules, Amendments, clauses and Supreme Court
+          judgments against approved authoritative sources (Laxmikanth,
+          D.D. Basu, Bare Acts). Exact matching is required when the notes
+          quote legal or constitutional text; numbers of Articles, Schedules,
+          Amendments and clauses, dates, names and judgment titles must be
+          verified exactly. A correct student-friendly paraphrase must not be
+          rejected merely because it is not verbatim.
+
+      - id: "FACT-SOURCE-002"
+        name: "Authentic source verification"
+        severity: "high"
+        external_verification: true
+        auto_correct_allowed: false
+        description: >
+          A claim must not be finalized solely from Wikipedia, blogs, or
+          coaching-institute material. Only official (.gov), standard textbook,
+          or institutional sources count; anything else is flagged.
+
+      - id: "FACT-DATA-003"
+        name: "Statistical and data verification"
+        severity: "high"
+        external_verification: true
+        date_sensitive: true
+        auto_correct_allowed: true
+        description: >
+          Economic statistics, demographic data and global rankings checked
+          against institutional sources (Economic Survey, Union Budget,
+          NITI Aayog, IMF, World Bank, Census). Outdated figures flagged.
+          Never replace a historical value with a current one when the lecture
+          is discussing history — verify the value for the period the
+          paragraph actually discusses.
+
+      - id: "FACT-UNSOURCED-004"
+        name: "Unsourced factual claim"
+        severity: "high"
+        external_verification: true
+        auto_correct_allowed: false
+        description: >
+          Any data for which no authentic source can be found is flagged
+          rather than left unverified. SOURCE_NOT_FOUND is never converted
+          into "false".
+
+      - id: "FACT-NAMES-005"
+        name: "Proper noun consistency"
+        severity: "medium"
+        external_verification: false
+        auto_correct_allowed: true
+        description: >
+          The same person, place, dynasty or text must be spelled identically
+          throughout the note.
+
+      - id: "FACT-ATTRIB-006"
+        name: "Attribution, committee and report-name accuracy"
+        severity: "high"
+        external_verification: true
+        auto_correct_allowed: true
+        description: >
+          Names of committees, commissions, reports and the people or bodies a
+          statement is attributed to must match approved sources.
+
+  conceptual:
+    display_name: "Conceptual and Flow Errors"
+    rules:
+      - id: "FLOW-HEADING-001"
+        name: "Heading-content mismatch"
+        severity: "medium"
+        description: >
+          All content under a heading must fall strictly within its stated
+          scope — neither broader nor narrower.
+
+      - id: "FLOW-CONTRADICTION-002"
+        name: "Internal contradiction"
+        severity: "high"
+        description: >
+          Every core fact or definition must be stated consistently wherever
+          it recurs, including inside tables. Any restatement that diverges
+          from its original form is flagged.
+
+      - id: "FLOW-INCOMPLETE-003"
+        name: "Incomplete explanation"
+        severity: "medium"
+        description: >
+          Every definition or equivalence needs a plain-language explanation a
+          student could restate independently. Undefined terms, missing
+          context, incorrect sequences and broken cause-effect chains fall
+          under this rule.
+
+      - id: "FLOW-FORMAT-004"
+        name: "Formatting integrity"
+        severity: "medium"
+        description: >
+          Every table, list and formatting element must display exactly as
+          intended in the student-facing output, with no raw syntax or broken
+          formatting visible.
+
+  language:
+    display_name: "Language and Grammar Errors"
+    rules:
+      - id: "LANG-SPELLING-001"
+        name: "Spelling consistency"
+        severity: "medium"
+        description: >
+          Title and running headers checked for typos first (most visible part
+          of the page). The same name spelled differently across the document
+          is highlighted.
+
+      - id: "LANG-GRAMMAR-002"
+        name: "Grammar affecting clarity"
+        severity: "medium"
+        description: >
+          Zero grammatical errors that affect sentence meaning or clarity may
+          remain. Broken sentences, unclear bullet fragments and incorrect
+          word usage fall under this rule. Hindi-English script problems
+          (Devanagari/Latin mixing) are included.
+
+      - id: "LANG-CLARITY-003"
+        name: "Independent sentence clarity"
+        severity: "medium"
+        description: >
+          Every sentence must be independently understandable without relying
+          on the previous or next sentence. Language stays simple, direct and
+          student-friendly; overly complex vocabulary and unnecessarily long
+          sentences are flagged.
+
+  # Spec §6: enrichment shortfalls are requirement-compliance findings,
+  # NEVER factual errors (unless they also contain incorrect facts).
+  compliance:
+    display_name: "Requirement Compliance"
+    rules:
+      - id: "ENRICH-TABLES-001"
+        name: "Requested tables delivered"
+        severity: "low"
+        description: "Tables enabled but no useful table appears."
+
+      - id: "ENRICH-FLOW-002"
+        name: "Requested flowcharts delivered"
+        severity: "low"
+        description: "Flowcharts enabled but a process remains a dense paragraph."
+
+      - id: "ENRICH-MAINS-003"
+        name: "Requested Mains value-adds delivered"
+        severity: "low"
+        description: "Mains value-add enabled but no analytical dimensions appear."
+
+      - id: "ENRICH-PRELIMS-004"
+        name: "Requested Prelims keywords delivered"
+        severity: "low"
+        description: "Prelims keywords enabled but none are marked."

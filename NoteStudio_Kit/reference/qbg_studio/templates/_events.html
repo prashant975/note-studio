@@ -1,0 +1,396 @@
+{#-
+  _events.html - live creation progress and the reconciliation panel.
+
+  The Create screen polls this while a creation job runs, so it re-renders
+  from scratch every couple of seconds and keeps no state of its own.
+
+  There is deliberately no Retry button anywhere on this screen. Creating a
+  question on the portal cannot be repeated safely: a second attempt puts a
+  second copy of the same question in front of students. Anything the portal
+  did not clearly answer is handed to a person instead.
+-#}
+{% import "_icons.html" as ico with context %}
+
+{% set made     = events | selectattr('outcome', 'equalto', 'created') | list %}
+{% set refused  = events | selectattr('outcome', 'equalto', 'failed')  | list %}
+{% set left_out = events | selectattr('outcome', 'equalto', 'skipped') | list %}
+{% set dupes    = events | selectattr('outcome', 'equalto', 'duplicate') | list %}
+{% set running  = job and job.state in ('queued', 'running') %}
+{% set finished = job and job.state in ('done', 'failed') %}
+
+{#- ---------------------------------------------------------- in progress -#}
+{% if running %}
+  <div class="card tight">
+    <div class="bd">
+      <div class="progress-line">
+        <span class="spinner"></span>
+        <span class="msg">{{ job.message or 'Creating questions on the portal...' }}</span>
+        <span class="chip info">{{ job.pct or 0 }}%</span>
+      </div>
+      <div class="bar" style="margin-top:var(--s-3)">
+        <i style="width: {{ job.pct or 0 }}%"></i>
+      </div>
+      <div class="progress-facts">
+        <span>{{ events | length }} answered so far</span>
+        {% if refused %}<span class="bad">{{ refused | length }} refused</span>{% endif %}
+      </div>
+    </div>
+    <div class="ft">
+      {{ ico.i('alert-triangle', 16) }}
+      <span class="small grow">
+        Keep this window open, and leave the Chrome window that is logged in to
+        QBG alone until this finishes. Stopping half way can leave a question
+        that was sent but never confirmed, and someone then has to check the
+        portal by hand.
+      </span>
+    </div>
+  </div>
+{% endif %}
+
+{#- ----------------------------------------------------------- event list -#}
+{% if events %}
+  <div class="card">
+    <div class="hd">
+      <div class="grow">
+        <h2>Question by question</h2>
+        <p class="d">What the live portal said about each one.</p>
+      </div>
+      <div class="acts">
+        <span class="chip">
+          {{ ico.i('inbox', 13) }}
+          {{ events | length }} answer{{ '' if events | length == 1 else 's' }} back
+        </span>
+      </div>
+    </div>
+    <div class="bd">
+      {% for e in events %}
+        <div class="evt {{ e.outcome }}">
+          <span class="ref">{{ e.row_ref }}</span>
+          <span class="msg">
+            {%- if e.outcome == 'created' -%}
+              Created{% if e.qbg_id %} as <span class="mono">{{ e.qbg_id }}</span>{% endif %}.
+            {%- elif e.outcome == 'needs_check' -%}
+              <span class="chip warn">{{ ico.i('alert-triangle', 13) }} Check this on the portal</span>
+              <strong>{{ e.detail }}</strong>
+            {%- elif e.outcome == 'duplicate' -%}
+              <span class="chip info">{{ ico.i('copy', 13) }} Already on the portal</span>
+              Not sent again{% if e.qbg_id %} - it is already there as
+              <span class="mono">{{ e.qbg_id }}</span>{% endif %}.
+            {%- elif e.outcome == 'skipped' -%}
+              Not sent - {{ e.detail }}
+            {%- else -%}
+              {#- A refusal. jobs.py rewords the refusals it recognises, but it
+                  falls back to the pipeline's own line, and one of its own
+                  wordings carries the portal's HTTP number. Neither means
+                  anything to the person reading this, so anything that still
+                  reads like machine text is reduced to the fact that matters:
+                  the portal said no, and nothing was created. -#}
+              {%- set d = (e.detail or '') | trim -%}
+              {%- set d = d.split(' (error ') | first | trim -%}
+              {#- One filter for the whole app - see
+                  pipeline_bridge.looks_technical(). Three hand-written copies
+                  of this test had drifted apart. -#}
+              {%- set machine = looks_technical(d) -%}
+              {%- if machine -%}
+                The portal refused this question, so nothing was created for it.
+              {%- else -%}
+                {{ d }}{{ '' if d.endswith('.') else '.' }}
+              {%- endif -%}
+            {%- endif -%}
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+{% elif running %}
+  <div class="note info">
+    <span class="nico">{{ ico.i('clock', 18) }}</span>
+    <div class="ntext">
+      <div class="hd">Nothing has come back yet</div>
+      <div class="bd">
+        The first answer from the portal usually takes a few seconds. Every
+        question appears here, one line each, as soon as it has been dealt with.
+      </div>
+    </div>
+  </div>
+
+{% elif not job %}
+  <div class="card">
+    <div class="bd">
+      <div class="empty">
+        <div class="eico">{{ ico.i('inbox', 20) }}</div>
+        <div class="big">Nothing has been sent to the portal yet</div>
+        <p>
+          Approved questions will appear here one at a time, with what the
+          portal said about each one.
+        </p>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{#- ------------------------------------------------- reconciliation panel -#}
+{% if finished %}
+  <div class="card">
+    <div class="hd">
+      <div class="grow">
+        <h2>What this run actually did</h2>
+        <p class="d">
+          The first four numbers are this run. The last one counts the whole
+          batch, and it is the one that stops everything else.
+        </p>
+      </div>
+      <div class="acts">
+        {% if job.state == 'done' %}
+          <span class="chip ok">{{ ico.i('check-circle', 13) }} Finished</span>
+        {% else %}
+          <span class="chip danger">{{ ico.i('alert-circle', 13) }} Stopped early</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="bd">
+      <div class="counters">
+        <div class="counter {{ 'ok' if made else '' }}">
+          <div class="n">{{ made | length }}</div>
+          <div class="l">created on the portal</div>
+        </div>
+        <div class="counter {{ 'danger' if refused else '' }}">
+          <div class="n">{{ refused | length }}</div>
+          <div class="l">refused, so not created</div>
+        </div>
+        <div class="counter">
+          <div class="n">{{ dupes | length }}</div>
+          <div class="l">already on the portal, not sent again</div>
+        </div>
+        <div class="counter">
+          <div class="n">{{ left_out | length }}</div>
+          <div class="l">left out, never sent</div>
+        </div>
+        <div class="counter {{ 'danger' if counts.needs_check else 'ok' }}">
+          <div class="n">{{ counts.needs_check }}</div>
+          <div class="l">need a person to check the portal, batch-wide</div>
+        </div>
+      </div>
+    </div>
+    <div class="ft">
+      <a class="btn sm" href="/batches/{{ b.id }}/create-runs/{{ job.id }}/report.xlsx">
+        {{ ico.i('download', 13) }} Download the report for this run (Excel)
+      </a>
+      {% if made %}
+        <a class="btn sm primary" href="/translate/bulk">
+          {{ ico.i('languages', 13) }} Translate the {{ made | length }} newly created (Bulk translation)
+        </a>
+      {% endif %}
+      <span class="small muted">
+        {% if made %}
+          Bulk translation: choose this batch there; only its confirmed QBG ids are translated.
+        {% else %}
+          Every question, what happened to it, and its QBG id.
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
+  {#- The one number that stops everything else. -#}
+  {% if counts.needs_check %}
+    <div class="note danger">
+      <span class="nico">{{ ico.i('alert-circle', 18) }}</span>
+      <div class="ntext">
+        <div class="hd">
+          {{ counts.needs_check }} question{{ '' if counts.needs_check == 1 else 's' }}
+          in this batch may already exist on the live portal
+        </div>
+        <div class="bd">
+          <p>
+            The portal never sent an answer back for
+            {{ 'this one' if counts.needs_check == 1 else 'these' }}. From here
+            there is no way to tell whether the question went into the live
+            question bank or not. Both are possible.
+          </p>
+          <p>
+            Someone has to open the QBG portal, search for each question marked
+            above, and write down what is actually there. If the question is
+            already on the portal, mark it as created in the review sheet. If
+            it is not there, it can go back in the queue and be created later.
+          </p>
+          <p style="margin-bottom:0">
+            <strong>This number must be zero before anything else is created,
+            in this batch or any other one.</strong> Until it is, QBG One
+            will refuse to send more questions.
+          </p>
+        </div>
+        <div class="btn-row">
+          <a class="btn sm primary" href="/batches/{{ b.id }}/detail">
+            {{ ico.i('shield', 13) }} Settle
+            {{ 'this question' if counts.needs_check == 1 else 'these questions' }}
+          </a>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if job.state == 'failed' %}
+    {#-
+      job.error is written for the reader as far as the marker jobs.py uses
+      when it has to fall back to the pipeline's own output. Past that point
+      it is a traceback, a file path or a Python name. The plain part is not
+      always safe either: pipeline_bridge.workbook_writable puts str(exc) in
+      it, which on Windows reads "[Errno 13] ... a path into the batch folder".
+      None of that belongs on a screen whose whole job is to tell an
+      operator what happened on the live portal, so machine text is folded
+      away behind a summary rather than shown.
+    -#}
+    {% set said  = (job.error or '') | trim %}
+    {% set parts = said.split('Technical detail:') %}
+    {% set plain = parts | first | trim %}
+    {% set techdetail = parts[1:] | join('Technical detail:') | trim %}
+    {#- Was the weakest of the three copies: it let a '{' through, so a
+        JSON body in job.error reached the screen. -#}
+    {% set machine = looks_technical(plain) %}
+
+    <div class="note danger">
+      <span class="nico">{{ ico.i('alert-circle', 18) }}</span>
+      <div class="ntext">
+        <div class="hd">{{ job.message or 'The run stopped before it finished' }}</div>
+        <div class="bd">
+          {%- if plain and not machine -%}
+            {{ plain }}
+          {%- else -%}
+            The run stopped before it finished, and nothing was sent again
+            automatically. Some of these questions may already have reached
+            the portal, so check there before starting another run.
+          {%- endif -%}
+        </div>
+        {% if techdetail or machine %}
+          <details class="raw">
+            <summary>Show the technical detail, for whoever supports this</summary>
+            <pre>{{ (said if machine else techdetail) | redact }}</pre>
+          </details>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if refused %}
+    <div class="note warn">
+      <span class="nico">{{ ico.i('alert-triangle', 18) }}</span>
+      <div class="ntext">
+        <div class="hd">
+          {{ refused | length }} question{{ '' if refused | length == 1 else 's' }}
+          {{ 'was' if refused | length == 1 else 'were' }} refused by the portal
+        </div>
+        <div class="bd">
+          The portal answered with a clear refusal for
+          {{ 'this one' if refused | length == 1 else 'these' }}, so nothing was
+          created for {{ 'it' if refused | length == 1 else 'them' }} and
+          nothing is half done. The reason is written next to each line above.
+          They stay in this batch and can be sent again later, once the reason
+          is fixed - there is nothing to undo first.
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if left_out and not counts.needs_check %}
+    <div class="note info">
+      <span class="nico">{{ ico.i('info', 18) }}</span>
+      <div class="ntext">
+        <div class="hd">
+          {{ left_out | length }} question{{ '' if left_out | length == 1 else 's' }}
+          {{ 'was' if left_out | length == 1 else 'were' }} left out
+        </div>
+        <div class="bd">
+          These were never sent to the portal, so nothing has changed for them.
+          Each line above says what is still missing. Sort those out on the
+          review screen and they will be included next time.
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if job.state == 'done' and not counts.needs_check and not refused and made %}
+    <div class="note ok">
+      <span class="nico">{{ ico.i('check-circle', 18) }}</span>
+      <div class="ntext">
+        <div class="hd">
+          All {{ made | length }} question{{ '' if made | length == 1 else 's' }}
+          went in cleanly. Nothing needs chasing.
+        </div>
+        <div class="bd">
+          Open two or three of them on the portal to be sure they read the way
+          you expect, then take the list of new question IDs from the batch
+          summary.
+        </div>
+        <div class="btn-row">
+          <a class="btn sm" href="/batches/{{ b.id }}/detail">
+            {{ ico.i('file-text', 13) }} Open the batch summary
+          </a>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if dupes %}
+    <div class="note info">
+      <span class="nico">{{ ico.i('copy', 18) }}</span>
+      <div class="ntext">
+        <div class="hd">
+          {{ dupes | length }} question{{ '' if dupes | length == 1 else 's' }}
+          {{ 'was' if dupes | length == 1 else 'were' }} already on the portal
+        </div>
+        <div class="bd">
+          Nothing was sent for {{ 'it' if dupes | length == 1 else 'them' }}.
+          Each row now carries the QBG id of the question that is already
+          there, so you can open it and confirm. Nothing needs undoing.
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <details class="helpbox">
+    <summary>Why there is no button here that sends anything again</summary>
+    <div class="bd">
+      <p>
+        Nothing on this screen sends a question again. Every line above is a
+        record of something that has already happened on the live portal.
+      </p>
+      <p style="margin-bottom:0">
+        Nothing will be sent again automatically either, and there is no
+        button on this screen that will do it. That is on purpose: sending the
+        same question a second time puts a duplicate in front of students, and
+        that cannot be taken back from here.
+      </p>
+    </div>
+  </details>
+{% endif %}
+
+{#- A creation run finishes in the background, and this fragment is the only
+    thing polling. The gate has moved on by now - a clean pilot unlocks the
+    full run - but the buttons further up the page were rendered before the
+    run started and would stay greyed until someone reloaded by hand. That is
+    what made the three steps look stuck.
+
+    Reload ONCE per job. The poller keeps re-rendering this same finished
+    fragment, so an unguarded reload would loop forever; the sessionStorage
+    key makes it fire a single time.
+
+    And only for the live poller (`live`, from ?live=1 on its URL): the
+    finished branch of create.html loads this same fragment once on every
+    visit, and without the flag each new tab reloaded itself as soon as it
+    opened. -#}
+{% if finished and job and live %}
+  <script>
+    (function () {
+      var key = 'qbg-reloaded-job-{{ job.id }}';
+      try {
+        if (!sessionStorage.getItem(key)) {
+          sessionStorage.setItem(key, '1');
+          window.location.reload();
+        }
+      } catch (e) {
+        /* private mode - leave the page alone rather than risk a loop */
+      }
+    })();
+  </script>
+{% endif %}

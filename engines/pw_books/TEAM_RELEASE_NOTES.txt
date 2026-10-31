@@ -1,0 +1,281 @@
+HANDWRITTEN NOTES AUTOMATION - TEAM RELEASE
+Build date: 14 August 2026
+Version: v2.6.1
+
+THIS BUILD - REVIEW FIXES ON THE IMAGE GATE AND QC
+--------------------------------------------------
+19 defects found in a full adversarial review of v2.6.0 were fixed; every
+fix is pinned by a test (181 tests, up from 173).
+
+* A diagram is no longer lost when its section is already full: the slide's
+  image is handed back and inserted under the next heading that wants it.
+* The image budget and duplicate registry are only charged AFTER Word has
+  really placed the picture - a failed insertion no longer poisons them.
+* An AI-redrawn diagram the run has paid for is no longer thrown away by the
+  screenshot heuristics at insertion time (dedupe and caps still apply).
+* Teaching slides that merely mention "exercise", "question", "solution" or
+  carry a lettered case-analysis line are no longer misread as question
+  slides; real MCQ/DPP/worked-solution slides are still rejected.
+* Two genuinely different sparse line diagrams (two ray diagrams sharing an
+  axis) are no longer merged as "near-duplicates".
+* A fully opaque screenshot saved with an alpha channel can no longer sneak
+  past the pixel screens; blank RGBA images are rejected too.
+* One transient 5xx blip on the first redraw no longer cancels every
+  remaining redraw of the run; a corrupt image payload no longer condemns
+  the direct route for the run.
+* QC no longer flags the template's own bold-accent colour or visible DTP
+  notes as "wrong body colour", checks all four margins against their own
+  constants, and now warns when "Concepts Covered" exceeds 8 items.
+* DTP notes render Greek/degree symbols correctly (missing-glyph boxes).
+* Bold-heavy bullets are no longer wrongly left-aligned: the phantom **
+  markers were being measured as if they printed.
+* The "filter rejected N diagrams" count no longer blames the filter for
+  DTP notes that point at slides which do not exist.
+
+PREVIOUS BUILD (v2.6.0, 13 August 2026) - NOTES TEMPLATE + FEWER, BETTER DIAGRAMS
+----------------------------------------------------
+Formatting (matches the reference "Concise Notes" document, all subjects)
+
+* Pages are now really A4 portrait (8.27 x 11.69 in) with 1 inch margins.
+  They were US Letter before - python-docx's default - because only the
+  margins were ever set. Nothing may cross the 6.27 in text column.
+* One central place for the look: src/style_config.py. Page size, margins,
+  fonts, sizes, colours, spacings and indents all live there now instead of
+  being scattered constants. Change the template in one file.
+* Typography as specified: Kalam throughout; 26 pt red centred subject,
+  24 pt red centred chapter title, 18 pt black section headings on a bright
+  green highlight, 16 pt dark blue (#000099) justified bullets, 0 pt spacing,
+  1.15-1.20 line spacing, 0.236 in hanging bullet indents.
+* Maths and science symbols Kalam cannot draw (Greek, operators, vector
+  arrows, hats, integrals) fall back to Cambria Math instead of dropping out.
+  A combining arrow now stays attached to its letter.
+* Justification no longer opens huge word gaps: a line that would have to
+  stretch its spaces by more than 40% is left-aligned instead. Tune it with
+  MAX_SPACE_STRETCH in src/style_config.py.
+* Section headings keep with their first bullet, so no orphan headings.
+* The footer icon is the PW mark. The book emoji used before had no glyph in
+  any document font and printed as an empty box in the PDF.
+* PW logo and watermark now fall back to assets/pw_logo.png when no slide
+  yields a clean mark, so branding is never silently missing.
+* Formatting QC reads the finished DOCX and reports paper size, margins,
+  fonts, stray font sizes, colours, missing furniture and any image wider
+  than the text column.
+
+Images - this is the big behaviour change
+
+* The notes used to take an image whenever a slide had one. They no longer
+  do. src/image_filter.py adds a relevance gate whose DEFAULT IS TO REJECT:
+  a picture is kept only when it is a real academic diagram.
+* Question images are gone: MCQ, DPP, PYQ, practice, homework, worked
+  solutions and answer options are rejected even when they contain a figure.
+  Also rejected: decorative/branding slides, icons, banners, near-blank
+  images, screenshots of text, and duplicates.
+* Duplicate control uses an exact hash plus a perceptual hash, so the same
+  diagram is never inserted twice - and at most one diagram per section.
+* Rejection happens EARLY, before any billed image work, so a question
+  screenshot no longer costs crop -> alpha -> describe -> render -> insert.
+  Every decision is written to runs/<id>/image_filter_report.json.
+* Image width is now chosen per image from its own resolution instead of one
+  fixed width: never past the margins, never stretched, never upscaled into
+  a blur, never split across a page.
+* There is no minimum. Zero images is a perfectly good result. Set a hard
+  cap with PW_MAX_NOTE_IMAGES if you want one.
+
+Diagram redraw fixes
+
+* A successful redraw was being CUT UP by the writer: region detection ran
+  again on the redrawn file and only one piece was inserted (measured: a
+  1400x760 figure inserted at aspect 1.04). A redraw is now inserted whole.
+* The redraw prompt sent to the image endpoint no longer refers to "the
+  original image" or "their original color". That endpoint is text-to-image
+  and never receives the slide, so those instructions pointed at something
+  the model could not see - and the describe stage is told not to mention
+  colour anyway. Your prompt is unchanged on the direct image-to-image path.
+* The dead direct image-to-image route is probed ONCE per run instead of
+  once per slide. It is billed for input tokens even when it returns no
+  image, so a 20-diagram deck used to buy 20 dead calls to learn one fact.
+* If the configured image model renders nothing for a non-quota reason, the
+  other known image model gets one attempt (PW_AI_IMAGE_FALLBACKS). A
+  withdrawn model id now costs one retry, not every diagram.
+
+Content
+
+* "Concepts Covered in the Class" is capped at 8 items - it is an overview,
+  not an index.
+* Prompts now tell the model to ask for a diagram only when a picture beats
+  the text and formula (visual_value > textual_value), never for a question
+  slide, and never for the same diagram twice.
+
+Nothing was removed: ingestion, AI understanding, note generation, equation
+rendering, QC and DOCX/PDF export all work as before.
+
+
+PREVIOUS BUILD (v2.3.3, 1 August 2026)
+======================================
+
+THIS BUILD - RELIABILITY + HONEST DIAGNOSTICS
+---------------------------------------------
+Current, verified behaviour of this tree (earlier v2.3.x notes described a
+build that was rolled back; the statements below match the code as shipped):
+
+* Diagram redraw is ON by default (default processing mode is high_quality).
+  REDRAW_DIAGRAMS=false now REALLY turns it off (the env var previously
+  documented here was never read by any code — that is fixed).
+* Image calls make exactly ONE attempt (no retries, no empty-response
+  retries). A failed redraw falls back to the original slide crop instantly
+  instead of burning the 2+4+8+16+32s backoff per diagram. Text generation
+  keeps its full retry budget (6 transient attempts, 4 empty retries).
+* Redraw failures report the REAL reason per slide (quota vs empty response
+  vs invalid output), including what the model said instead of an image.
+* MODEL_FALLBACK_ENABLED=false now REALLY pins one model per task (this knob
+  was also documented-but-unread before).
+* PW_AI_IMAGE_WORKERS now REALLY controls redraw concurrency (default 4 —
+  the measured-good value; lower it if the image quota is tight).
+* The model health check still runs before generation, cached for
+  MODEL_HEALTH_CACHE_MINUTES (15). Only SUCCESS is cached: a failed probe
+  expires immediately, so one bad probe can no longer pin "No Gemini model
+  is available" for 15 minutes.
+* Proxy error bodies are truncated at 1200 chars (was 300), so a quota error
+  shows the provider's actual reason.
+
+HISTORY NOTE: the v2.3.x series was rolled back in full. Its notes claimed a
+"balanced" default mode, a removed model availability check (MODEL_HEALTH_CHECK
+never existed in code), and 2-attempt image calls — none of that describes this
+tree. The authoritative behaviour is the section above.
+
+DIAGRAM REDRAW - SLOW RATE-LIMITED RUNS FIXED
+---------------------------------------------
+* A rate-limited redraw used to cost ~62s PER SLIDE in pure retry sleeping.
+  Two causes, both fixed:
+  1. The quota breaker never tripped on a 429. It matched the text
+     "rate limit", but the app writes "rate-limited" (hyphen), so every 429
+     read as NOT-quota. The breaker exists to stop the whole run after the
+     first 429; instead every slide paid its own billed describe call to
+     rediscover the same limit. Matching now ignores hyphens.
+  2. The redraw "describe" stage is a TEXT call, so it inherited note
+     generation's 6-attempt budget (2+4+8+16+32s of backoff). A redraw is
+     optional - failure just keeps the original slide crop - so it now gets
+     2 attempts (~2s). Tune with PW_AI_DESCRIBE_RETRIES if ever needed.
+* Net effect: the first 429 stops all remaining redraws immediately (no
+  further calls, no further cost), and a slide that does hit a limit gives up
+  in ~2s instead of ~62s. Note generation is untouched and keeps its full
+  retry and empty-response budgets.
+
+DIAGRAM IMAGE FIXES
+* Diagram redraw is ON by default (high_quality mode). It is a
+  deliverable-quality requirement (raw slide crops are light-on-dark and
+  unusable), not a speed/quality knob. Opt out with REDRAW_DIAGRAMS=false.
+* Redrawn diagrams now have a TRANSPARENT background by default, so they blend
+  into the note page and the PW watermark shows through instead of sitting in
+  a white box.
+* A failed redraw now reports WHY in the run warnings (e.g. "Reason: proxy
+  error 429: image model rate limited"). Previously it failed silently and
+  looked identical to redraw being switched off.
+* Model availability errors now show the real cause on screen (401 auth vs 404
+  unknown model id vs proxy down) instead of a bare "Unavailable".
+
+* pw_access.py re-synced with pw-app-kit (adds Gemini image/TTS and Claude
+  calls through the proxy). APP_NAME stays "Handwritten Notes Automation".
+
+PW APP KIT v2 - USAGE LOGGING CHANGED
+------------------------------------
+* The proxy now writes ONE TRUSTED RAW ROW PER PROVIDER CALL, to the
+  "Raw Usage Ledger Export" tab. The old "Usage Cost" combined-row-per-file
+  model is gone, along with the client-side machinery that produced it
+  (UsageSession accumulation, log:false, the /api/usage-log write at the end
+  of a run). Nothing in the app posts usage any more.
+* Every run now creates ONE Task ID ("handwritten-notes-<uuid>") before its
+  first AI call and attaches it to every Gemini, Mathpix and image call that
+  run makes. To see what one file cost, group the ledger by
+  Task ID + App Name + Email + Model.
+* The Task ID is saved in the run's run_log.json / run_metadata.json and is
+  shown in the UI in developer mode, so a run can be traced to its rows.
+* Because logging is now proxy-side and per call, usage survives a run that
+  fails half-way — previously the combined row was only written at the end.
+* Allowlist checks are now LIVE (uncached) before every billed action: the
+  Generate click, "Test Gemini connection", and "Refresh Model Availability".
+  A user removed from the Whitelisted sheet mid-session is stopped at the next
+  paid action rather than up to 5 minutes later.
+* Diagram redraw uses gemini-3.1-flash-image.
+  gemini-3-pro-image is the slower, higher-quality alternative.
+
+PW_ACCESS APP ADDITIONS - RE-APPLY ON EVERY KIT SYNC
+---------------------------------------------------
+The stock kit file omits SEVEN things this app depends on. Each is marked
+"APP ADDITION (not in the stock kit)" in pw_access.py; re-add them whenever
+the kit is re-copied:
+  1. proxy_base_url()       - resolves the URL at call time, so a late
+                              load_dotenv is still honoured.
+  2. set_token_provider()   - process-wide fallback token provider.
+  3. _invalidate_session()  - drops the cached 7-day session pass so the next
+                              call mints a fresh one.
+  4. _resolve_token(force=) - tolerant: supports zero-arg providers, force-
+                              refresh, and fails closed instead of raising.
+  5. check_allowed_status() returns "expired" for 401 (the kit collapses it
+     into "error"); the auth layer needs it to trigger re-login.
+  6. PWAccessError.status_code, plus a lock around session-pass minting -
+     image redraws and note chunks run many threads, so an unguarded cold
+     start would mint one 7-day pass per thread instead of one per process.
+  7. gemini_generate(timeout=...) - per-call timeout override. The stock kit
+     hardcodes one value; without this parameter note generation raises
+     TypeError and the UI reports "No Gemini model is available for note
+     generation right now".
+  Also: _post() retries a 401 only when the refreshed token actually differs
+  (replaying a rejected token just buys a second 401).
+
+WARNING: a kit re-copy that drops these fails at RUNTIME, not at import. The
+symptom is "No Gemini model is available for note generation right now" with
+an AttributeError/TypeError in the details. Run the test suite after any sync.
+tests/test_pw_kit_contract.py now binds every pw_access call site in the app
+against the live signature, so a sync that drops a parameter fails the test
+suite instead of only failing at runtime.
+The kit's own README confirms the direct-Vertex path is permanently dead, so
+the removed Vertex helpers were NOT restored.
+
+PROBLEMS SOLVED
+---------------
+1. Mathematical equations now use protected math tags and native Word equations
+   (OMML/Cambria Math) instead of being forced into the Kalam body font.
+
+2. Vector arrows, unit-vector hats, cross products, dot products, fractions,
+   roots, Greek symbols, superscripts and subscripts are preserved.
+
+3. Chemical formulae and scientific units are preserved, including examples
+   such as H2O, CO2, SO4^2-, v0, x^2, 10^-3 and m s^-2.
+
+4. Common broken AI formula output is repaired conservatively before DOCX
+   creation. Repairs and remaining warnings are recorded in equation reports.
+
+5. JEE, NEET and JEE + NEET concise-note modes are available, with strict
+   exam-oriented prompts and removal of repeated or unnecessary teacher talk.
+
+6. QR codes, advertisements, social-media panels, phone-number slides,
+   homework/welcome/thank-you slides, ASQ/MCQ slides, answer options and worked
+   question images are filtered out.
+
+7. Filtered promotional/question slides can no longer re-enter through diagram
+   redraw or a mistaken AI "Note to DTP" request. DOCX insertion performs a
+   final independent safety check.
+
+8. The app provides DOCX, PDF, Equation Quality Report and Full Run ZIP
+   downloads without regenerating the notes when a download button is clicked.
+
+9. PDF export failure no longer prevents the DOCX and reports from being
+   delivered. A clear warning is shown when Word/LibreOffice is unavailable.
+
+10. Authentication/session handling, proxy access checks and usage tracking are
+    included in the packaged team application.
+
+VALIDATION
+----------
+- Automated test suite: 64 passed
+- Packaged Windows executable startup: passed
+- Streamlit health endpoint: OK
+
+TEAM USAGE
+----------
+1. Extract the ZIP completely.
+2. Open the HandwrittenNotesAppTeam folder.
+3. Double-click HandwrittenNotesAppTeam.exe.
+4. Keep the command window open while using the app.
+5. Use http://localhost:8501 and sign in with an authorized @pw.live account.

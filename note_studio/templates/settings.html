@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}Settings - {{ brand.APP_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="grow">
+    <h1>Settings</h1>
+    <p class="sub">Choices you make once. Every change keeps a backup or can be put back.</p>
+  </div>
+</div>
+
+<nav class="pills settings-tabs" aria-label="Settings">
+  {% for href, label in tabs %}<a class="pill {{ 'on' if tab == href }}" href="{{ href }}">{{ label }}</a>{% endfor %}
+</nav>
+
+{% if tab == '/settings' %}
+{# ------------------------------------------------------------- sign-in #}
+<section class="card" id="old-app">
+  <div class="hd">
+    <div class="grow">
+      <h2>The old Short Notes app's sheets and sign-in</h2>
+      <p class="d">The Short Notes app keeps your sheet list, your Google sign-in and the notes it already made in one folder on this computer.</p>
+    </div>
+    <span class="chip {{ choice_words[1] }}">{{ ico.state(choice_words[1], 13) }} {{ choice_words[0] }}</span>
+  </div>
+  <div class="bd">
+    {% if old.exists %}
+    <div class="facts mb-4">
+      <div class="fact"><span class="n">{{ old.sheets }}</span><span class="l">sheets in its list</span></div>
+      <div class="fact"><span class="n">{{ old.accounts }}</span><span class="l">Google sign-in{{ '' if old.accounts == 1 else 's' }} saved</span></div>
+      <div class="fact"><span class="n">{{ 'Yes' if old.cache else 'No' }}</span><span class="l">notes already made, kept</span></div>
+    </div>
+    {% if old.choice == 'yes' and old.account %}<p class="small">Signed in as <strong>{{ old.account }}</strong>.</p>{% endif %}
+    {% else %}
+    <p class="small muted">The old app's folder was not found on this computer, so there is nothing to share.</p>
+    {% endif %}
+    <div class="choice-grid">
+      <form method="post" action="/settings/old-app" class="choice {{ 'on' if old.choice == 'yes' }}">
+        <input type="hidden" name="choice" value="yes">
+        <div class="choice-title">{{ ico.i('link', 16) }} Use them <span class="navtag brand">Recommended</span></div>
+        <p>One sheet list and one sign-in for both apps. Notes already made are reused, not paid for again.
+           {{ brand.APP_NAME }} keeps a backup copy before it ever saves the sheet list.</p>
+        <button class="btn {{ 'primary' if old.choice != 'yes' }}" type="submit" {% if old.choice == 'yes' %}disabled{% endif %}>
+          {{ 'In use' if old.choice == 'yes' else 'Use them' }}</button>
+      </form>
+      <form method="post" action="/settings/old-app" class="choice {{ 'on' if old.choice == 'no' }}">
+        <input type="hidden" name="choice" value="no">
+        <div class="choice-title">{{ ico.i('folder', 16) }} Keep {{ brand.APP_NAME }} separate</div>
+        <p>{{ brand.APP_NAME }} starts with its own empty sheet list and asks you to sign in to Google again.
+           The old app is not affected either way.</p>
+        <button class="btn" type="submit" {% if old.choice == 'no' %}disabled{% endif %}>
+          {{ 'In use' if old.choice == 'no' else 'Keep separate' }}</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% include "_signin_card.html" %}
+
+{% elif tab == '/settings/ai' %}
+{# ----------------------------------------------------------- AI models #}
+<section class="card" id="ai">
+  <div class="hd"><div class="grow"><h2>AI models</h2>
+    <p class="d">The first model makes the notes. Hand-drawn notes stop when the PW gateway budget is exhausted; ask its administrator to renew the allowance. Alternate model choices are kept in your settings. UPSC uses its second model when the first is unavailable or stays busy, following the UPSC app's own rule.</p></div></div>
+  {% if resting %}
+  <div class="bd"><div class="note warn">{{ ico.i('pause', 16, 'nico') }}<div class="ntext">
+    {% for r in resting %}<div class="hd">{{ r.provider }} budget spent: resting until <span data-time="{{ r.until }}"></span></div>{% endfor %}</div></div></div>
+  {% endif %}
+  {% for row in rows %}
+  <form class="bd model-order" method="post" action="/settings/ai">
+    <input type="hidden" name="type_id" value="{{ row.type.id }}"><input type="hidden" name="stage" value="{{ row.stage }}">
+    <p class="lead-strong">{{ row.type.label }} <span class="muted small">&middot; {{ row.stage_label }}</span></p>
+    <ol class="model-list">
+      {% for i in range(row.slots) %}{% set current = row.order[i] if i < row.order | length else '' %}
+      <li><span class="pos">{{ i + 1 }}</span>
+        <select name="model_{{ i }}" aria-label="Model {{ i + 1 }}">
+          {% if i > 0 %}<option value="">(none)</option>{% endif %}
+          {% for m in row.selectable %}<option value="{{ m.id }}" {% if m.id == current %}selected{% endif %}>{{ m.label }}</option>{% endfor %}
+        </select>
+        <span class="hint">{{ row.hints[0] if i == 0 else row.hints[1] }}</span></li>
+      {% endfor %}
+    </ol>
+    <div class="btn-row"><button class="btn primary sm" type="submit">Save</button>
+      <button class="btn ghost sm" type="submit" name="reset" value="1">Back to the usual order ({{ row.default | join(', ') }})</button></div>
+  </form>
+  {% endfor %}
+  <div class="ft"><span class="small muted">To try a model with one tiny call, use Test the AI model on Sheet automation.</span>
+    <div class="acts"><a class="btn sm" href="/automation#checks">{{ ico.i('sparkles', 13) }} Test the AI model</a></div></div>
+</section>
+
+{% elif tab == '/settings/categories' %}
+{# ---------------------------------------------------------- categories #}
+<section class="card" id="categories">
+  <div class="hd"><div class="grow"><h2>Categories</h2>
+    <p class="d">One per exam: its subjects, languages, note types and rules. Rules are plain sentences; lines starting with # are notes to yourself and are never sent. Files live in <span class="mono">{{ packs_dir }}</span>.</p></div></div>
+  <ul class="cat-list">
+    {% for p in packs %}
+    <li class="cat-item {{ 'off' if not p.enabled }}" id="cat-{{ p.id }}">
+      <details {% if open_id == p.id %}open{% endif %}>
+        <summary>
+          <span class="cat-name">{{ p.label }}{% if p.builtin %} <span class="navtag">Built in</span>{% endif %}</span>
+          <span class="cat-meta">{{ p.types | map(attribute='label') | join(', ') }} &middot; {{ (p.subjects or []) | length }} subjects &middot; {{ p.rules | length }} rule file{{ '' if p.rules | length == 1 else 's' }}</span>
+          {% if p.enabled %}<span class="chip ok xs"><span class="dot"></span> On</span>{% else %}<span class="chip xs">Off</span>{% endif %}
+        </summary>
+        <div class="cat-body">
+          <div class="btn-row">
+            <button class="btn sm" type="button" hx-get="/settings/categories/{{ p.id }}/check" hx-target="#check-{{ p.id }}">{{ ico.i('shield', 13) }} Check category</button>
+            <form method="post" action="/settings/categories/{{ p.id }}/enabled">
+              <input type="hidden" name="on" value="{{ '0' if p.enabled else '1' }}">
+              <button class="btn ghost sm" type="submit">{{ 'Switch off' if p.enabled else 'Switch on' }}</button></form>
+          </div>
+          <div id="check-{{ p.id }}"></div>
+
+          <h3 class="sub-h">Rules</h3>
+          {% for r in p.rules %}
+          <form method="post" action="/settings/categories/{{ p.id }}/rule" class="rule-form">
+            <input type="hidden" name="name" value="{{ r.name }}">
+            <label class="field"><span>{{ r.label }} <span class="muted small mono">{{ r.name }}.txt</span></span>
+              <textarea name="text" rows="5">{{ r.text }}</textarea></label>
+            <div class="btn-row"><button class="btn sm primary" type="submit">Save</button>{% if r.backup %}<span class="hint">The previous text is kept as a backup.</span>{% endif %}</div>
+          </form>
+          {% else %}<p class="small muted">No rule files: this category makes the standard notes.</p>{% endfor %}
+          {% set have = p.rules | map(attribute='name') | list %}
+          {% set free = p.targets | rejectattr('name', 'in', have) | list %}
+          {% if free %}
+          <form method="post" action="/settings/categories/{{ p.id }}/rule" class="rule-form add-rule">
+            <div class="field-row">
+              <label class="field"><span>Add rules for</span><select name="name">{% for t in free %}<option value="{{ t.name }}">{{ t.label }}</option>{% endfor %}</select></label>
+            </div>
+            <label class="field"><span>Rules (one per line)</span><textarea name="text" rows="3" placeholder="e.g. Keep every formula with its units."></textarea></label>
+            <div class="btn-row"><button class="btn sm" type="submit">{{ ico.i('plus', 13) }} Add these rules</button></div>
+          </form>
+          {% endif %}
+
+          <h3 class="sub-h">Preview what a run follows</h3>
+          <form class="field-row preview-form" hx-get="/settings/categories/preview" hx-target="#preview-{{ p.id }}" hx-trigger="change, load">
+            <input type="hidden" name="category" value="{{ p.id }}">
+            <label class="field"><span>Note type</span><select name="note_type">{% for t in p.types %}<option value="{{ t.id }}">{{ t.label }}</option>{% endfor %}</select></label>
+            <label class="field"><span>Subject</span><select name="subject">{% for s in p.subject_choices %}<option value="{{ s.id }}">{{ s.label }}</option>{% endfor %}</select></label>
+          </form>
+          <div id="preview-{{ p.id }}"></div>
+        </div>
+      </details>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card" id="add">
+  <div class="hd"><div class="grow"><h2>Add a category</h2>
+    <p class="d">For a new exam (CLAT, SSC, Banking...). No code is needed when one of the note types fits.</p></div></div>
+  <form class="bd stack" method="post" action="/settings/categories/add">
+    <div class="field-row">
+      <label class="field"><span>Name</span><input type="text" name="label" maxlength="40" required placeholder="e.g. CLAT"></label>
+      <label class="field"><span>One line about it (optional)</span><input type="text" name="summary" maxlength="160" placeholder="e.g. Law entrance notes"></label>
+    </div>
+    <label class="field"><span>Subjects (one per line)</span><textarea name="subjects" rows="4" placeholder="Legal Reasoning&#10;English&#10;Current Affairs"></textarea></label>
+    <fieldset class="field"><span class="legend">Languages</span>
+      <div class="checks">{% for code, label in languages.items() %}<label class="row checkrow"><input type="checkbox" name="languages" value="{{ code }}" {% if code in ('auto', 'english', 'hindi') %}checked{% endif %}><span>{{ label }}</span></label>{% endfor %}</div></fieldset>
+    <fieldset class="field"><span class="legend">Note types</span>
+      <div class="checks">{% for t in all_types %}<label class="row checkrow {{ 'off' if t.status != 'ready' }}"><input type="checkbox" name="note_types" value="{{ t.id }}" {% if t.id == 'concise_handdrawn' %}checked{% endif %} {% if t.status != 'ready' %}disabled{% endif %}><span>{{ t.label }}{% if t.status != 'ready' %} <span class="navtag">Soon</span>{% endif %}</span></label>{% endfor %}</div></fieldset>
+    <label class="field"><span>What is different for this exam (one rule per line, optional)</span>
+      <textarea name="rules" rows="3" placeholder="e.g. Quote every section and article number exactly."></textarea></label>
+    <div class="btn-row"><button class="btn primary" type="submit">{{ ico.i('plus', 15) }} Add the category</button></div>
+  </form>
+</section>
+
+{% elif tab == '/settings/values' %}
+{# -------------------------------------------------------------- values #}
+<section class="card" id="values">
+  <div class="hd"><div class="grow"><h2>Values you can change</h2>
+    <p class="d">What the notes engine starts with. {% if imported.found %}They were copied once from the old project's settings{% else %}The old app's built-in values are used{% endif %}; the old app itself is not changed. Leave a box empty to use the old app's value. New values are used the next time {{ brand.APP_NAME }} opens.</p></div></div>
+  <form method="post" action="/settings/values">
+    <div class="tablewrap"><table class="data values-table">
+      <thead><tr><th>Value</th><th>Set to</th><th>Comes from</th></tr></thead>
+      <tbody>
+      {% for v in values if v.main %}
+        <tr><td>{{ v.label }}<div class="small muted mono">{{ v.key }}</div></td>
+          <td><input type="text" name="{{ v.key }}" value="{{ v.value }}" aria-label="{{ v.label }}"></td>
+          <td class="small">{{ v.source }}{% if v.in_use and v.in_use != v.value %}<div class="muted">in use now: {{ v.in_use }}</div>{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <details class="ft more-values"><summary class="small">More values</summary>
+      <div class="tablewrap"><table class="data values-table"><tbody>
+      {% for v in values if not v.main %}
+        <tr><td class="mono small">{{ v.key }}</td><td><input type="text" name="{{ v.key }}" value="{{ v.value }}" aria-label="{{ v.key }}"></td><td class="small">{{ v.source }}</td></tr>
+      {% endfor %}
+      </tbody></table></div></details>
+    <div class="ft"><div class="acts"><button class="btn primary" type="submit">Save values</button></div></div>
+  </form>
+</section>
+
+{% else %}
+{# -------------------------------------------------------------- system #}
+<section class="card" id="updates">
+  <div class="hd"><div class="grow"><h2>Updates</h2>
+    <p class="d">Automatic updates are on. New versions download from the team's Google Drive folder in the background while you work. When the download is checked and ready, a pop-up offers Install update. Your notes, runs and settings are kept.</p></div>
+    <span class="chip xs {{ 'info' if updates.available else 'ok' }}">{{ (updates.latest.version ~ ' available') if updates.available else 'Up to date' if updates.checked_at and not updates.error else 'Not checked yet' }}</span></div>
+  <div class="tablewrap"><table class="data values-table">
+    <tbody>
+      <tr><td>Installed</td><td><strong>{{ updates.current }}</strong> <span class="small muted">({{ CHANNEL }})</span></td></tr>
+      <tr><td>Newest in the folder</td><td>{% if updates.latest %}{{ updates.latest.version }} <span class="small muted">released {{ updates.latest.released }}</span>{% else %}<span class="muted">-</span>{% endif %}</td></tr>
+      <tr><td>Release folder</td><td class="small">{% if updates.source.folder_id %}<a href="https://drive.google.com/drive/folders/{{ updates.source.folder_id }}" target="_blank" rel="noopener noreferrer">{{ 'Your folder' if updates.source.own else 'The team folder' }}</a>{% else %}<span class="muted">Not set yet</span>{% endif %}</td></tr>
+      <tr><td>Read with</td><td class="small">{% if updates.team_account %}The team's service account <span class="mono">{{ updates.team_account }}</span>{% else %}Your Google sign-in <span class="muted">(no team key)</span>{% endif %}</td></tr>
+      {#- Only an update going on or one that failed: "Updated to <an old version>" is history (as QBG One). -#}
+      {% if updates.state and updates.state.state and updates.state.state != 'done' %}<tr><td>Last update</td><td class="small">{{ updates.state.error or updates.state.message or updates.state.state }}</td></tr>{% endif %}
+    </tbody>
+  </table></div>
+  {% if updates.error or updates.last_error or (updates.available and updates.notes) %}<div class="bd stack">
+    {% if updates.last_error %}<div class="note warn">{{ ico.state('warn', 16, 'nico') }}<div class="ntext"><div class="hd">{{ updates.last_error }}</div></div></div>{% endif %}
+    {% if updates.error %}<div class="note warn">{{ ico.state('warn', 16, 'nico') }}<div class="ntext"><div class="hd">The last check did not go through</div><div class="small">{{ updates.error }}</div></div></div>{% endif %}
+    {% if updates.available and updates.notes %}<div class="small"><strong>What is in it:</strong>
+      <ul class="update-notes">{% for line in updates.notes %}<li>{{ line }}</li>{% endfor %}</ul></div>{% endif %}
+  </div>{% endif %}
+  <div class="ft btn-row">
+    <form method="post" action="/update/check"><button class="btn sm" type="submit">{{ ico.i('arrow-right', 13) }} Check for updates</button></form>
+    {% if updates.available and updates.installed and updates.download_ready %}<form method="post" action="/update/install" data-confirm="Install {{ updates.latest.version }} now? {{ brand.APP_NAME }} closes and opens again by itself in about a minute.">
+      <button class="btn sm primary" type="submit">{{ ico.i('download', 13) }} Install update {{ updates.latest.version }}</button></form>{% endif %}
+    <span class="small muted">
+      {%- if updates.installed %}About a minute: {{ brand.APP_NAME }} closes, updates and opens again. Your notes stay.
+      {%- else %}Running from the project folder: new versions are installed with the installer.{% endif -%}
+    </span>
+  </div>
+  <details class="ft more-values"><summary class="small">Release folder</summary>
+    <form class="stack" method="post" action="/settings/updates">
+      <label class="field"><span>Google Drive folder link</span>
+        <input type="text" name="folder" value="{{ ('https://drive.google.com/drive/folders/' ~ updates.source.folder_id) if updates.source.own else '' }}" placeholder="https://drive.google.com/drive/folders/…">
+        <span class="hint">Leave empty to use the folder this version was built with. To release a version: put {{ updates.setup_name }}.exe (and its .txt notes) from dist\team\&lt;version&gt;\ into this folder.</span></label>
+      <div class="btn-row"><button class="btn sm primary" type="submit">Save</button></div>
+    </form>
+    <form class="stack" method="post" action="/settings/updates/team-key" enctype="multipart/form-data">
+      <label class="field"><span>Team key (service account)</span>
+        <input type="file" name="key" accept=".json,application/json">
+        <span class="hint">Only for whoever releases {{ brand.APP_NAME }}: the service account's .json key file, as in QBG One. The release folder is then read with it, and the team installer carries it, so nobody else adds anything. Share the folder with the service account's email as Viewer. The key is kept in your data folder and never shown.</span></label>
+      <div class="btn-row"><button class="btn sm primary" type="submit">Add team key</button></div>
+    </form>
+    {% if updates.team_key_here %}<form method="post" action="/settings/updates/team-key/remove" data-confirm="Remove the team key from this computer? A backup copy is kept in the data folder.">
+      <button class="btn sm" type="submit">Remove team key</button></form>{% endif %}
+  </details>
+</section>
+
+<section class="card" id="engines">
+  <div class="hd"><div class="grow"><h2>Note engines</h2>
+    <p class="d">Copies of your note apps that {{ brand.APP_NAME }} runs, and its own typeset notes engine. The original apps keep working exactly as before.</p></div></div>
+  <div class="tablewrap"><table class="data">
+    <thead><tr><th>Engine</th><th>Makes</th><th>For</th><th>State</th></tr></thead>
+    <tbody>
+    {% for e in engines %}
+      <tr><td><span class="row gap-2 nowrap">{{ ico.i(e.icon, 15) }} {{ e.label }}</span></td>
+        <td class="wrap-cell">{{ e.makes }}</td><td>{{ e.for }}</td>
+        <td>{% if e.copied %}<span class="chip ok xs"><span class="dot"></span> On board</span>
+              <div class="small muted">{% if e.builtin %}Part of {{ brand.APP_NAME }}{% else %}Copied {{ e.copied_on }}{% endif %}{% if e.files %} &middot; {{ e.files }} files{% endif %}</div>
+            {% else %}<span class="chip xs">Not in this installation</span>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+{% if upsc_available %}
+<section class="card" id="setup">
+  <div class="hd"><div class="grow"><h2>Check setup</h2>
+    <p class="d">What the UPSC engine needs on this computer: its Python, ffmpeg for class recordings, LibreOffice or Word for the PDF, and the handwriting fonts. Nothing is installed or changed.</p></div>
+    <div class="acts"><button class="btn sm" type="button" hx-get="/settings/system/check" hx-target="#setup-check"
+      hx-swap="outerHTML">{{ ico.i('shield', 13) }} Check setup</button></div></div>
+  <div id="setup-check"><p class="bd small muted">Press Check setup to look. It takes a few seconds.</p></div>
+</section>
+
+<section class="card" id="dpp">
+  <div class="hd"><div class="grow"><h2>DPP question bank</h2>
+    <p class="d">DPP sets are drawn from two Excel workbooks: the QBG tag workbook ({{ dpp_files.taxonomy }}) and the question bank ({{ dpp_files.questions }}). They are read where they are; nothing is copied.</p></div>
+    <span class="chip xs {{ 'ok' if dpp.ready else 'warn' }}">{{ 'Found' if dpp.ready else 'Missing' }}</span></div>
+  <form class="bd" method="post" action="/settings/system/dpp">
+    <label class="field"><span>Folder with both workbooks</span>
+      <input type="text" name="folder" value="{{ dpp.folder if dpp.chosen else '' }}" placeholder="{{ dpp.folder }}">
+      <span class="hint">Leave empty to use the UPSC engine's own data folder ({{ dpp_default }}). A shared folder works too.</span></label>
+    <div class="btn-row"><button class="btn primary sm" type="submit">Save</button>
+      {% if dpp.chosen %}<button class="btn ghost sm" type="submit" name="folder" value="">Back to the engine's folder</button>{% endif %}</div>
+  </form>
+</section>
+
+{% endif %}
+<section class="card" id="types">
+  <div class="hd"><div class="grow"><h2>Note types</h2><p class="d">The kinds of notes {{ brand.APP_NAME }} can make, and which engine makes each.</p></div></div>
+  <div class="tablewrap"><table class="data">
+    <thead><tr><th>Note type</th><th>Engine</th><th>From</th><th>Gives</th><th>State</th></tr></thead>
+    <tbody>{% for t in types %}
+      <tr><td>{{ t.label }}<div class="small muted">{{ t.summary }}</div></td><td>{{ engine_label(t.engine) }}</td>
+        <td class="small">{{ t.inputs | join(', ') | replace('_', ' ') }}</td><td class="small">{{ t.outputs | join(', ') | replace('_', ' ') }}</td>
+        <td>{% if not t.available %}<span class="chip xs">Not in this installation</span>{% elif t.status == 'ready' %}<span class="chip ok xs"><span class="dot"></span> Ready</span>{% else %}<span class="chip xs">Soon</span>{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+
+<section class="card" id="storage">
+  <div class="hd"><div class="grow"><h2>Where your work is kept</h2><p class="d">Nothing here deletes or moves anything.</p></div></div>
+  <ul class="needs">
+    {% for s in storage %}
+    <li><span class="nico">{{ ico.i('folder', 16) }}</span>
+      <div class="grow"><strong>{{ s.label }}{% if s.size %} <span class="muted small">&middot; {{ s.size }}</span>{% endif %}</strong>
+        <span class="mono small">{{ s.path }}</span><span class="small muted">{{ s.about }}</span></div></li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card" id="about">
+  <div class="hd"><div class="grow"><h2>About</h2></div></div>
+  <div class="bd"><div class="kvs">
+    <div class="kv"><span class="k">Version</span><span class="v">{{ about.version }} &middot; {{ about.channel }}</span></div>
+    <div class="kv"><span class="k">Address</span><span class="v mono">{{ about.address }}</span></div>
+    <div class="kv"><span class="k">Python</span><span class="v">{{ about.python }}</span></div>
+  </div></div>
+</section>
+{% endif %}
+{% endblock %}

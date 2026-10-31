@@ -1,0 +1,15 @@
+Noto Sans Devanagari
+====================
+
+Files:
+- NotoSansDevanagari-Regular.ttf
+- NotoSansDevanagari-Bold.ttf
+
+Official source:
+https://github.com/notofonts/noto-fonts/tree/main/hinted/ttf/NotoSansDevanagari
+
+License source:
+https://github.com/notofonts/devanagari/blob/main/OFL.txt
+
+The font files are distributed under the SIL Open Font License 1.1. The full
+license text is included alongside them as OFL.txt.

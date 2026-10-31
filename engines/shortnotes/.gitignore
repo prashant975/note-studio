@@ -1,0 +1,22 @@
+.env
+.env.local
+__pycache__/
+*.pyc
+*.pyo
+.vercel
+.venv/
+venv/
+*.log
+out_*.pdf
+
+.vercel
+
+service_account.json
+content-creation-*.json
+
+# Sheets/Drive bridge OAuth files
+client_secret*.json
+.shortnotes_bridge/
+
+# Which sheets this install drives (machine-specific; see sheets.json.example)
+sheets.json

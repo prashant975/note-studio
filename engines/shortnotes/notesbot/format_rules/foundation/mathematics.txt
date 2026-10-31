@@ -1,0 +1,9 @@
+FOUNDATION MATHS NOTES (class 9-10) - theory plus the teacher's solved examples.
+- Theory first in each section: definitions, theorems, formulas and identities
+  with their conditions, as short points.
+- Then that section's solved examples in worked_examples, in the order the
+  teacher solves them: the full question with its numbers, every step of the
+  teacher's working (one step per entry, each equation in $...$), and the final
+  answer. Do not skip or merge steps the teacher shows.
+- Keep each example under the concept it practises. Do not turn an example's
+  working into theory bullets as well.

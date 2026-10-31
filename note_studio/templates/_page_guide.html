@@ -1,0 +1,10 @@
+{#- The short guide above a page (guides.py). Folded state is remembered by app.js. -#}
+{% import "_icons.html" as ico with context %}
+{% if guide %}
+<details class="page-guide" data-guide="{{ request.url.path }}">
+  <summary>{{ ico.i('info', 14) }} <strong>{{ guide.title }}</strong></summary>
+  <div class="page-guide-body">
+    <ol>{% for step in guide.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+  </div>
+</details>
+{% endif %}

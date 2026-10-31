@@ -1,0 +1,3 @@
+Write chemical formulas and equations in maths, e.g. $\mathrm{H_2SO_4}$, with the reaction conditions given by the lecture.
+Give named reactions and mechanisms as numbered steps.
+Use tables to compare compounds, reagents or methods.

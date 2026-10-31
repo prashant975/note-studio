@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}{{ page.title }} - {{ brand.APP_NAME }}{% endblock %}
+{% block crumb %}<a href="/">{{ ico.i('arrow-left', 13) }} Overview</a>{% endblock %}
+
+{% block body %}
+<section class="soon">
+  <div class="soon-ico">{{ ico.i(page.icon, 26) }}</div>
+  {% if page.group %}<span class="hero-kicker">{{ page.group }}</span>{% endif %}
+  <h1>{{ page.title }}</h1>
+  <p class="sub">{{ page.lead }}</p>
+  <span class="chip info lg">{{ ico.i('clock', 13) }} Coming soon</span>
+</section>
+
+<section class="card soon-card">
+  <div class="hd"><div class="grow"><h2>What this page will do</h2></div></div>
+  <ul class="needs">
+    {% for p in page.points %}
+    <li><span class="nico ok">{{ ico.i('check', 16) }}</span><div class="grow"><span>{{ p }}</span></div></li>
+    {% endfor %}
+  </ul>
+  <div class="ft"><span class="small muted">Until then, the original app keeps doing this exactly as today.</span>
+    <div class="acts"><a class="btn sm" href="/">Back to Overview</a></div></div>
+</section>
+{% endblock %}

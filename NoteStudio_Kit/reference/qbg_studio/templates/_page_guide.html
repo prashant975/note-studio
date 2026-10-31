@@ -1,0 +1,13 @@
+{#- A short guide at the top of a main screen (guides.py): what it is for, then
+    the steps. Open on the first visit to a screen, folded after that (app.js,
+    data-page-guide), so the screen's own work is what the page starts with. -#}
+{% set guide = page_guide(here) if page_guide is defined and here is defined else none %}
+{% if guide %}
+<details class="page-guide" data-page-guide="{{ guide.key }}">
+  <summary><strong>How this works</strong> <span class="muted">{{ guide.title }}</span></summary>
+  <div class="page-guide-body">
+    <p>{{ guide.about }}</p>
+    <ol>{% for step in guide.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+  </div>
+</details>
+{% endif %}

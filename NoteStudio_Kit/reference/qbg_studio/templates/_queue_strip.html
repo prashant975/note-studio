@@ -1,0 +1,11 @@
+{#- A one-line view of the Smart Queue for the task screens, shown only while
+    something waits or runs in it (job_queue). The full card is on Autopilot,
+    New batch and the Smart Queue page. -#}
+{% set strip = queue_overview() if queue_overview is defined else none %}
+{% if strip and strip.active %}
+<div class="note info queue-strip"><div class="ntext"><div class="bd">
+  <strong>Smart Queue:</strong> {{ strip.running|length }} running{% if strip.waiting %}, {{ strip.waiting|length }} waiting{% endif %}{% if strip.paused %} &middot; on hold{% endif %}.
+  Anything you start now joins the line and runs by itself when its turn comes.
+  <a href="/work-queue">Open Smart Queue</a>
+</div></div></div>
+{% endif %}

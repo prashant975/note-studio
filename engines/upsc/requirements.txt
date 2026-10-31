@@ -1,0 +1,64 @@
+# Use a recent Streamlit: native Google login (st.login) had auth bugs in the
+# early 1.4x releases — clicking "Continue with Google" could 400 with
+# "'NoneType' object does not support item assignment". 1.58+ fixes it.
+streamlit[auth]>=1.58
+# Keep Authlib 1.7.x (the version Streamlit's OAuth login is tested against).
+# Its `authlib.jose` DeprecationWarning is cosmetic and is silenced at app
+# startup (see app.py).
+Authlib>=1.7,<2
+python-dotenv>=1.0
+requests>=2.31
+google-genai>=1.0
+google-auth>=2.0
+pymupdf>=1.24
+# QC engine: rule set + approved-source registry are YAML (config/upsc_qc_*.yaml).
+PyYAML>=6.0
+python-pptx>=0.6.23
+python-docx>=1.1
+openpyxl>=3.1
+Pillow>=10.0
+# --- Lecture video -> transcript --------------------------------------------
+# The app takes a video link (Google Drive / YouTube / direct URL) and makes the
+# transcript itself. ffmpeg + ffprobe must be on PATH: they read the audio
+# straight off the remote video, so no video is ever downloaded.
+#
+# YouTube captions are the fast path (free, no API key, ~2 s).
+youtube-transcript-api>=1.2
+# For YouTube videos with no captions: fetches the audio track so it can be
+# transcribed. Not used by the Drive or direct-URL paths, which stream instead.
+yt-dlp>=2024.1
+# Google Drive and direct/CDN video access reuse `requests` and `google-auth`,
+# both already required above — no Drive-specific package is needed.
+#
+# OPTIONAL: local speech-to-text, enabled with TRANSCRIPTION_ENGINE=faster_whisper.
+# Deliberately not installed by default: it pulls in CTranslate2 and downloads a
+# model, and on CPU it transcribes at roughly realtime, so a 2-hour class takes
+# about 2 hours. Gemini does the same class in minutes through the proxy.
+#   pip install faster-whisper
+pywin32>=306; platform_system == "Windows"
+
+# --- DPP question-set builder (src/notes_to_dpp) -----------------------------
+# Turns a finished notes PDF into a curated practice set from the QBG question
+# bank. The package is UI-free; the Streamlit panel lives in app.py.
+pandas>=2.2
+# Question and solution PDFs. [shaping] pulls uharfbuzz, which is what makes
+# Devanagari conjuncts render correctly rather than as separate glyphs.
+reportlab[shaping]>=4.4
+# Ranks taxonomy candidates. It can only ever choose from rows that exist in
+# the QBG workbook — it never invents a label.
+rapidfuzz>=3.0
+# OCR for scanned notes, OPTIONAL: a text PDF needs none of this, and the app
+# reports the missing engine rather than failing when a scan is uploaded.
+#   pip install rapidocr
+# `rapidocr` is the maintained package and the only one that installs on
+# Python 3.13; the older `rapidocr-onnxruntime` caps at <3.13 and is still
+# accepted if already present.
+
+# --- tests -------------------------------------------------------------------
+pytest>=8.0
+# The lint gate in tests/test_silent_failure_guards.py. `date.today()` with
+# `date` never imported shipped and ran on every lecture for weeks: the call
+# sat inside a broad `except Exception`, so the NameError became a warning line
+# and the error-report verification pass silently never ran. pyflakes catches
+# that class of bug in under a second, so it is a test rather than a habit.
+pyflakes>=3.2

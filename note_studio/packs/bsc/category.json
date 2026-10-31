@@ -1,0 +1,25 @@
+{
+  "_comment": "Built-in pack for B.Sc. (26 October 2026), from the team's B.Sc. Wallah sample notes. It offers the typeset notes (note_studio/typeset), whose layout is the samples'. branding is printed on every page: header_left (also the notes' brand), header_right, footer_left, footer_right; audience is who the notes are written for. rules/ holds plain commands added after the engine's own prompt; edit them in Settings -> Categories.",
+  "id": "bsc",
+  "label": "B.Sc.",
+  "enabled": true,
+  "builtin": true,
+  "order": 4,
+  "summary": "B.Sc. Wallah typeset notes from a lecture PDF: coloured boxes, tables, labelled figures and Key Takeaways.",
+  "subjects": [
+    {"id": "physics", "label": "Physics"},
+    {"id": "chemistry", "label": "Chemistry"},
+    {"id": "mathematics", "label": "Mathematics"},
+    {"id": "botany", "label": "Botany"},
+    {"id": "zoology", "label": "Zoology"}
+  ],
+  "subject_auto": true,
+  "languages": ["english", "hindi", "hinglish"],
+  "language_required": false,
+  "note_types": ["typeset_notes"],
+  "default_note_type": "typeset_notes",
+  "inputs": ["pdf_upload"],
+  "branding": {"header_left": "B.Sc. Wallah", "header_right": "B.Sc. Notes", "footer_left": "B.Sc. Wallah",
+               "footer_right": "Concept • Understand • Apply", "audience": "B.Sc."},
+  "rules_dir": "rules"
+}

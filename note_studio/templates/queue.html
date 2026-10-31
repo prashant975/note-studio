@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}Smart Queue - {{ brand.APP_NAME }}{% endblock %}
+{% block topacts %}
+  {% if not hold %}<form method="post" action="/queue/pause"><button class="btn sm ghost" type="submit">{{ ico.i('pause', 13) }} Pause the queue</button></form>{% endif %}
+  <a class="btn sm" href="/new">{{ ico.i('plus', 13) }} New notes</a>
+{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="grow">
+    <h1>Smart Queue</h1>
+    <p class="sub">Everything you start waits here and runs by itself: notes and sheets side by side, each one at a time, in the order added.</p>
+  </div>
+</div>
+
+{% if hold %}
+<div class="note warn hold-note">{{ ico.i('pause', 16, 'nico') }}<div class="ntext">
+  <div class="hd">The queue is holding</div>
+  <div class="bd">{{ hold_words }}</div>
+  <form method="post" action="/queue/continue" class="btn-row"><button class="btn primary sm" type="submit">{{ ico.i('arrow-right', 13) }} Continue the queue</button></form>
+</div></div>
+{% endif %}
+
+{% include "_queue_lanes.html" %}
+
+<section class="card">
+  <div class="hd"><div class="grow"><h2>Recently finished</h2></div></div>
+  {% if finished %}
+  <div class="tablewrap"><table class="data">
+    <thead><tr><th>What</th><th>Lane</th><th>Outcome</th><th>Note</th><th>Finished</th></tr></thead>
+    <tbody>{% for f in finished %}
+      <tr><td>{% if f.run %}<a class="run-link" href="/runs/{{ f.run.id }}">{{ f.title }}</a>{% else %}{{ f.title }}{% endif %}</td>
+        <td>{{ 'Notes' if f.lane == 'notes' else 'Sheets' }}</td>
+        <td><span class="chip xs {{ f.cls }}">{{ f.words }}</span></td>
+        <td class="wrap-cell small">{{ f.note }}</td>
+        <td><span class="small muted" data-time="{{ f.finished_at or f.created_at }}"></span></td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="bd"><p class="quiet-line">{{ ico.i('inbox', 15) }} Nothing has finished yet.</p></div>{% endif %}
+</section>
+{% endblock %}

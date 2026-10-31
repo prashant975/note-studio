@@ -1,0 +1,198 @@
+{#- One practice set as it is now. Polled only while a step runs or waits, so ticks are never lost. -#}
+{% import "_icons.html" as ico with context %}
+{% set base = '/practice/' ~ run.id %}
+<div id="practice-card" {% if busy or queued %}hx-get="{{ base }}/card{{ '?' ~ query if query }}" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+
+{% if busy %}
+<div class="note info">{{ ico.i('clock', 16, 'nico') }}<div class="ntext"><div class="hd"><span class="spinner sm"></span> {{ run.message }}</div>
+  <div class="bd">This page updates by itself.</div></div></div>
+{% elif queued %}
+<div class="note info">{{ ico.i('layers', 16, 'nico') }}<div class="ntext"><div class="hd">{{ run.message }}</div>
+  <div class="bd">It starts when the Notes lane of the <a href="/queue">Smart Queue</a> is free.</div></div></div>
+{% elif last.status == 'failed' and last.message %}
+<div class="note warn" role="alert">{{ ico.state('warn', 16, 'nico') }}<div class="ntext"><div class="hd">{{ last.message }}</div>
+  {% if last.code == 'sign_in' %}<div class="bd"><a href="/settings#signin">Open Sign-in</a></div>{% endif %}</div></div>
+{% endif %}
+
+{% if kind == 'dmp' %}
+{# ------------------------------------------------------------- Mains practice #}
+{% set v = view %}
+<section class="card">
+  <div class="hd"><div class="grow"><h2>Practice questions</h2>
+    <p class="d">Ten questions in three levels (4 easy, 3 moderate, 3 applied), written from these notes. Tick the ones you want: model answers are written only for those, one PW AI call each.</p></div>
+    {% if v.sessions | length > 1 %}
+    <form class="acts" method="post" action="{{ base }}/dmp/set">
+      <select name="session" onchange="this.form.submit()" aria-label="Practice set">
+        {% for s in v.sessions %}<option value="{{ s.dmp_session_id }}" {% if s.dmp_session_id == v.session_id %}selected{% endif %}>Set of {{ s.created_at[:16] | replace('T', ' ') }} &middot; {{ s.answered }}/{{ s.total }} answered</option>{% endfor %}
+      </select></form>
+    {% endif %}
+  </div>
+  {% if not v.session %}
+  <div class="bd">
+    <p class="quiet-line">{{ ico.i('sparkles', 15) }} No practice questions yet.</p>
+    <form method="post" action="{{ base }}/dmp/questions" data-confirm="Write ten practice questions from these notes? This uses PW AI credit (three calls).">
+      <button class="btn primary" type="submit" {% if busy or queued %}disabled{% endif %}>{{ ico.i('sparkles', 14) }} Make practice questions</button></form>
+  </div>
+  {% else %}
+  <form method="post" action="{{ base }}/dmp/answers" id="dmp-form">
+    <ol class="dmp-list">
+      {% for q in v.questions %}
+      {% if loop.first or q.level != v.questions[loop.index0 - 1].level %}<li class="dmp-level">{{ q.level_words }}</li>{% endif %}
+      <li class="dmp-q">
+        <label class="row checkrow"><input type="checkbox" name="q" value="{{ q.id }}" {% if not q.answered %}checked{% endif %}>
+          <span><strong>Q{{ q.number }}.</strong> ({{ q.marks }}) {{ q.text }}</span></label>
+        {% if q.answered %}<details class="dmp-answer"><summary class="small">Model answer {{ ico.i('check', 12) }}</summary>
+          <div class="answer-text">{{ q.answer_text }}</div></details>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    <div class="bd">
+      <p class="small quiet-line">Printed at the top of the sheets. Leave a box empty to use the lecture's own.</p>
+      <label class="field"><span>Subject</span><input type="text" name="sheet_subject" value="{{ v.labels.subject or '' }}" placeholder="e.g. Society, Social Issues, Social Justice" maxlength="200"></label>
+      <label class="field"><span>Topic</span><input type="text" name="sheet_topic" value="{{ v.labels.topic or '' }}" placeholder="e.g. Urbanization (Part 03)" maxlength="200"></label>
+      <label class="field"><span>DMP No.</span><input type="text" name="sheet_dmp_no" value="{{ v.labels.dmp_no or '' }}" placeholder="e.g. 19" maxlength="12"></label>
+    </div>
+    <div class="ft btn-row">
+      <button class="btn primary" type="submit" {% if busy or queued %}disabled{% endif %}
+        data-confirm="Write model answers for the ticked questions that have none yet? One PW AI call each.">{{ ico.i('sparkles', 14) }} Make model answers for the ticked</button>
+      <button class="btn" type="submit" formaction="{{ base }}/dmp/sheet/questions" {% if busy or queued %}disabled{% endif %}>{{ ico.i('file-text', 14) }} Question paper (ticked)</button>
+      {% if v.answered %}<button class="btn" type="submit" formaction="{{ base }}/dmp/sheet/answers" {% if busy or queued %}disabled{% endif %}>{{ ico.i('file-text', 14) }} Model answers sheet ({{ v.answered }})</button>{% endif %}
+    </div>
+  </form>
+  <div class="ft"><form method="post" action="{{ base }}/dmp/questions" data-confirm="Write a new set of ten practice questions? This uses PW AI credit (three calls). The current set is kept.">
+    <button class="btn ghost sm" type="submit" {% if busy or queued %}disabled{% endif %}>{{ ico.i('plus', 13) }} New practice set</button></form></div>
+  {% endif %}
+</section>
+{% if v.sheets %}
+<section class="card">
+  <div class="hd"><div class="grow"><h2>Sheets</h2><p class="d">The answer sheet prints every answered question, as in the UPSC Notes app.</p></div></div>
+  <ul class="needs files">{% for f in v.sheets %}
+    <li><span class="nico ok">{{ ico.i('file-text', 16) }}</span>
+      <div class="grow"><strong>{{ f.name }}</strong><span class="small muted">{{ 'PDF' if f.suffix | lower == '.pdf' else 'Word document' }}</span></div>
+      <a class="btn sm" href="{{ base }}/files/sheets/{{ f.name | urlencode }}">{{ ico.i('download', 13) }} Download</a></li>
+  {% endfor %}</ul>
+</section>
+{% endif %}
+
+{% else %}
+{# ------------------------------------------------------------------------ DPP #}
+{% set v = view %}
+{% if not masters.ready %}
+<div class="note warn">{{ ico.state('warn', 16, 'nico') }}<div class="ntext"><div class="hd">The QBG tag workbook and the question bank are not on this computer</div>
+  <div class="bd">Expected in <span class="mono">{{ masters.folder }}</span>. Choose their folder in <a href="/settings/system#dpp">Settings → System</a>.</div></div></div>
+{% endif %}
+
+{% if not st.coverage %}
+<section class="card"><div class="bd">
+  {% if busy %}<p class="quiet-line"><span class="spinner sm"></span> Matching these notes against the QBG taxonomy. The first time, the question bank is read too (about half a minute).</p>
+  {% else %}
+  <p class="quiet-line">{{ ico.i('info', 15) }} {{ "No chapter or topic in the QBG taxonomy matched these notes, so there is nothing to draw questions from. This usually means the lecture's subject is not in the tag workbook." if last.action == 'dpp_topics' and last.status == 'complete' else 'The topics are not matched yet.' }}</p>
+  <form method="post" action="{{ base }}/dpp/again"><button class="btn sm" type="submit">{{ ico.i('arrow-right', 13) }} Match the topics again</button></form>
+  {% endif %}
+</div></section>
+
+{% elif not st.slots %}
+<section class="card">
+  <div class="hd"><div class="grow"><h2>1. Topics to draw questions from</h2>
+    <p class="d">{{ v.topics.rows | length }} topic(s) from the tag workbook{% if v.topics.hidden %} ({{ v.topics.hidden }} weaker match(es) hidden){% endif %}. Every one is an existing row; nothing is invented. Untick anything this lecture did not really cover.</p></div></div>
+  <form class="bd dpp-filter" method="get" action="{{ base }}">
+    {% if v.topics.subjects | length > 1 %}<label class="field"><span>Subject</span>
+      <select name="subject" onchange="this.form.submit()">{% for value, label in v.topics.subjects %}<option value="{{ value }}" {% if value == v.topics.subject %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>{% endif %}
+    {% if v.topics.chapters %}<label class="field"><span>Chapter</span>
+      <select name="chapter" onchange="this.form.submit()"><option value="">All chapters</option>{% for value, label in v.topics.chapters %}<option value="{{ value }}" {% if value == v.topics.chapter %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>{% endif %}
+    <label class="row checkrow"><input type="checkbox" name="weak" value="1" {% if v.topics.weak %}checked{% endif %} onchange="this.form.submit()"><span>Show weaker matches</span></label>
+  </form>
+  <form method="post" action="{{ base }}/dpp/topics">
+    <div class="bd stack">
+      {% for r in v.topics.rows %}<label class="row checkrow"><input type="checkbox" name="row" value="{{ r.row_id }}" {% if r.ticked %}checked{% endif %}><span>{{ r.label }}</span></label>{% endfor %}
+    </div>
+    <div class="bd field-row">
+      <div class="field"><span>Question language</span>
+        {% if st.note_language_code == 'mr' %}
+        <p class="small">These notes are in Marathi. The question bank holds English and Hindi questions only, so there is no Marathi set to draw from. Choose which language of questions you want instead.</p>
+        <select name="language">{% for l in ('English', 'Hindi') %}<option value="{{ l }}" {% if (st.language or 'English') == l %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+        {% else %}<input type="hidden" name="language" value="{{ st.language or 'English' }}"><strong>{{ st.language or 'English' }}</strong> <span class="small muted">(the notes' language)</span>{% endif %}
+      </div>
+      <div class="field"><span>Questions</span>
+        <label class="row checkrow"><input type="checkbox" name="verified" {% if st.verified_only is not sameas false %}checked{% endif %}><span>Verified questions only</span></label></div>
+    </div>
+    <div class="ft btn-row">
+      <button class="btn primary" type="submit" name="mode" value="difficulty" {% if busy %}disabled{% endif %}>{{ ico.i('arrow-right', 14) }} Choose by difficulty</button>
+      <button class="btn" type="submit" name="mode" value="pick" {% if busy %}disabled{% endif %}>{{ ico.i('list', 14) }} Pick questions myself</button>
+    </div>
+  </form>
+</section>
+
+{% if st.mode == 'pick' and v.pick.has_pool %}
+<section class="card">
+  <div class="hd"><div class="grow"><h2>2. Pick the questions</h2>
+    <p class="d">{{ v.pick.count }} question(s) match &middot; {{ v.pick.picked | length }} ticked. The paper follows the order you tick them in.</p></div></div>
+  <form class="bd dpp-filter" method="get" action="{{ base }}">
+    <label class="field"><span>Difficulty</span><select name="level" onchange="this.form.submit()">{% for l in ('All', 'Easy', 'Medium', 'Hard') %}<option {% if l == v.pick.level %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+    <label class="field"><span>Topic</span><select name="topic" onchange="this.form.submit()"><option value="All">All</option>{% for rid, label in v.pick.topics.items() %}<option value="{{ rid }}" {% if rid == v.pick.topic %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    {% if v.pick.pages > 1 %}<label class="field"><span>Page (of {{ v.pick.pages }})</span><input type="number" name="page" min="1" max="{{ v.pick.pages }}" value="{{ v.pick.page }}" onchange="this.form.submit()"></label>{% endif %}
+  </form>
+  <ul class="dpp-pool">
+    {% for q in v.pick.listed %}
+    <li><form method="post" action="{{ base }}/dpp/tick/{{ q.question_id }}{{ '?' ~ query if query }}">
+      <button class="btn {{ 'primary' if q.question_id in v.pick.picked else 'ghost' }} sm" type="submit">{{ ico.i('check', 12) if q.question_id in v.pick.picked else ico.i('plus', 12) }} {{ 'Ticked' if q.question_id in v.pick.picked else 'Tick' }}</button></form>
+      <div class="grow"><span class="chip xs">{{ q.difficulty }}</span> <span class="small muted">{{ q.topic }}</span>
+        <div class="q-text">{{ q.prompt }}</div>
+        <div class="q-options">{% for o in q.options %}<div>{{ 'ABCDEFGH'[loop.index0] }}. {{ o }}</div>{% endfor %}</div></div></li>
+    {% endfor %}
+  </ul>
+  <div class="ft"><form method="post" action="{{ base }}/dpp/pick"><button class="btn primary" type="submit" {% if not v.pick.picked or busy %}disabled{% endif %}>{{ ico.i('arrow-right', 14) }} Build practice set ({{ v.pick.picked | length }} ticked)</button></form></div>
+</section>
+{% elif st.mode != 'pick' and v.counts %}
+<section class="card">
+  <div class="hd"><div class="grow"><h2>2. How many of each</h2>
+    <p class="d">Available for these topics in {{ st.language }}: {% for c in v.counts %}{{ c.name }} {{ c.cap }}{% if not loop.last %} &middot; {% endif %}{% endfor %}</p></div></div>
+  {% if not v.available_total %}
+  <div class="bd"><p class="quiet-line">{{ ico.i('info', 15) }} The question bank has no {{ st.language }} questions for the topics selected above. Pick different topics, or check that the bank holds questions in this language.</p></div>
+  {% else %}
+  <form method="post" action="{{ base }}/dpp/build">
+    <div class="bd field-row three">{% for c in v.counts %}
+      <label class="field"><span>{{ c.name }}</span><input type="number" name="{{ c.name }}" min="0" max="{{ c.cap }}" value="{{ c.value }}" {% if not c.cap %}disabled{% endif %}></label>{% endfor %}</div>
+    <div class="ft"><button class="btn primary" type="submit" {% if busy %}disabled{% endif %}>{{ ico.i('arrow-right', 14) }} Build the practice set</button></div>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
+{% else %}
+<section class="card">
+  <div class="hd"><div class="grow"><h2>{{ st.slots | length }} questions &middot; {{ st.language }}</h2>
+    {% if st.flash %}<p class="d">{{ st.flash }}</p>{% endif %}</div>
+    <form class="acts" method="post" action="{{ base }}/dpp/new"><button class="btn ghost sm" type="submit" {% if busy %}disabled{% endif %}>{{ ico.i('plus', 13) }} Start a new set</button></form></div>
+  <ol class="dpp-set">
+    {% for s in v.slots %}
+    <li><div class="grow"><strong>Q{{ s.number }}.</strong> <span class="chip xs">{{ s.difficulty }}</span>
+        <div class="q-text">{{ s.prompt }}</div>
+        <div class="q-options">{% for o in s.options %}<div>{{ 'ABCDEFGH'[loop.index0] }}. {{ o }}</div>{% endfor %}</div></div>
+      <div class="acts">
+        <form method="post" action="{{ base }}/dpp/replace/{{ s.slot_id }}"><button class="btn sm" type="submit" {% if busy %}disabled{% endif %}>Replace</button></form>
+        <form method="post" action="{{ base }}/dpp/remove/{{ s.slot_id }}"><button class="btn ghost sm" type="submit" {% if busy %}disabled{% endif %}>Remove</button></form>
+      </div></li>
+    {% endfor %}
+  </ol>
+</section>
+<section class="card">
+  <div class="hd"><div class="grow"><h2>3. The files</h2><p class="d">Question paper, solutions, both together, the QBG IDs and a ZIP of everything.</p></div></div>
+  <form method="post" action="{{ base }}/dpp/files">
+    <div class="bd field-row">
+      <label class="field"><span>DPP No. for this practice set</span><input type="text" name="dpp_no" value="{{ v.dpp_no }}" placeholder="03" maxlength="6">
+        <span class="hint">Printed in the PDFs and used in their file names. Prefilled from the lecture when it has one.</span></label>
+      <label class="field"><span>Subject printed on the PDFs</span><input type="text" name="subject" value="{{ v.subject_value }}" placeholder="Geography" maxlength="120"></label>
+    </div>
+    <div class="ft"><button class="btn primary" type="submit" {% if busy %}disabled{% endif %}>{{ ico.i('file-text', 14) }} Build the practice set files</button></div>
+  </form>
+  {% if v.files %}
+  <ul class="needs files">{% for f in v.files %}
+    <li><span class="nico ok">{{ ico.i('file-text', 16) }}</span><div class="grow"><strong>{{ f.label }}</strong><span class="small muted">{{ f.file }}</span></div>
+      <a class="btn sm" href="{{ base }}/files/dpp/{{ f.file | urlencode }}">{{ ico.i('download', 13) }} Download</a></li>
+  {% endfor %}</ul>
+  {% endif %}
+</section>
+{% endif %}
+{% endif %}
+</div>

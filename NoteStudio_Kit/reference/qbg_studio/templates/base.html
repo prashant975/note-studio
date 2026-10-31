@@ -1,0 +1,186 @@
+{#-
+  The application shell: sidebar, top bar, content column, toasts.
+
+  Everything is vendored locally - no CDN, no build step, no icon font. The
+  stylesheet and script are versioned by their own mtime (see app._asset), so
+  a redesign can never again ship as new markup against a cached stylesheet.
+
+  Pages extend this and fill {% block body %}. Two optional blocks:
+    crumb    what sits in the top bar beside the page name
+    topacts  buttons in the top bar's right-hand side
+
+  Nothing here is decorative. The sidebar answers "where am I, where else can
+  I go"; the top bar answers "what is this page, and is the machine busy".
+  Both stay put while the content scrolls.
+-#}
+{% import "_icons.html" as ico with context %}
+{% set here = request.url.path if request else '/' %}
+
+{%- macro navlink(href, label, icon, match='', tag='', tagcls='', hint='', cls='') -%}
+  {%- set on = (here == href) or (match and here.startswith(match)) -%}
+  <a class="{{ 'on' if on else '' }} {{ cls }}" href="{{ href }}"
+     {% if on %}aria-current="page"{% endif %}{% if hint %} title="{{ hint }}"{% endif %}>
+    {{ ico.i(icon, 17) }}
+    <span class="grow">{{ label }}{% if hint %}<span class="navhint">{{ hint }}</span>{% endif %}</span>
+    {%- if tag %}<span class="navtag {{ tagcls }}">{{ tag }}</span>{% endif -%}
+  </a>
+{%- endmacro -%}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{% block title %}QBG One{% endblock %}</title>
+  <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="{{ asset('style.css') }}">
+  <link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48 256x256" href="{{ asset('icons/qbg-studio.ico') }}">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="{{ asset('icons/qbg-studio.svg') }}">
+  <link rel="apple-touch-icon" href="{{ asset('icons/qbg-studio.png') }}">
+  <script src="/static/vendor/htmx.min.js" defer></script>
+  <script src="/static/vendor/katex/katex.min.js" defer></script>
+  <script src="/static/vendor/katex/auto-render.min.js" defer></script>
+  <script src="{{ asset('app.js') }}" defer></script>
+  <script src="{{ asset('language_tabs.js') }}" defer></script>
+  <script src="{{ asset('release.js') }}" defer></script>
+  <script src="{{ asset('report_sheets.js') }}" defer></script>
+  <script src="{{ asset('messages.js') }}" defer></script>
+  <script src="{{ asset('celebrations.js') }}" defer></script>
+  <script src="{{ asset('whats_new.js') }}" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+
+<div class="shell">
+
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <a class="brand" href="/dashboard">
+      <img src="{{ asset('icons/qbg-studio.svg') }}" width="32" height="32" alt="" aria-hidden="true">
+      <span class="grow">
+        QBG One
+        <span class="sub">All QBG work in one place</span>
+      </span>
+    </a>
+
+    <nav>
+      {% if hosted_studio %}<a href="/setup">Account and connection</a>{% endif %}
+      {#- Grouped by the job a person came to do, most used first (4 October
+          2026; the order follows three weeks of real use). -#}
+      {{ navlink('/dashboard', 'Overview', 'gauge') }}
+      {#- The Smart Queue: everything started while QBG is busy waits here and
+          runs by itself. Marked, with how many are waiting; it breathes while
+          it is running something. -#}
+      {{ navlink('/work-queue', 'Smart Queue', 'clock', '/work-queue',
+                 ('%d waiting' % nav.queue_waiting) if nav.queue_waiting else ('Running' if nav.queue_running else 'New'),
+                 'live' if nav.queue_running else 'brand',
+                 'Add many papers & tasks at once; they run one by one', 'smart') }}
+
+      <div class="navgroup">Add papers</div>
+      {{ navlink('/new', 'New batch', 'plus') }}
+      {#- Autopilot runs every stage in one go; it pulses while a run is going. -#}
+      {{ navlink('/autopilot', 'Autopilot', 'sparkles', '/autopilot',
+                 'Running' if nav.autopilot_running else '', 'live') }}
+      {{ navlink('/', 'Batches', 'file-text') }}
+
+      <div class="navgroup">Work on QBG questions</div>
+      {{ navlink('/search', 'Search questions', 'search', '/search') }}
+      {#- '/translate/' with the slash, so /translation-runs never lights it.
+          The classic Translation Bot and its Past runs entry were removed on
+          19 September 2026; Translate questions is Bulk translation (GPT). -#}
+      {{ navlink('/tagging', 'Tag questions', 'list-checks', '/tagging') }}
+      {{ navlink('/translate', 'Translate questions', 'languages', '/translate/') }}
+      {{ navlink('/video-tagging', 'Video tagging', 'video', '/video-tagging') }}
+      {{ navlink('/verify', 'Verify questions', 'shield', '/verify') }}
+      {{ navlink('/solutions', 'Solutions', 'book', '/solutions',
+                 nav.solution_tag, nav.solution_cls) }}
+
+      <div class="navgroup">Make papers</div>
+      {{ navlink('/word-export', 'Generate paper', 'download', '/word-export') }}
+      {{ navlink('/question-bank', 'Question bank', 'database', '/question-bank') }}
+
+      <div class="navgroup">System</div>
+      {{ navlink('/settings', 'Settings', 'settings', '',
+                 nav.settings_tag, nav.settings_cls) }}
+    </nav>
+
+    <div class="sidefoot">
+      <div class="release-info" data-release-info aria-live="polite"
+           title="Installed release version and release update time">
+        <span data-release-version>Checking version…</span>
+        <time data-release-updated></time>
+        <div data-update-slot hidden></div>
+        <a class="small" href="/work-queue" data-whats-new>What's new</a>
+      </div>
+      {#- Who the AI work is charged to. preflight rides on every render. -#}
+      {% set pw = preflight.pw if preflight else none %}
+      <a class="who" href="/settings">
+        <span class="avatar" aria-hidden="true">
+          {{- (pw.email[0] if pw and pw.email else 'Q') | upper -}}
+        </span>
+        <span class="grow">
+          <span class="nm">
+            {{- (pw.email.split('@')[0] if pw and pw.email else 'Not signed in') -}}
+          </span>
+          <span class="st">
+            {%- if pw and pw.usable %}PW proxy connected
+            {%- else %}Sign in to PW{% endif -%}
+          </span>
+        </span>
+      </a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="btn icon ghost burger" type="button"
+              data-nav-toggle aria-label="Open navigation" aria-controls="sidebar"
+              aria-expanded="false">{{ ico.i('menu', 18) }}</button>
+
+      <div class="crumb">
+        {% block crumb %}
+          <span class="now">{{ self.title() | replace(' - QBG One', '') }}</span>
+        {% endblock %}
+      </div>
+
+      <div class="acts">
+        {% block topacts %}{% endblock %}
+        {#- The one fact worth carrying on every screen: whether a portal job
+            is running, because only one may. Read from the same job table
+            the Overview reads, so it cannot disagree with it. -#}
+        {% if nav.running %}
+          <a class="chip info" href="/dashboard"
+             title="Only one portal job runs at a time">
+            <span class="spinner sm"></span>
+            {{ nav.running }}
+          </a>
+        {% elif nav.health_bad %}
+          <a class="chip danger" href="/dashboard">
+            {{ ico.i('alert-circle', 13) }}
+            {{ nav.health_bad }} to fix
+          </a>
+        {% endif %}
+      </div>
+    </header>
+
+    <main class="wrap {% block wrapclass %}{% endblock %}" id="content">
+      {% if hosted_studio %}<p class="muted">Your private paper workspace. Portal uploads currently use desktop Studio.</p>{% endif %}
+      {% include '_page_guide.html' %}
+      {% block body %}{% endblock %}
+    </main>
+  </div>
+
+</div>
+
+<div id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+{#- Team support notices: a teammate is told when the feature is on and when a
+    safe fix is offered or applied. Desktop QBG One only; refreshes itself. -#}
+{% if not hosted_studio %}
+<div id="team-support-banner" aria-live="polite"
+     style="position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:60;width:min(520px,calc(100% - 32px));display:flex;flex-direction:column;gap:8px;"
+     hx-get="/team-support/notifications" hx-trigger="load, every 30s" hx-swap="innerHTML"></div>
+{% endif %}
+
+{% block foot %}{% endblock %}
+</body>
+</html>

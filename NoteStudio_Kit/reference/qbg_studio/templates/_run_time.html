@@ -1,0 +1,11 @@
+{% macro show(timestamp) -%}
+  {% set saved = run_time(timestamp|default(none)) %}
+  {% if saved %}
+    <time datetime="{{ saved.iso }}" class="cellstack">
+      <span>{{ saved.date }}</span>
+      <span class="small muted">{{ saved.time }}</span>
+    </time>
+  {% else %}
+    <span class="small muted">Date unavailable</span>
+  {% endif %}
+{%- endmacro %}

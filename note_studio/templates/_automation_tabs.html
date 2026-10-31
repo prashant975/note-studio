@@ -1,0 +1,15 @@
+{#- The tabs of a pasted workbook (the old app's tab check), to pick one. -#}
+{% import "_icons.html" as ico with context %}
+{% if not ok %}
+  <div class="note warn">{{ ico.i('alert-triangle', 16, 'nico') }}<div class="ntext"><div class="hd">{{ problem }}</div></div></div>
+{% else %}
+  <p class="small"><strong>{{ payload.title }}</strong>: pick the tab to run.</p>
+  <ul class="tab-list">
+    {% for t in payload.tabs %}
+    <li><label class="row checkrow {{ 'off' if not t.supported }}">
+      <input type="radio" name="gid" value="{{ t.gid }}" {% if t.gid == payload.selectedGid %}checked{% endif %} {% if not t.supported %}disabled{% endif %}>
+      <span><strong>{{ t.title }}</strong> <span class="muted small">{{ t.rows }} rows{% if t.eligible is not none %} &middot; {{ t.eligible }} ready{% endif %}{% if t.note %} &middot; {{ t.note }}{% endif %}</span></span>
+    </label></li>
+    {% endfor %}
+  </ul>
+{% endif %}

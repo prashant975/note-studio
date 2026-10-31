@@ -1,0 +1,44 @@
+Task
+Create detailed, exam-ready UPSC Civil Services notes from the attached lecture/handout (PPT or PDF). The reader is a serious UPSC aspirant who will use these notes for BOTH Prelims (facts) and Mains (analysis). Write in clear, precise English. Follow every rule strictly.
+
+Slide/page-filtering rules [NON-NEGOTIABLE]
+1. Exclude housekeeping content: QR codes, ads, batch/course promotions, welcome/thank-you pages, app-download lines, telegram/subscribe banners.
+2. Do NOT reproduce multiple-choice options or long practice questions as questions. BUT if a slide shows a Previous Year Question (PYQ) or an important fact framed as a question, convert it into a factual bullet under a "Prelims Pointers" or "PYQ Insight" note — never lose the fact.
+3. If a slide has both instructional content and a question box, keep the instructional content and mine the question only for the fact it tests.
+
+Map / diagram policy
+When a concept needs a map, diagram, timeline, or table from a slide, add this exact note immediately after the related bullet:
+(Note to DTP: Insert the image with "<label1>" and "<label2>" from slide <Slide#> under the heading "<Heading>".)
+Use the actual visible labels, slide number, and heading. Maps and diagrams matter greatly in Geography, History, and Environment — always flag them.
+
+Output structure (use these section headings verbatim where content exists)
+Topics Covered in the Class
+• <Topic 1>
+• <Topic 2>
+• ...
+
+<Main Topic Heading 1>
+• Clear explanatory bullets. Give exact terms, definitions, dates, Articles, Acts, bodies, and data as relevant.
+• Break sub-points into indented bullets under the main bullet.
+
+Prelims Pointers
+• Crisp, memorisable facts: exact names, years, first/largest/highest, Article numbers, full forms, committee/report names, schemes (year + ministry + aim).
+
+Mains Angle
+• Analytical points THAT THE SOURCE ALREADY MAKES: causes and effects, dimensions of the issue, significance, challenges, interlinkages, and balanced viewpoints — but only as stated by the teacher or the slides. This block collects the analysis present in the source; it is NOT a place to add your own. If the source offers no analysis on a topic, omit this block for that topic.
+
+(Repeat <Main Topic Heading> → bullets, and add "Prelims Pointers" / "Mains Angle" blocks where the content supports them. Not every topic needs all three; include a block only when there is real substance for it.)
+
+Style rules
+- SOURCE FIDELITY [NON-NEGOTIABLE]: Every line must come from the supplied source(s).
+  Do NOT add background, definitions, examples, current affairs, or explanation from your
+  own knowledge, even if correct or useful. Do not expand a point beyond what the source
+  says. If the source does not cover something, omit it. Never guess a number, date,
+  Article, name or scheme that is not in the source.
+- Preserve the order of topics as taught.
+- Reuse each slide's original heading text for main headings where possible.
+- Be detailed and complete — do not over-compress. Capture every substantive fact and argument. Prefer accuracy and coverage over brevity.
+- Keep bullets self-contained and jargon-light. Where the source itself defines a term, give that definition the first time the term appears; if the source never defines it, leave it undefined rather than supplying your own.
+- Bold the single most important keyword/date/name in a bullet using **double asterisks** so it stands out for revision.
+- Translate any non-heading Hindi content into clear English; keep proper nouns as-is.
+- Output only the final notes. No extra commentary, no markdown code fences, no mention of AI.

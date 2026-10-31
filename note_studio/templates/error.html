@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}{{ title }} - {{ brand.APP_NAME }}{% endblock %}
+
+{% block body %}
+<section class="soon">
+  <div class="soon-ico warn">{{ ico.i('alert-triangle', 26) }}</div>
+  <h1>{{ title }}</h1>
+  {% if detail %}<p class="sub">{{ detail }}</p>{% endif %}
+  {% if ref %}<p class="small muted">Reference <span class="mono">{{ ref }}</span></p>{% endif %}
+  <div class="btn-row center"><a class="btn primary" href="/">Go to Overview</a></div>
+</section>
+{% endblock %}

@@ -1,0 +1,603 @@
+{
+  "document": "Trial Doc(2)_Placebo_Unmarked.pdf",
+  "note": "Answer key derived MECHANICALLY from a word-level diff of Trial Doc(2)_Original.pdf against the Placebo (seeded) copy, so unlike trail_ground_truth.json nothing here rests on a human's list. 35 diff hunks collapse to 29 distinct errors (multi-hunk edits merged; a zero-width-space insert on p7 dropped). 'any' lists alternative keyword sets - a finding matches when any set is fully present in the row text (statement + type + concern + correction), case-insensitive. Each set pairs the WRONG token with the correction or the concept, so a row cannot match by quoting the sentence alone. Reasoning class tags: knowledge = needs an outside fact; internal = provable from the page (contradiction, arithmetic, absurdity); language = spelling/grammar. Patterns for 5, 17 and 18 name their subject as well as their numbers: a bare pair of digits matched unrelated rows.",
+  "errors": [
+    {
+      "id": 1,
+      "page": 2,
+      "class": "internal",
+      "topic": "Vagdevi idol '9th-century' in context line vs '11th-century' in About (should be 11th)",
+      "any": [
+        [
+          "9th-century",
+          "11th"
+        ],
+        [
+          "9th century",
+          "11th"
+        ],
+        [
+          "ninth",
+          "eleventh"
+        ]
+      ]
+    },
+    {
+      "id": 2,
+      "page": 2,
+      "class": "knowledge",
+      "topic": "G-7 Culture Ministers' meeting (should be BRICS; India is not a G-7 member)",
+      "any": [
+        [
+          "g-7",
+          "brics"
+        ],
+        [
+          "g7",
+          "brics"
+        ],
+        [
+          "g-7",
+          "not a member"
+        ],
+        [
+          "g-7",
+          "not a g-7"
+        ],
+        [
+          "g-7",
+          "not part of"
+        ]
+      ]
+    },
+    {
+      "id": 3,
+      "page": 2,
+      "class": "knowledge",
+      "topic": "meeting in Indore (should be Bhopal)",
+      "any": [
+        [
+          "indore",
+          "bhopal"
+        ]
+      ]
+    },
+    {
+      "id": 4,
+      "page": 2,
+      "class": "knowledge",
+      "topic": "red-marble sculpture (should be white marble)",
+      "any": [
+        [
+          "red-marble",
+          "white"
+        ],
+        [
+          "red marble",
+          "white"
+        ]
+      ]
+    },
+    {
+      "id": 5,
+      "page": 2,
+      "class": "knowledge",
+      "topic": "weighs approximately 500 kg (should be 250)",
+      "any": [
+        [
+          "500",
+          "250",
+          "kg"
+        ],
+        [
+          "500 kg",
+          "250"
+        ],
+        [
+          "weighs",
+          "250"
+        ],
+        [
+          "weight",
+          "250"
+        ]
+      ]
+    },
+    {
+      "id": 6,
+      "page": 2,
+      "class": "knowledge",
+      "topic": "six-armed (should be four-armed)",
+      "any": [
+        [
+          "six-armed",
+          "four"
+        ],
+        [
+          "six armed",
+          "four"
+        ]
+      ]
+    },
+    {
+      "id": 7,
+      "page": 3,
+      "class": "knowledge",
+      "topic": "Ministry of Finance released the caregiving report (should be NITI Aayog) - appears twice",
+      "any": [
+        [
+          "ministry of finance",
+          "niti"
+        ]
+      ]
+    },
+    {
+      "id": 8,
+      "page": 3,
+      "class": "knowledge",
+      "topic": "Viksit Bharat@2057 (should be @2047)",
+      "any": [
+        [
+          "2057",
+          "2047"
+        ]
+      ]
+    },
+    {
+      "id": 9,
+      "page": 3,
+      "class": "internal",
+      "topic": "'Fragmented Care System: Recommends a fragmented ecosystem' (should be Integrated/unified)",
+      "any": [
+        [
+          "fragmented",
+          "integrated"
+        ],
+        [
+          "fragmented",
+          "unified"
+        ],
+        [
+          "fragmented",
+          "contradict"
+        ]
+      ]
+    },
+    {
+      "id": 10,
+      "page": 3,
+      "class": "internal",
+      "topic": "Women spend 70x more time than men on unpaid work (should be ~7x; implausible magnitude)",
+      "any": [
+        [
+          "70x",
+          "7x"
+        ],
+        [
+          "70x",
+          "seven"
+        ],
+        [
+          "70x",
+          "implausib"
+        ],
+        [
+          "70x",
+          "exaggerat"
+        ],
+        [
+          "70 times",
+          "implausib"
+        ],
+        [
+          "70x",
+          "overstat"
+        ],
+        [
+          "70x",
+          "impossible"
+        ],
+        [
+          "70x",
+          "24-hour"
+        ],
+        [
+          "70x",
+          "24 hour"
+        ],
+        [
+          "70x",
+          "cannot be"
+        ]
+      ]
+    },
+    {
+      "id": 11,
+      "page": 4,
+      "class": "internal",
+      "topic": "26.8 million persons with disabilities = 5.21% of population (should be 2.21%; arithmetic)",
+      "any": [
+        [
+          "5.21",
+          "2.21"
+        ],
+        [
+          "5.21",
+          "2.2%"
+        ],
+        [
+          "5.21",
+          "does not"
+        ],
+        [
+          "5.21",
+          "arithmetic"
+        ],
+        [
+          "5.21",
+          "incorrect"
+        ]
+      ]
+    },
+    {
+      "id": 12,
+      "page": 4,
+      "class": "language",
+      "topic": "spelling: 'provid' (provided)",
+      "any": [
+        [
+          "provid ",
+          "provided"
+        ],
+        [
+          "\"provid\"",
+          "provided"
+        ],
+        [
+          "'provid'",
+          "provided"
+        ],
+        [
+          "provid'",
+          "provided"
+        ],
+        [
+          "provid”",
+          "provided"
+        ]
+      ]
+    },
+    {
+      "id": 13,
+      "page": 5,
+      "class": "internal",
+      "topic": "'Ensure unfair wages' (should be fair)",
+      "any": [
+        [
+          "unfair",
+          "fair"
+        ]
+      ]
+    },
+    {
+      "id": 14,
+      "page": 6,
+      "class": "knowledge",
+      "topic": "glaciers studied between 1982 and 2023 (should be 1992)",
+      "any": [
+        [
+          "1982",
+          "1992"
+        ]
+      ]
+    },
+    {
+      "id": 15,
+      "page": 6,
+      "class": "internal",
+      "topic": "slowdown linked to glacier thickening (should be thinning)",
+      "any": [
+        [
+          "thickening",
+          "thinning"
+        ],
+        [
+          "thickening",
+          "contradict"
+        ],
+        [
+          "thickening",
+          "mass loss"
+        ]
+      ]
+    },
+    {
+      "id": 16,
+      "page": 7,
+      "class": "knowledge",
+      "topic": "SDRF/NDRF guidelines (2012-2017) (should be 2026-31)",
+      "any": [
+        [
+          "2012-2017",
+          "2026"
+        ],
+        [
+          "2012–2017",
+          "2026"
+        ],
+        [
+          "2012-2017",
+          "2021-26"
+        ],
+        [
+          "2012-2017",
+          "outdated"
+        ],
+        [
+          "2012-2017",
+          "15th"
+        ]
+      ]
+    },
+    {
+      "id": 17,
+      "page": 7,
+      "class": "knowledge",
+      "topic": "following the 13th Finance Commission (should be 16th)",
+      "any": [
+        [
+          "13th",
+          "16th"
+        ],
+        [
+          "13th",
+          "15th"
+        ],
+        [
+          "13th finance commission",
+          "period"
+        ],
+        [
+          "13th",
+          "outdated"
+        ],
+        [
+          "13th",
+          "anachron"
+        ],
+        [
+          "13th",
+          "lapsed"
+        ],
+        [
+          "13th",
+          "ended"
+        ],
+        [
+          "13th",
+          "no longer"
+        ]
+      ]
+    },
+    {
+      "id": 18,
+      "page": 7,
+      "class": "internal",
+      "topic": "categories expand from 12 to 18 (should be 14: the list has 14 items)",
+      "any": [
+        [
+          "18",
+          "14",
+          "categor"
+        ],
+        [
+          "18",
+          "14",
+          "disaster"
+        ],
+        [
+          "18",
+          "fourteen"
+        ],
+        [
+          "12 to 18",
+          "list"
+        ],
+        [
+          "18",
+          "14",
+          "notified"
+        ]
+      ]
+    },
+    {
+      "id": 19,
+      "page": 7,
+      "class": "internal",
+      "topic": "Typhoon landfall near Tibet Province of eastern China (Tibet is landlocked; should be Yuhuan, Zhejiang)",
+      "any": [
+        [
+          "tibet",
+          "landlocked"
+        ],
+        [
+          "tibet",
+          "zhejiang"
+        ],
+        [
+          "tibet",
+          "coast"
+        ],
+        [
+          "tibet",
+          "not in eastern"
+        ],
+        [
+          "tibet",
+          "inland"
+        ],
+        [
+          "tibet",
+          "western"
+        ]
+      ]
+    },
+    {
+      "id": 20,
+      "page": 7,
+      "class": "knowledge",
+      "topic": "typhoon name contributed by Thailand (should be Hong Kong)",
+      "any": [
+        [
+          "thailand",
+          "hong kong"
+        ]
+      ]
+    },
+    {
+      "id": 21,
+      "page": 8,
+      "class": "knowledge",
+      "topic": "National Tribunals Authority (should be National Tribunals Commission (NTC))",
+      "any": [
+        [
+          "tribunals authority",
+          "commission"
+        ],
+        [
+          "national tribunals authority",
+          "ntc"
+        ]
+      ]
+    },
+    {
+      "id": 22,
+      "page": 8,
+      "class": "knowledge",
+      "topic": "recommends primary, secondary and tertiary candidates (should be one primary and one waiting-list candidate)",
+      "any": [
+        [
+          "tertiary",
+          "waiting"
+        ],
+        [
+          "secondary and tertiary",
+          "one primary"
+        ],
+        [
+          "tertiary candidates",
+          "incorrect"
+        ]
+      ]
+    },
+    {
+      "id": 23,
+      "page": 11,
+      "class": "knowledge",
+      "topic": "Indra Sawhney Case (1990) (should be 1992) - appears on p11 and p12",
+      "any": [
+        [
+          "1990",
+          "1992"
+        ]
+      ]
+    },
+    {
+      "id": 24,
+      "page": 12,
+      "class": "knowledge",
+      "topic": "Davinder Singh (2024) Nine-Judge Bench (should be Seven-Judge)",
+      "any": [
+        [
+          "nine-judge",
+          "seven"
+        ],
+        [
+          "nine judge",
+          "seven"
+        ],
+        [
+          "nine-judge",
+          "7-judge"
+        ]
+      ]
+    },
+    {
+      "id": 25,
+      "page": 13,
+      "class": "language",
+      "topic": "spelling: 'remves' (removes)",
+      "any": [
+        [
+          "remves"
+        ]
+      ]
+    },
+    {
+      "id": 26,
+      "page": 13,
+      "class": "language",
+      "topic": "spelling: 'exsting' (existing)",
+      "any": [
+        [
+          "exsting"
+        ]
+      ]
+    },
+    {
+      "id": 27,
+      "page": 13,
+      "class": "language",
+      "topic": "spelling: 'Formlisation' (Formalisation)",
+      "any": [
+        [
+          "formlisation"
+        ]
+      ]
+    },
+    {
+      "id": 28,
+      "page": 15,
+      "class": "language",
+      "topic": "'Bank in a Box was an integrated technology platform' (tense: should be is)",
+      "any": [
+        [
+          "bank in a box",
+          "tense"
+        ],
+        [
+          "bank in a box",
+          "\"is\""
+        ],
+        [
+          "bank in a box",
+          "'is'"
+        ],
+        [
+          "bank in a box",
+          "should be is"
+        ],
+        [
+          "bank in a box",
+          "present tense"
+        ]
+      ]
+    },
+    {
+      "id": 29,
+      "page": 15,
+      "class": "language",
+      "topic": "'platform launches to help' (should be launched)",
+      "any": [
+        [
+          "launches",
+          "launched"
+        ],
+        [
+          "launches to help",
+          "grammat"
+        ]
+      ]
+    }
+  ]
+}

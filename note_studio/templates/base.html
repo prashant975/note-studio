@@ -1,0 +1,163 @@
+{#-
+  The application shell, in QBG One's family: a light glass top bar with the
+  menus, a slim bar under it for where you are and the page's own buttons,
+  the content, and toasts. Everything is local: no CDN, no build step.
+
+  Pages extend this and fill {% block body %}. Optional blocks:
+    crumb    a way back, beside the page name in the slim bar
+    topacts  buttons on the slim bar's right-hand side
+-#}
+{% import "_icons.html" as ico with context %}
+{% set here = request.url.path if request else '/' %}
+{%- set ABOUT = {
+  '/new': 'Lecture PDFs or a class recording, any category',
+  '/automation': 'Notes for every new row of a Google Sheet',
+  '/runs': 'Everything made, with files, cost and log',
+  '/practice': 'Mains practice and DPP from finished notes',
+  '/check': 'A check report for any finished notes'
+} -%}
+
+{%- macro navlink(href, label, icon) -%}
+  {%- set on = here == href or here.startswith(href + '/') -%}
+  <a class="gn-item {{ 'on' if on }}" href="{{ href }}" {% if on %}aria-current="page"{% endif %}>
+    <span class="gn-ico">{{ ico.i(icon, 18) }}</span>
+    <span class="gn-text">
+      <span class="gn-name">{{ label }}{% if href in SOON %} <span class="navtag">Soon</span>{% endif %}</span>
+      <span class="gn-about">{{ ABOUT.get(href, '') }}</span>
+    </span>
+  </a>
+{%- endmacro -%}
+
+{%- set in_make = here.startswith('/new') or here.startswith('/automation') -%}
+{%- set in_results = here.startswith('/runs') or here.startswith('/practice') or here.startswith('/check') -%}
+{%- set chev = '<svg class="ico gn-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6"/></svg>' -%}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{% block title %}{{ brand.APP_NAME }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ asset('style.css') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ asset('icons/notecraft.svg') }}">
+  <script src="/static/vendor/htmx.min.js" defer></script>
+  <script src="{{ asset('app.js') }}" defer></script>
+  <script src="{{ asset('release.js') }}" defer></script>
+  <script src="{{ asset('whats_new.js') }}" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+
+<header class="gn" id="globalnav">
+  <div class="gn-bar">
+    <a class="gn-brand" href="/" aria-label="{{ brand.APP_NAME }}, Overview">
+      <span class="logo" aria-hidden="true"><span class="logo-core"><span class="logo-n">N</span></span><span class="logo-nib"></span></span>
+      <span class="gn-word">{{ brand.WORDMARK[0] }}<span class="logo-sheen">{{ brand.WORDMARK[1] }}</span></span>
+    </a>
+
+    <nav class="gn-menu" id="gn-menu" aria-label="Main menu">
+      <a class="gn-top {{ 'on' if here == '/' }}" href="/" {% if here == '/' %}aria-current="page"{% endif %}>Overview</a>
+
+      <div class="gn-group" data-menu>
+        <button type="button" class="gn-top {{ 'on' if in_make }}" aria-expanded="false" aria-controls="gn-make" data-menu-button>
+          Make notes{% if nav.running %}<span class="gn-live" title="Notes are being made"></span>{% endif %}{{ chev | safe }}</button>
+        <div class="gn-flyout" id="gn-make" data-menu-panel hidden>
+          <div class="gn-flyout-in">
+            <div class="gn-lead"><span class="gn-kicker">Make notes</span><p>Any category, any kind of notes, from one place.</p></div>
+            <div class="gn-items">
+              {{ navlink('/new', 'New notes', 'plus') }}
+              {{ navlink('/automation', 'Sheet automation', 'sheet') }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gn-group" data-menu>
+        <button type="button" class="gn-top {{ 'on' if in_results }}" aria-expanded="false" aria-controls="gn-results" data-menu-button>
+          Results{{ chev | safe }}</button>
+        <div class="gn-flyout" id="gn-results" data-menu-panel hidden>
+          <div class="gn-flyout-in">
+            <div class="gn-lead"><span class="gn-kicker">Results</span><p>Your notes, and what you can make from them.</p></div>
+            <div class="gn-items">
+              {{ navlink('/runs', 'Runs', 'file-text') }}
+              {{ navlink('/practice', 'Practice', 'target') }}
+              {{ navlink('/check', 'Check notes', 'shield') }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <a class="gn-top smart {{ 'on' if here.startswith('/queue') }}" href="/queue"
+         {% if here.startswith('/queue') %}aria-current="page"{% endif %}
+         title="Add many at once; they run one by one">Smart Queue
+        {%- if nav.queue_waiting %}<span class="gn-badge">{{ nav.queue_waiting }} waiting</span>
+        {%- elif nav.running %}<span class="gn-badge live">Running</span>{% endif -%}
+      </a>
+      {#- Beside Smart Queue: the installed version, and the Update button when a newer one is released. -#}
+      <span class="gn-release" data-release>
+        <span class="gn-version" title="The version installed on this computer" data-release-version>v{{ VERSION }}</span>
+        {#- nav.newer, not nav.update: on a dict Jinja finds the dict's own update() method first. -#}
+        <button type="button" class="gn-update" data-update-button {% if not nav.newer %}hidden{% endif %}
+                data-version="{{ nav.newer.version if nav.newer else '' }}" data-app="{{ brand.APP_NAME }}"
+                title="A newer {{ brand.APP_NAME }} is ready: press to update">
+          {{ ico.i('download', 14) }}<span data-update-label>Update{% if nav.newer %} to {{ nav.newer.version }}{% endif %}</span></button>
+      </span>
+    </nav>
+
+    <div class="gn-tools">
+      <a class="gn-help" href="https://wa.me/{{ brand.SUPPORT.whatsapp }}?text={{ brand.SUPPORT.message | urlencode }}"
+         target="_blank" rel="noopener" title="Chat on WhatsApp: {{ brand.SUPPORT.label }}">
+        {{ ico.i('message', 15) }}<span>Help</span></a>
+      <a class="gn-icon {{ 'on' if here.startswith('/settings') }}" href="/settings" aria-label="Settings" title="Settings">
+        {{ ico.i('settings', 17) }}{% if nav.settings_dot %}<span class="gn-dot {{ nav.settings_dot }}" title="A choice is waiting"></span>{% endif %}</a>
+
+      <div class="gn-group gn-account" data-menu>
+        <button type="button" class="gn-avatar" aria-expanded="false" aria-controls="gn-account" data-menu-button
+                aria-label="Version and settings">N</button>
+        <div class="gn-pop" id="gn-account" data-menu-panel hidden>
+          <a class="who" href="/settings">
+            <span class="avatar" aria-hidden="true">N</span>
+            <span class="grow"><span class="nm">{{ brand.APP_NAME }}</span><span class="st">{{ brand.TAGLINE }}</span></span>
+          </a>
+          <div class="release-info"><span class="ver">Version {{ VERSION }}</span><span>{{ CHANNEL | capitalize }}</span>
+            <time class="small" data-release-updated></time>
+            <a class="small" href="/settings/system#updates" data-whats-new>What's new</a></div>
+          <a class="gn-pop-link" href="/settings">{{ ico.i('settings', 15) }} Settings</a>
+          <a class="gn-pop-link" href="https://wa.me/{{ brand.SUPPORT.whatsapp }}?text={{ brand.SUPPORT.message | urlencode }}" target="_blank" rel="noopener">{{ ico.i('message', 15) }} Help on WhatsApp <span class="muted small">{{ brand.SUPPORT.label }}</span></a>
+        </div>
+      </div>
+      <button class="gn-icon gn-burger" type="button" data-nav-toggle aria-label="Open the menu"
+              aria-controls="gn-menu" aria-expanded="false">{{ ico.i('menu', 18) }}</button>
+    </div>
+  </div>
+</header>
+<div class="gn-shade" data-menu-shade hidden></div>
+
+<div class="topbar localnav">
+  <div class="ln-in {% block wrapclass %}{% endblock %}">
+    <div class="crumb">{% block crumb %}{% endblock %}</div>
+    <div class="acts">
+      {% block topacts %}{% endblock %}
+      {% if nav.running %}
+        <a class="chip info running" href="/" title="Notes being made now"><span class="spinner sm"></span> {{ nav.running }} running</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<main class="wrap {{ self.wrapclass() }}" id="content">
+  {% include '_page_guide.html' %}
+  {% block body %}{% endblock %}
+</main>
+
+<footer class="foot">
+  <div class="foot-in">
+    <span>{{ brand.APP_NAME }} &middot; Version {{ VERSION }}</span>
+    <span class="muted">Runs on this computer only &middot; your original note apps stay untouched</span>
+  </div>
+</footer>
+
+<div id="toasts" aria-live="polite" aria-atomic="false"></div>
+{% block foot %}{% endblock %}
+</body>
+</html>

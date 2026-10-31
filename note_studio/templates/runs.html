@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}Runs - {{ brand.APP_NAME }}{% endblock %}
+{% block topacts %}<a class="btn sm primary" href="/new">{{ ico.i('plus', 13) }} New notes</a>{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="grow">
+    <h1>Runs</h1>
+    <p class="sub">Every set of notes made here: its files, what it cost, and what happened.</p>
+  </div>
+</div>
+
+{% if hold %}
+<div class="note warn">{{ ico.i('pause', 16, 'nico') }}<div class="ntext">
+  <div class="hd">The Smart Queue is holding</div>
+  <div class="bd">Waiting lectures and sheet runs start again when you press Continue there.</div>
+  <div class="btn-row"><a class="btn primary sm" href="/queue">{{ ico.i('layers', 13) }} Open the Smart Queue</a></div>
+</div></div>
+{% endif %}
+
+<form class="run-tools" method="get" action="/runs">
+  <div class="pills" role="group" aria-label="Show">
+    <a class="pill {{ 'on' if not state }}" href="/runs?category={{ category }}&q={{ q }}">All</a>
+    <a class="pill {{ 'on' if state == 'active' }}" href="/runs?state=active&category={{ category }}&q={{ q }}">Waiting or running{% if counts.active %} <span class="pill-n">{{ counts.active }}</span>{% endif %}</a>
+    <a class="pill {{ 'on' if state == 'done' }}" href="/runs?state=done&category={{ category }}&q={{ q }}">Done</a>
+    <a class="pill {{ 'on' if state == 'attention' }}" href="/runs?state=attention&category={{ category }}&q={{ q }}">Did not finish{% if counts.attention %} <span class="pill-n">{{ counts.attention }}</span>{% endif %}</a>
+    <a class="pill" href="/runs/older">From older apps</a>
+  </div>
+  <input type="hidden" name="state" value="{{ state }}">
+  <select name="category" onchange="this.form.submit()" aria-label="Category">
+    <option value="">Every category</option>
+    {% for p in packs %}<option value="{{ p.id }}" {% if p.id == category %}selected{% endif %}>{{ p.label }}</option>{% endfor %}
+  </select>
+  <div class="find">{{ ico.i('file-text', 15) }}<input type="search" name="q" value="{{ q }}" placeholder="Find a lecture"></div>
+</form>
+
+{% if runs %}
+<section class="card">
+  <div class="tablewrap"><table class="data">
+    <thead><tr><th>Lecture</th><th>Category</th><th>Type</th><th>State</th><th class="num">Cost</th><th>Started</th></tr></thead>
+    <tbody>
+    {% for r in runs %}
+      <tr>
+        <td><a class="run-link" href="/runs/{{ r.id }}">{{ r.title or 'Notes' }}</a>
+          {% if r.subject_label and r.subject not in ('auto',) %}<div class="small muted">{{ r.subject_label }}</div>{% endif %}</td>
+        <td>{{ r.category_label }}</td>
+        <td>{{ r.type_label }}</td>
+        <td><span class="chip xs {{ r.state_cls }}">{% if r.state == 'running' %}<span class="spinner sm"></span>{% endif %} {{ r.state_words }}</span></td>
+        <td class="num">{% if r.cost_inr %}&#8377;{{ '%.2f' % r.cost_inr }}{% else %}<span class="muted">-</span>{% endif %}</td>
+        <td><span class="small muted" data-time="{{ r.created_at }}"></span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% else %}
+<section class="card"><div class="empty">
+  <div class="eico">{{ ico.i('inbox', 20) }}</div>
+  <div class="big">{% if state or category or q %}Nothing matches{% else %}No notes made in {{ brand.APP_NAME }} yet{% endif %}</div>
+  <p>{% if state or category or q %}Try another filter.{% else %}Make your first notes and they will be listed here.{% endif %}</p>
+  {% if not (state or category or q) %}<div class="btn-row center mt-4"><a class="btn primary" href="/new">{{ ico.i('plus', 14) }} New notes</a></div>{% endif %}
+</div></section>
+{% endif %}
+{% endblock %}

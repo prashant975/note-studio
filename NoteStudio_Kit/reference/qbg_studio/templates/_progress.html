@@ -1,0 +1,176 @@
+{#-
+  One running job, polled every 1.5 seconds by whichever screen started it.
+
+  A bare fragment: it is swapped into a container that already exists on the
+  page, so it extends nothing and carries no page furniture - no card, no
+  page head, no margins of its own. The only context is the `job` row from
+  db.get_job - columns id, kind, state, pct, message, detail, error, done_n,
+  total_n, errors_n. The one other thing read is ?live=1 on the request,
+  which only the two pollers (report.html, review.html) send - see the
+  reload at the bottom.
+
+  job.message is written for the reader and is always shown. Two other
+  columns are written for a developer and are never trusted:
+
+    job.detail  the pipeline's own stdout line, shown only when it reads
+                like plain progress.
+    job.error   a friendly sentence from jobs.py, but the branches that did
+                not recognise the failure append the last few lines of raw
+                process output after a "Technical detail:" marker.
+
+  Both go through TECHNICAL below, and job.error is additionally cut at that
+  marker, so a traceback, a Windows path, a JSON body, an HTTP status code or
+  a bearer token cannot reach the screen. When nothing survives the filter
+  the reader gets plain copy telling them what to do instead.
+
+  That filter is a security boundary. Do not loosen it, and do not add a
+  "show the raw output" disclosure here: the raw text is exactly what it
+  exists to keep off the screen.
+-#}
+{% import "_icons.html" as ico with context %}
+{% if job %}
+
+  {#- Both developer-written columns go through the app's one machine-text
+      filter, pipeline_bridge.looks_technical(). strict=True here because
+      these two paths carry RAW subprocess output, none of which was written
+      for a reader. -#}
+
+  {% if job.state in ('queued', 'running') %}
+
+    {% set raw  = (job.detail or '') | trim %}
+    {% set last = raw.split('\n') | last | trim %}
+    {% set technical = looks_technical(last, strict=True) %}
+
+    {#- The bar is honest or it is indeterminate. A run that has not
+        reported a percentage yet gets .bar.idle rather than a 0% sliver
+        pretending to be a measurement. -#}
+    {% set pct = job.pct or 0 %}
+    <div class="progress-line">
+      <span class="spinner"></span>
+      <span class="msg">{{ job.message or 'Working...' }}</span>
+      <div class="bar {{ '' if pct else 'idle' }}" style="width:170px; flex:none">
+        <i style="width: {{ pct }}%"></i>
+      </div>
+    </div>
+
+    {#- The honest progress line: counted rows, counted errors, and a time
+        left worked out from how long the finished rows actually took. It
+        only appears once there is something real to divide by - an estimate
+        from a single sample would swing by minutes between polls. -#}
+    {% set eta = job_eta(job) %}
+    {% set done = job.done_n or 0 %}
+    {% set total = job.total_n or 0 %}
+    {% if done %}
+      <div class="progress-facts">
+        <span>Row {{ done }}{% if total %} of {{ total }}{% endif %}</span>
+        {% if job.errors_n %}
+          <span class="bad">
+            {{ job.errors_n }} error{{ '' if job.errors_n == 1 else 's' }}
+          </span>
+        {% endif %}
+        {% if eta %}<span>{{ eta }}</span>{% endif %}
+      </div>
+    {% endif %}
+
+    {% if not technical %}
+      <div class="small muted" style="margin-top:8px">
+        {{ last | truncate(80, true, '...') }}
+      </div>
+    {% endif %}
+
+  {% elif job.state == 'done' %}
+
+    <div class="note ok" style="margin-bottom:0">
+      <span class="nico">{{ ico.i('check-circle', 18) }}</span>
+      <div class="ntext">
+        <div class="hd">{{ job.message or 'Finished.' }}</div>
+      </div>
+    </div>
+
+  {% elif job.state == 'failed' %}
+
+    {#- Keep only the sentences a person can act on: stop at the technical
+        marker, and drop any surviving line that still reads like output. -#}
+    {% set ns = namespace(cut=false, kept=[]) %}
+    {% for line in (job.error or '').split('\n') %}
+      {% set head = line.split('Technical detail')[0]
+                        .split('technical detail')[0] | trim %}
+      {% if not ns.cut %}
+        {% if not head %}
+          {% if ns.kept %}{% set ns.kept = ns.kept + [''] %}{% endif %}
+        {% elif not looks_technical(head, strict=True) %}
+          {% set ns.kept = ns.kept + [head] %}
+        {% endif %}
+      {% endif %}
+      {% if 'technical detail' in (line | lower) %}{% set ns.cut = true %}{% endif %}
+    {% endfor %}
+    {% set safe = ns.kept | join('\n') | trim %}
+
+    {% set stopped_at = job.done_n or 0 %}
+    {% set stopped_of = job.total_n or 0 %}
+
+    <div class="note danger" style="margin-bottom:0">
+      <span class="nico">{{ ico.i('alert-circle', 18) }}</span>
+      <div class="ntext">
+        <div class="hd">{{ job.message or 'This step did not finish' }}</div>
+        {% if safe %}
+          <div class="bd" style="white-space:pre-wrap">{{ safe }}</div>
+        {% elif job.kind == 'create' %}
+          <div class="bd">Nothing more was recorded. Some of these questions may
+            already have reached the portal, so check them there before sending
+            anything again.</div>
+        {% else %}
+          <div class="bd">Nothing more was recorded about what went wrong.</div>
+        {% endif %}
+
+        {#- How far it got before it stopped. The message rarely says, and it
+            is the first thing anyone asks. -#}
+        {% if stopped_at or job.errors_n %}
+          <div class="progress-facts">
+            {% if stopped_at %}
+              <span>Stopped after row {{ stopped_at }}{% if stopped_of %} of {{ stopped_of }}{% endif %}</span>
+            {% endif %}
+            {% if job.errors_n %}
+              <span class="bad">
+                {{ job.errors_n }} error{{ '' if job.errors_n == 1 else 's' }}
+              </span>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  {% endif %}
+
+  {#- The screens that poll this - report.html while a paper is read,
+      review.html while equations are converted - drew their chips, buttons
+      and question pane while the job was still running, and nothing here
+      can redraw those. Once the job is over, reload that screen so it can
+      draw itself in its finished state; otherwise it said "being read now"
+      and kept polling for ever.
+
+      Reload ONCE per job, exactly as _events.html does: the poller keeps
+      re-rendering this same finished fragment, so an unguarded reload would
+      loop; the sessionStorage key makes it fire a single time.
+
+      Only the pollers ask for it (?live=1). The bot and translation-run
+      screens include this fragment server-side, and must not reload
+      themselves on every visit to a finished run. -#}
+  {% set live = request is defined and request and request.query_params.get('live') %}
+  {% if live and job.state in ('done', 'failed') %}
+    <script>
+      (function () {
+        var key = 'qbg-reloaded-job-{{ job.id }}';
+        try {
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, '1');
+            window.location.reload();
+          }
+        } catch (e) {
+          /* private mode - leave the page alone rather than risk a loop */
+        }
+      })();
+    </script>
+  {% endif %}
+
+{% endif %}

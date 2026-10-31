@@ -1,0 +1,38 @@
+{#- The two lanes, as they are now. Polled every 3 s while anything waits or runs. -#}
+{% import "_icons.html" as ico with context %}
+{% set busy = counts.waiting or counts.running %}
+<div class="lanes" id="lanes" {% if busy %}hx-get="/queue/card" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  {% for lane in lanes %}
+  <section class="card lane">
+    <div class="hd">
+      <span class="lane-ico">{{ ico.i('pen' if lane.id == 'notes' else 'sheet', 17) }}</span>
+      <div class="grow"><h2>{{ lane.label }}</h2>
+        <p class="d">{{ 'New notes, one lecture at a time' if lane.id == 'notes' else 'Sheet runs, one at a time' }}</p></div>
+      {% if lane.waiting %}<span class="chip">{{ lane.waiting | length }} waiting</span>{% endif %}
+    </div>
+    {% for item in lane.running %}
+    <div class="bd lane-now">
+      <div class="row gap-2"><span class="chip info"><span class="spinner sm"></span> Running</span>
+        <strong class="grow">{{ item.title }}</strong>
+        {% if item.run %}<a class="btn sm" href="/runs/{{ item.run.id }}">{{ ico.i('eye', 13) }} Watch it</a>{% endif %}</div>
+      {% if item.run %}
+      <div class="bar mt-2"><i style="width: {{ item.run.pct or 3 }}%"></i></div>
+      <p class="small muted mt-2">{{ item.run.message }}</p>
+      {% else %}<p class="small muted mt-2">Starting...</p>{% endif %}
+    </div>
+    {% endfor %}
+    {% if lane.waiting %}
+    <ol class="lane-list">
+      {% for item in lane.waiting %}
+      <li><span class="pos">{{ loop.index }}</span><span class="grow">{{ item.title }}
+          <span class="small muted" data-time="{{ item.created_at }}"></span></span>
+        <form method="post" action="/queue/{{ item.id }}/remove" data-confirm="Take {{ item.title }} out of the queue? Nothing has been made or paid for yet.">
+          <button class="btn ghost sm" type="submit">{{ ico.i('x', 13) }} Remove</button></form></li>
+      {% endfor %}
+    </ol>
+    {% elif not lane.running %}
+    <div class="bd"><p class="quiet-line">{{ ico.i('check-circle', 15) }} Nothing waiting.</p></div>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>

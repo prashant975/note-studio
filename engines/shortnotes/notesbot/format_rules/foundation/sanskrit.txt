@@ -1,0 +1,11 @@
+FOUNDATION SANSKRIT NOTES - keep to the lesson itself.
+- Cover only the lesson: its introduction, its opening verse and numbered verses
+  (१, २, ३ ...) with their पदच्छेद / अन्वय / अर्थ, one शब्दार्थ table and its
+  teachings. Leave out everything else in the PDF, even though it is printed there:
+  extra or closing verses outside the numbered lesson verses (e.g. a "गीता-पाठ"
+  or "हित-सन्देश" verse), reference lists and tables (e.g. "गीता के अठारह अध्याय"),
+  and grammar drills (e.g. "विभक्तियों का प्रयोग"). Leaving these out is not a
+  coverage gap.
+- Exactly ONE "महत्त्वपूर्ण शब्दार्थ" table: the words of the lesson's verses that
+  matter most. Never a second word list ("शब्दार्थ विस्तार", a repeated
+  "महत्त्वपूर्ण शब्दार्थ" or similar).

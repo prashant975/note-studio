@@ -1,0 +1,33 @@
+{#- Sign-in (signin.snapshot). Polls while a saved sign-in is being checked or a sign-in is open in the browser. -#}
+{% import "_icons.html" as ico with context %}
+{% set busy = signin.state in ('checking', 'pending') %}
+<section class="card" id="signin" {% if busy %}hx-get="/settings/signin-card" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  <div class="hd">
+    <div class="grow">
+      <h2>Sign-in</h2>
+      <p class="d">Notes are made through PW with your Google account (@pw.live, on PW's list for this app).</p>
+    </div>
+    {% if signin.state == 'ready' %}<span class="chip ok">{{ ico.i('check-circle', 13) }} Signed in</span>
+    {% elif busy %}<span class="chip info"><span class="spinner sm"></span> {{ 'Waiting for the browser' if signin.state == 'pending' else 'Checking' }}</span>
+    {% elif signin.state == 'undecided' %}<span class="chip warn">{{ ico.i('alert-triangle', 13) }} Choose above first</span>
+    {% else %}<span class="chip warn">{{ ico.i('alert-triangle', 13) }} Not signed in</span>{% endif %}
+  </div>
+  <div class="bd">
+    {% if signin.state == 'ready' %}
+      <p>Signed in as <strong>{{ signin.email }}</strong>.</p>
+      <form method="post" action="/settings/signout" class="btn-row"><button class="btn sm" type="submit">Sign out</button></form>
+    {% elif signin.state == 'undecided' %}
+      <p class="small muted">First choose, in the card above, whether {{ brand.APP_NAME }} uses the old app's sign-in.</p>
+    {% elif signin.state == 'pending' %}
+      <p class="small">A Google sign-in page is open in your browser. Finish it there; this card updates by itself.</p>
+    {% elif signin.state == 'checking' %}
+      <p class="small muted">Checking the saved Google sign-in with PW...</p>
+    {% else %}
+      {% if signin.error %}<div class="note warn">{{ ico.i('alert-triangle', 16, 'nico') }}<div class="ntext"><div class="hd">{{ signin.error }}</div></div></div>{% endif %}
+      <form method="post" action="/settings/signin" class="btn-row">
+        <button class="btn primary" type="submit">{{ ico.i('key', 15) }} Sign in with Google</button>
+        <span class="hint">Opens Google in your browser, once.</span>
+      </form>
+    {% endif %}
+  </div>
+</section>

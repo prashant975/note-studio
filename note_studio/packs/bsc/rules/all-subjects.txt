@@ -1,0 +1,5 @@
+# B.Sc. rules for every subject. Plain commands, one per line; lines starting with # are notes for you.
+Write for B.Sc. students of Indian universities preparing for their semester examinations.
+Follow the lecture's own order and cover every topic it teaches; leave nothing out.
+Give each important term a definition box, and end the notes with Key Takeaways.
+Write every scientific name in italics and every quantity with its unit.

@@ -1,0 +1,41 @@
+{#- The line of papers and tasks waiting their turn (job_queue). Sits on
+    Autopilot, New batch and the Queue page; refreshes itself while anything
+    is in the line. `queue` comes from the route, or from the app-wide
+    queue_overview() when the card is part of another screen. -#}
+{% if queue is not defined and queue_overview is defined %}{% set queue = queue_overview() %}{% endif %}
+{% if queue is defined %}
+<div id="queue-card" {% if queue.active %}hx-get="/work-queue/card" hx-trigger="every 5s" hx-swap="outerHTML"{% endif %}>
+{% if queue.active or (queue.recent and not queue_compact) %}
+<div class="card">
+  <div class="hd"><div class="grow"><h2>Smart Queue{% if queue.line %} · {{ queue.line|length }}{% endif %}</h2>
+    <p class="d">Two lines run side by side: <strong>Reading</strong> (papers being read) and <strong>QBG</strong> (everything that works on QBG). Each line runs one at a time, in order; the next starts by itself. Each paper is its own batch.</p></div>
+    {% if queue.waiting %}<div class="btn-row">
+      {% if queue.paused %}<form method="post" action="/work-queue/continue"><button class="btn sm primary">Continue the queue</button></form>
+      {% else %}<form method="post" action="/work-queue/pause"><button class="btn sm">Hold the queue</button></form>{% endif %}
+      <form method="post" action="/work-queue/clear" data-confirm="Remove everything that is still waiting? What is running now carries on."><button class="btn sm ghost">Remove all waiting</button></form>
+    </div>{% endif %}
+  </div>
+  <div class="bd stack">
+    {% if queue.paused %}<div class="note warn"><div class="ntext"><div class="hd">The queue is on hold</div>
+      <div class="bd">{{ queue.note or 'Nothing new starts until you continue it.' }}</div></div></div>{% endif %}
+    {% if queue.line %}<ol class="stack">
+      {% for item in queue.line %}<li>
+        <span class="chip">{{ item.lane_label }}</span> <strong>{{ item.title }}</strong> <span class="small muted">· {{ item.label }}{% if item.detail %} · {{ item.detail }}{% endif %}</span>
+        {% if item.state == 'running' %}<span class="chip info">Running now</span>
+          {% if item.link %}<a class="btn sm" href="{{ item.link }}">Open</a>{% endif %}
+        {% else %}<span class="chip">Waiting</span>{% if item.note %} <span class="small muted">{{ item.note }}</span>{% endif %}
+          <form method="post" action="/work-queue/{{ item.id }}/remove" style="display:inline"><button class="btn sm ghost">Remove</button></form>
+        {% endif %}
+      </li>{% endfor %}
+    </ol>{% endif %}
+    {% if queue.recent and not queue_compact %}<details {% if not queue.line %}open{% endif %}><summary>Finished from the queue ({{ queue.recent|length }})</summary>
+      <ul>{% for item in queue.recent %}<li><strong>{{ item.title }}</strong> <span class="small muted">· {{ item.label }}</span>
+        <span class="chip {{ 'warn' if item.state == 'failed' else 'ok' }}">{{ 'Could not start' if item.state == 'failed' else 'Finished' }}</span>
+        {% if item.note %}<span class="small">{{ item.note }}</span>{% endif %}
+        {% if item.link %}<a href="{{ item.link }}">Open</a>{% endif %}</li>{% endfor %}</ul>
+    </details>{% endif %}
+  </div>
+</div>
+{% endif %}
+</div>
+{% endif %}

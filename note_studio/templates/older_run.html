@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}{{ run.title }} - {{ brand.APP_NAME }}{% endblock %}
+{% block crumb %}<a href="/runs/older">{{ ico.i('arrow-left', 13) }} From older apps</a>{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="grow">
+    <span class="hero-kicker">{{ run.type_label }} &middot; {{ run.app_label }}</span>
+    <h1 class="run-title">{{ run.title }}</h1>
+    <div class="meta">
+      {% if run.language %}<span class="chip">{{ run.language }}</span>{% endif %}
+      {% if run.dcn_no %}<span class="chip">DCN {{ run.dcn_no }}</span>{% endif %}
+      {% if run.video_url %}<a class="chip" href="{{ run.video_url }}" target="_blank" rel="noopener noreferrer">{{ ico.i('video', 12) }} Class recording</a>{% endif %}
+      {% if run.test_run %}<span class="chip">Test run (no AI was used)</span>{% endif %}
+      <span class="small muted" data-time="{{ run.when }}"></span>
+    </div>
+  </div>
+</div>
+
+<section class="card">
+  <div class="hd"><div class="grow"><h2>Files</h2>
+    <p class="d">Read from the old app's folder; downloading copies nothing into it or out of it.</p></div>
+    <span class="chip {{ run.state_cls }}">{{ run.state_words }}</span></div>
+  {% if run.files %}
+  <ul class="needs files">
+    {% for f in run.files %}
+    <li><span class="nico ok">{{ ico.i('file-text', 16) }}</span>
+      <div class="grow"><strong>{{ f.name }}</strong><span class="small muted">{{ f.kind_words }}</span></div>
+      <a class="btn sm" href="/runs/older/{{ run.app }}/{{ run.name }}/files/{{ f.name | urlencode }}">{{ ico.i('download', 13) }} Download</a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="bd"><p class="quiet-line">{{ ico.i('inbox', 15) }} This run has no notes files.</p></div>
+  {% endif %}
+  <div class="ft"><span class="small muted mono">{{ run.folder }}</span></div>
+</section>
+
+{% if run.warnings %}
+<details class="helpbox">
+  <summary>What the old app noted while making it ({{ run.warnings | length }})</summary>
+  <div class="bd"><ul>{% for w in run.warnings %}<li>{{ w }}</li>{% endfor %}</ul></div>
+</details>
+{% endif %}
+{% endblock %}

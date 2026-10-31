@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}From older apps - {{ brand.APP_NAME }}{% endblock %}
+{% block crumb %}<a href="/runs">{{ ico.i('arrow-left', 13) }} Runs</a>{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="grow">
+    <h1>From older apps</h1>
+    <p class="sub">Notes the UPSC Notes app made before {{ brand.APP_NAME }}. They are read where they are, in the old app's folder; nothing there is changed.</p>
+  </div>
+</div>
+
+<form class="run-tools" method="get" action="/runs">
+  <div class="pills" role="group" aria-label="Show">
+    <a class="pill" href="/runs">Made in {{ brand.APP_NAME }}</a>
+    <a class="pill on" href="/runs/older" aria-current="page">From older apps{% if runs %} <span class="pill-n">{{ runs | length }}</span>{% endif %}</a>
+  </div>
+</form>
+
+{% if runs %}
+<section class="card">
+  <div class="tablewrap"><table class="data">
+    <thead><tr><th>Lecture</th><th>App</th><th>Type</th><th>State</th><th>Made</th></tr></thead>
+    <tbody>
+    {% for r in runs %}
+      <tr>
+        <td><a class="run-link" href="/runs/older/{{ r.app }}/{{ r.name }}">{{ r.title }}</a>
+          {% if r.test_run %}<span class="chip xs">Test run</span>{% endif %}
+          {% if r.language %}<div class="small muted">{{ r.language }}</div>{% endif %}</td>
+        <td>{{ r.app_label }}</td>
+        <td>{{ r.type_label }}</td>
+        <td><span class="chip xs {{ r.state_cls }}">{{ r.state_words }}</span></td>
+        <td><span class="small muted" data-time="{{ r.when }}"></span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="ft"><span class="small muted mono">{{ folder }}</span></div>
+</section>
+{% else %}
+<section class="card"><div class="empty">
+  <div class="eico">{{ ico.i('inbox', 20) }}</div>
+  <div class="big">No runs from older apps on this computer</div>
+  <p>The UPSC Notes app's runs folder was not found or is empty: <span class="mono">{{ folder }}</span></p>
+</div></section>
+{% endif %}
+{% endblock %}

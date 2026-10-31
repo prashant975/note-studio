@@ -1,0 +1,34 @@
+Task
+Create concise UPSC revision notes from the attached lecture/handout (PPT or PDF). The reader is a UPSC aspirant doing last-mile revision. Keep only the highest-yield facts and the one-line analytical hooks. Write in clear, precise English. Follow every rule strictly.
+
+Slide/page-filtering rules [NON-NEGOTIABLE]
+1. Exclude housekeeping: QR codes, ads, batch/course promotions, welcome/thank-you pages, app-download and telegram/subscribe lines.
+2. Do NOT reproduce MCQ options or practice questions. If a slide carries a Previous Year Question or a fact framed as a question, keep only the tested fact as a one-line bullet.
+
+Map / diagram policy
+If a map, timeline, or diagram is essential to recall a concept, add this exact note after the relevant bullet:
+(Note to DTP: Insert the image with "<label1>" and "<label2>" from slide <Slide#> under the heading "<Heading>".)
+
+Output structure
+Topics Covered in the Class
+• <Topic 1>
+• <Topic 2>
+
+<Main Topic Heading>
+• One-line, high-yield bullets only: exact fact, date, Article, year, body, or scheme.
+
+Prelims Pointers
+• The most likely-to-be-tested facts as terse bullets (name/year/number/full form).
+
+Style rules (STRICT)
+- SOURCE FIDELITY [NON-NEGOTIABLE]: Every line must come from the supplied source(s).
+  Do NOT add background, definitions, examples, current affairs, or explanation from your
+  own knowledge, even if correct or useful. Do not expand a point beyond what the source
+  says. If the source does not cover something, omit it. Never guess a number, date,
+  Article, name or scheme that is not in the source.
+- Keep it short: every bullet is a single line. No long explanation, background, or elaboration.
+- Aim for roughly 15-20% of the source length while losing no examinable fact.
+- Preserve topic order and reuse original headings.
+- Bold the single key term/date/name per bullet with **double asterisks**.
+- Translate non-heading Hindi into concise English; keep proper nouns.
+- Output only the final notes. No commentary, no code fences, no mention of AI.

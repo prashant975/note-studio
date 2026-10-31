@@ -1,0 +1,46 @@
+{
+  "_comment": "Built-in pack for the merged UPSC engine. Subject ids are the upsc engine's own (src/config.py / upsc_subjects) - keep them unchanged; take the EN/HI/MR labels from the engine. rules/ starts empty: the engine's prompts already carry the UPSC rules; operators add only what differs.",
+  "id": "upsc",
+  "label": "UPSC (OnlyIAS)",
+  "enabled": true,
+  "subjects": [
+    {"id": "polity", "label": "Polity"},
+    {"id": "economy", "label": "Economy"},
+    {"id": "geography", "label": "Geography"},
+    {"id": "ancient", "label": "Ancient History"},
+    {"id": "medieval", "label": "Medieval History"},
+    {"id": "modern", "label": "Modern History"},
+    {"id": "history", "label": "History (general)"},
+    {"id": "culture", "label": "Art & Culture"},
+    {"id": "environment", "label": "Environment"},
+    {"id": "science", "label": "Science & Tech"},
+    {"id": "ir", "label": "International Relations"},
+    {"id": "society", "label": "Society"},
+    {"id": "security", "label": "Internal Security"},
+    {"id": "governance", "label": "Governance"},
+    {"id": "ethics", "label": "Ethics (GS4)"},
+    {"id": "current_affairs", "label": "Current Affairs"}
+  ],
+  "languages": ["english", "hindi", "marathi"],
+  "language_required": true,
+  "note_types": ["upsc_dcn", "upsc_simple", "upsc_mains", "upsc_prelims", "upsc_mains_practice", "dpp_from_notes"],
+  "default_note_type": "upsc_dcn",
+  "inputs": ["video_link", "slides_upload"],
+  "branding": {
+    "signature_label": "Faculty",
+    "footer": "PW OnlyIAS | {page} | Daily Class Notes",
+    "logo": "<engine default: assets/pw_onlyias_logo.png>",
+    "watermark": false
+  },
+  "rules_dir": "rules",
+  "qc_rules": "<engine copy: config/upsc_qc_rules.yaml + upsc_qc_sources.yaml>",
+  "practice": {
+    "dpp_question_bank": "<in place: Upsc_Notes_2/upsc_Notes/data/DPP and Infinite Practice Questions.xlsx (55 MB) - ask how teammates get it>",
+    "dpp_tags": "<in place: Upsc_Notes_2/upsc_Notes/data/UPSC QBG Tags.xlsx>",
+    "dpp_languages": ["english", "hindi"]
+  },
+  "page_budget": {"target_pages": [10, 15], "hard_limit": 15},
+  "automation": {"sheet_layouts": [], "_comment": "no UPSC sheet today; add a layout when one exists"},
+  "output_naming": "<engine default: <stem>_upsc_notes.docx/.pdf>",
+  "models": {}
+}

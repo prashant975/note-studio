@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}{{ run.title }} - {{ brand.APP_NAME }}{% endblock %}
+{% block crumb %}<a href="/practice">{{ ico.i('arrow-left', 13) }} Practice</a>{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="grow">
+    <span class="hero-kicker">{{ 'Mains practice (DMP)' if kind == 'dmp' else 'Daily practice problems (DPP)' }}</span>
+    <h1 class="run-title">{{ run.options['from'].title }}</h1>
+    <div class="meta">
+      <span class="chip">{{ brand.APP_NAME if run.options['from'].kind == 'notecraft' else 'UPSC Notes app' }}</span>
+      {% if run.language %}<span class="chip">{{ run.language | capitalize }}</span>{% endif %}
+      {% if run.cost_inr %}<span class="chip">&#8377;{{ '%.2f' % run.cost_inr }}</span>{% endif %}
+      <span class="small muted" data-time="{{ run.created_at }}"></span>
+    </div>
+  </div>
+</div>
+{% include "_practice_card.html" %}
+{% endblock %}

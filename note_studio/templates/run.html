@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}{{ run.title or 'Notes' }} - {{ brand.APP_NAME }}{% endblock %}
+{% block crumb %}<a href="/runs">{{ ico.i('arrow-left', 13) }} Runs</a>{% endblock %}
+{% block topacts %}<a class="btn sm" href="{{ '/automation' if run.source == 'sheet' else '/new?category=' ~ run.category }}">{{ ico.i('plus', 13) }} Start another</a>{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="grow">
+    <span class="hero-kicker">{{ run.type_label }}</span>
+    <h1 class="run-title">{{ run.title or 'Notes' }}</h1>
+    <div class="meta">
+      <span class="chip">{{ run.category_label }}</span>
+      {% if run.subject and run.subject != 'auto' %}<span class="chip">{{ run.subject_label }}</span>{% endif %}
+      {% if run.language_label %}<span class="chip">{{ run.language_label }}</span>{% endif %}
+      {% if run.options.teacher_name %}<span class="chip">{{ ico.i('pen', 12) }} by {{ run.options.teacher_name }}</span>{% endif %}
+      {% if run.options.dcn_no %}<span class="chip">DCN {{ run.options.dcn_no }}</span>{% endif %}
+      {% if run.options.video_url %}<a class="chip" href="{{ run.options.video_url if run.options.video_url.startswith('http') else 'https://youtu.be/' ~ run.options.video_url }}" target="_blank" rel="noopener noreferrer">{{ ico.i('video', 12) }} Class recording</a>{% endif %}
+      {% if run.options.file and run.engine == 'upsc' %}<span class="chip">{{ ico.i('file-text', 12) }} {{ run.options.file }}</span>{% endif %}
+      <span class="small muted" data-time="{{ run.created_at }}"></span>
+    </div>
+  </div>
+</div>
+
+{% include "_run_card.html" %}
+
+{% set reqs = run.options.requirements %}
+{% set followed = (reqs.layers | selectattr('text') | list | rejectattr('layer', 'equalto', 'engine') | list) if reqs else [] %}
+{% if reqs and reqs.applied is defined %}{% set followed = followed | selectattr('layer', 'in', reqs.applied) | list %}{% endif %}
+{% if followed %}
+<details class="helpbox">
+  <summary>Rules this run followed</summary>
+  <div class="bd"><ul>{% for l in followed %}<li><strong>{{ l.path }}</strong>: {{ l.text }}</li>{% endfor %}</ul></div>
+</details>
+{% endif %}
+{% endblock %}

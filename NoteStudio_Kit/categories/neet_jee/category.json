@@ -1,0 +1,20 @@
+{
+  "_comment": "Built-in pack. On first start its rules/ are SEEDED byte-for-byte from engines/shortnotes/notesbot/format_rules/neet_jee/ and switches.json from that category's entries in format_rules/rules.json, so notesbot's prompt_block and fingerprint stay byte-identical. Label must stay exactly 'NEET-JEE' (it is printed into the prompt). Subjects: take the real list from the copy's notesbot/categories.py + sheets_bridge/mapping.py (today NEET-JEE has no subject dropdown - the sheet's column D / auto-detect decides).",
+  "id": "neet_jee",
+  "label": "NEET-JEE",
+  "enabled": true,
+  "legacy_ids": ["neet", "jee"],
+  "subjects": "<from code: auto / sheet column D>",
+  "languages": ["auto", "english", "hindi"],
+  "language_required": false,
+  "note_types": ["concise_handdrawn", "pw_books_handwritten"],
+  "default_note_type": "concise_handdrawn",
+  "inputs": ["pdf_upload", "pdf_link", "pptx_upload"],
+  "branding": {"signature_label": "Faculty", "footer": "", "logo": "<today's notesbot branding>", "watermark": true},
+  "rules_dir": "rules",
+  "seed_from": "engines/shortnotes/notesbot/format_rules/neet_jee",
+  "qc_rules": "",
+  "automation": {"sheet_layouts": ["batch", "catalog"]},
+  "output_naming": "<unchanged: notesbot/output_naming.py ' - Concise Notes.pdf'>",
+  "models": {}
+}

@@ -1,0 +1,3 @@
+Put every formula in a formula box and explain each symbol with its SI unit.
+Show each derivation step by step as numbered points, every step's formula in maths.
+Add a Common Mistake box wherever students often confuse two ideas.

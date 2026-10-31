@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+{% block title %}Batches - QBG One{% endblock %}
+
+{% block body %}
+<p class="small" style="margin:0 0 var(--s-3)"><a href="/created">Created questions</a> lists every question this computer has put on QBG.</p>
+{#-
+  Screen 1: one row per faculty paper.
+
+  Nothing on this page sends anything to the portal, so there is nothing to
+  confirm here. The only job of this screen is to say, for every paper, how
+  far it has got and what the next step is - so it leads with state (the
+  prerequisite lights, the totals, the per-paper progress) and keeps the
+  explanation folded away at the bottom.
+-#}
+{% import "_icons.html" as ico with context %}
+
+{#- The date a batch was started is stored as a plain number of seconds, and
+    this app has no date filter, so the calendar date is worked out here.
+    Only the date is shown - never a clock time - because the stored number
+    is in universal time and a clock time would read wrong. -#}
+{%- macro started(ts) -%}
+  {%- if not ts -%}
+    <span class="muted">not recorded</span>
+  {%- else -%}
+    {%- set days = (ts | int) // 86400 -%}
+    {%- set z = days + 719468 -%}
+    {%- set era = z // 146097 -%}
+    {%- set doe = z - era * 146097 -%}
+    {%- set yoe = (doe - doe // 1460 + doe // 36524 - doe // 146096) // 365 -%}
+    {%- set doy = doe - (365 * yoe + yoe // 4 - yoe // 100) -%}
+    {%- set mp = (5 * doy + 2) // 153 -%}
+    {%- set day = doy - (153 * mp + 2) // 5 + 1 -%}
+    {%- set month = mp + 3 if mp < 10 else mp - 9 -%}
+    {%- set year = yoe + era * 400 + (1 if month <= 2 else 0) -%}
+    {%- set names = ['January', 'February', 'March', 'April', 'May', 'June',
+                     'July', 'August', 'September', 'October', 'November',
+                     'December'] -%}
+    {{ day }} {{ names[month - 1] }} {{ year }}
+  {%- endif -%}
+{%- endmacro -%}
+
+{%- macro stage_chip(stage) -%}
+  {%- if stage == 'extracting' -%}
+    <span class="chip info"><span class="spinner sm" aria-hidden="true"></span> reading the paper</span>
+  {%- elif stage == 'new' -%}
+    <span class="chip info">reading the paper</span>
+  {%- elif stage == 'extracted' -%}
+    <span class="chip info">ready to review</span>
+  {%- elif stage == 'reviewing' -%}
+    <span class="chip info">being reviewed</span>
+  {%- elif stage == 'created' -%}
+    <span class="chip ok">created</span>
+  {%- elif stage == 'blocked' -%}
+    <span class="chip danger">needs attention</span>
+  {%- else -%}
+    <span class="chip">in progress</span>
+  {%- endif -%}
+{%- endmacro -%}
+
+{#- The wording on the one button in each row. Every paper opens at the same
+    address; /batches/<id> already forwards to wherever that paper is up to,
+    so this only names the step the reader is about to land on. -#}
+{%- macro next_step(stage, any_format=false) -%}
+  {%- if any_format -%}Preview paper
+  {%- elif stage == 'extracted' -%}Start review
+  {%- elif stage == 'reviewing' -%}Continue review
+  {%- elif stage == 'blocked' -%}See the problem
+  {%- elif stage in ('new', 'extracting') -%}See progress
+  {%- else -%}Open
+  {%- endif -%}
+{%- endmacro -%}
+
+{#- Questions caught mid-send may already be on the portal. Add them up across
+    every paper so the warning cannot be missed. The other three totals are the
+    same numbers the table shows, summed so the top of the screen answers
+    "what is outstanding" without reading every row. -#}
+{% set ns = namespace(unsafe=0, review=0, pick=0, created=0) %}
+{% for it in items %}
+  {%- if it.c %}{% set ns.unsafe = ns.unsafe + it.c.needs_check + it.c.creating %}{% endif -%}
+  {%- if it.c %}{% set ns.review = ns.review + it.c.needs_review %}{% endif -%}
+  {%- if it.c %}{% set ns.pick = ns.pick + it.c.pick %}{% endif -%}
+  {%- if it.c %}{% set ns.created = ns.created + it.c.created %}{% endif -%}
+{% endfor %}
+
+{#- ============================================ the portal browser, first -#}
+{#- Keep both connection methods available, including when already connected.
+    Bot tabs and browser refreshes use the same fragment. -#}
+<div class="card portal-compact-card"><div class="bd">
+  {% include "_chrome.html" with context %}
+</div></div>
+<div class="page-head">
+  <div class="grow">
+    <h1>Batches</h1>
+    <p class="sub">
+      One batch is one faculty paper - the question document and its answer
+      key - followed all the way to live questions on the QBG portal.
+    </p>
+    <div class="meta">
+      {% if items %}
+        <span class="chip">
+          {{ ico.i('layers', 13) }}
+          {{ items | length }} paper{{ '' if items | length == 1 else 's' }}
+        </span>
+      {% endif %}
+    </div>
+  </div>
+  {#- The one primary action on this screen. When there are no papers the
+      empty state below carries it instead, so it is never shown twice. -#}
+  {% if items %}
+    <div class="acts">
+      <a class="btn primary lg" href="/new">{{ ico.i('plus', 15) }} New batch</a>
+    </div>
+  {% endif %}
+</div>
+
+{#- The prerequisite lights, on the first screen of the app.
+
+    Two shapes on purpose. When everything is green this is one quiet line -
+    a permanent red-light panel on the busiest screen would be ignored within
+    a week, which is exactly how a light stops working. When something is
+    wrong it opens into the full panel, with the fix and a way to it.
+
+    The same health() drives the Dashboard and every bot tab, so these can
+    never disagree with each other. -#}
+{% if not health.ready %}
+  <div class="card">
+    <div class="hd">
+      <div class="grow">
+        <h2>
+          {{ health.bad }} thing{{ '' if health.bad == 1 else 's' }} to fix
+          before anything can run
+        </h2>
+        <p class="d">
+          Reading a paper still works. Creating questions and running the bots
+          do not, until these are green.
+        </p>
+      </div>
+      <div class="acts">
+        <form method="post" action="/dashboard/recheck">
+          <input type="hidden" name="back" value="/">
+          <button class="btn sm" type="submit">{{ ico.i('refresh', 13) }} Check again</button>
+        </form>
+      </div>
+    </div>
+    <div class="bd">
+      {% include "_health.html" %}
+    </div>
+  </div>
+{% endif %}
+
+{% if ns.unsafe %}
+  <div class="note danger">
+    <span class="nico">{{ ico.i('alert-circle', 18) }}</span>
+    <div class="ntext">
+      <div class="hd">
+        {{ ns.unsafe }} question{{ '' if ns.unsafe == 1 else 's' }}
+        still need{{ 's' if ns.unsafe == 1 else '' }} checking on the portal
+      </div>
+      <div class="bd">
+        Sending was interrupted for {{ 'this one' if ns.unsafe == 1 else 'these' }},
+        so {{ 'it' if ns.unsafe == 1 else 'each one' }} may already be in the live
+        question bank that students see. Open the paper marked below, find the
+        question{{ '' if ns.unsafe == 1 else 's' }} in its list, and search for
+        {{ 'it' if ns.unsafe == 1 else 'them' }} on the portal before doing
+        anything else with that paper. QBG One will never send
+        {{ 'it' if ns.unsafe == 1 else 'them' }} again on its own.
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% if not preflight.can_extract %}
+  <div class="note info">
+    <span class="nico">{{ ico.i('info', 18) }}</span>
+    <div class="ntext">
+      <div class="hd">New papers cannot be read on this computer yet</div>
+      <div class="bd">
+        <p>
+          Reading a Word file needs the helper programs below, and they are not
+          installed here. Everything else works exactly as usual: papers that
+          were already read can still be reviewed and created from this computer.
+        </p>
+        <ul>
+          {% for m in preflight.missing %}
+            <li><strong>{{ m.name }}</strong> - {{ m.why }}. {{ m.how }}</li>
+          {% endfor %}
+        </ul>
+        <p>
+          If a colleague has already read a paper on another computer, bring in
+          their finished folder instead.
+        </p>
+      </div>
+      <div class="btn-row">
+        <a class="btn sm" href="/new">Bring in a finished folder {{ ico.i('arrow-right', 13) }}</a>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% if not items %}
+  <div class="card flush">
+    <div class="bd">
+      <div class="empty">
+        <div class="eico">{{ ico.i('inbox', 20) }}</div>
+        <div class="big">No papers here yet</div>
+        <p>
+          Give QBG One a question document and its answer key and it reads
+          them into a list of questions to check. Nothing reaches the portal
+          until you ask for it.
+        </p>
+        <div class="btn-row" style="justify-content:center">
+          <a class="btn primary lg" href="/new">{{ ico.i('plus', 15) }} New batch</a>
+        </div>
+      </div>
+    </div>
+  </div>
+{% else %}
+  <div class="counters">
+    <div class="counter brand">
+      <div class="n">{{ ns.review }}</div>
+      <div class="l">still to review</div>
+    </div>
+    <div class="counter">
+      <div class="n">{{ ns.pick }}</div>
+      <div class="l">approved, waiting to be created</div>
+    </div>
+    <div class="counter ok">
+      <div class="n">{{ ns.created }}</div>
+      <div class="l">created on the portal</div>
+    </div>
+    {% if ns.unsafe %}
+      <div class="counter danger">
+        <div class="n">{{ ns.unsafe }}</div>
+        <div class="l">to check on the portal</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card flush">
+    <div class="hd">
+      <div class="grow">
+        <h2>Papers</h2>
+        <p class="d">
+          Newest first. Opening a paper picks up wherever it was left.
+        </p>
+      </div>
+    </div>
+    <div class="bd">
+      <div class="tablewrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th scope="col">Paper</th>
+              <th scope="col">Started</th>
+              <th scope="col">Questions</th>
+              <th scope="col">Progress</th>
+              <th scope="col">Where it is up to</th>
+              <th scope="col" class="acts"><span class="sr">Other actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for it in items %}
+              {% set b = it.b %}
+              {% set c = it.c %}
+              {% set unsafe = (c.needs_check + c.creating) if c else 0 %}
+              {#- A paper only has a review sheet once it has been read. Before
+                  that - while it is being read, and after reading failed - there
+                  is no sheet to be missing, so do not call it lost. These are the
+                  same three stages the app sends to the progress screen. -#}
+              {% set unread = b.stage in ('new', 'extracting', 'blocked') %}
+              {% set lost = not it.exists and not unread %}
+              {% set counted = it.exists and c %}
+              <tr {% if lost %}class="muted"{% endif %}>
+
+                <td>
+                  {% if not lost %}
+                    <a href="/batches/{{ b.id }}">{{ b.name }}</a>
+                  {% else %}
+                    {{ b.name }}
+                    <div class="small">
+                      The review sheet was moved or deleted on this computer, so
+                      there is nothing left to open.
+                    </div>
+                  {% endif %}
+                  {% if b.upload_mode == 'english_hindi' %}<div class="small muted">English + Hindi papers</div>{% endif %}
+                  {% if b.upload_mode == 'english_copies' %}<div class="small muted">English papers with language copies</div>{% endif %}
+                </td>
+
+                <td>{{ started(b.created_at) }}</td>
+
+                <td>
+                  {% if counted %}
+                    {{ c.total }}
+                  {% elif unread %}
+                    <span class="muted">not read yet</span>
+                  {% else %}
+                    <span class="muted">not known</span>
+                  {% endif %}
+                </td>
+
+                <td class="wrap-cell">
+                  {% if counted and c.total %}
+                    {% set pct = (c.created * 100) // c.total %}
+                    {% set stuck = c.error + c.unknown %}
+                    <div class="bar {{ 'danger' if unsafe else ('ok' if c.created == c.total else ('warn' if stuck else '')) }}"
+                         role="progressbar" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100"
+                         aria-label="{{ c.created }} of {{ c.total }} created">
+                      <i style="width: {{ pct }}%"></i>
+                    </div>
+                    {#- Every bucket counts() returns is listed, so the facts always
+                        add up to the total the bar is drawn against. -#}
+                    <div class="progress-facts">
+                      <span>{{ c.created }} of {{ c.total }} created</span>
+                      {% if c.pick %}<span>{{ c.pick }} approved</span>{% endif %}
+                      {% if c.needs_review %}<span>{{ c.needs_review }} to review</span>{% endif %}
+                      {% if c.needs_fix %}<span>{{ c.needs_fix }} flagged</span>{% endif %}
+                      {% if c.duplicate %}<span>{{ c.duplicate }} already on the portal</span>{% endif %}
+                      {% if c.error %}<span class="bad">{{ c.error }} refused by the portal</span>{% endif %}
+                      {% if c.unknown %}<span class="bad">{{ c.unknown }} with a status the app does not recognise</span>{% endif %}
+                      {% if unsafe %}<span class="bad">{{ unsafe }} need checking</span>{% endif %}
+                    </div>
+                  {% elif b.stage in ('new', 'extracting') %}
+                    <div class="bar idle" aria-hidden="true"><i></i></div>
+                    <div class="progress-facts"><span>Reading the paper now</span></div>
+                  {% else %}
+                    <span class="muted">nothing to show yet</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  <div class="row">
+                    {% if lost %}
+                      <span class="chip warn">
+                        {{ ico.i('alert-triangle', 12) }} review sheet missing
+                      </span>
+                    {% else %}
+                      {{ stage_chip(b.stage) }}
+                    {% endif %}
+                    {% if unsafe %}
+                      <span class="chip danger">
+                        {{ ico.i('alert-circle', 12) }} check on the portal
+                      </span>
+                    {% endif %}
+                  </div>
+                </td>
+
+                <td class="acts">
+                  <div class="batch-file-actions small">
+                  {% if lost %}<span class="muted" title="The review sheet was moved or deleted on this computer, so there is nothing left to open.">nothing to open</span>{% endif %}
+                  {% if it.exists %}
+                    <a href="/tagging?batch={{ b.id }}">Tag</a>
+                    <a href="/batches/{{ b.id }}/export.xlsx"
+                       aria-label="Download Excel for {{ b.name }}"
+                       title="Questions, answers, solutions and current statuses">
+                      Excel
+                    </a>
+                  {% endif %}
+                  </div>
+                </td>
+
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<details class="helpbox">
+  <summary>How a batch works, and what the states mean</summary>
+  <div class="bd">
+    <p>
+      A batch is one faculty paper. You give QBG One the question document
+      and the answer key, it reads them into a list of questions, you check
+      every question one at a time, and only the ones you approve are created
+      on the QBG portal. Nothing reaches the portal until you ask for it.
+    </p>
+    <p>
+      <strong>Reading the paper</strong> means the two Word files are still
+      being turned into a question list. <strong>Ready to review</strong> means
+      that list is waiting for you. <strong>Being reviewed</strong> means you
+      have started going through it. <strong>Created</strong> means at least one
+      question from it is live on the portal. <strong>Needs attention</strong>
+      means reading the paper stopped part way and the report says why.
+    </p>
+    <p>
+      <strong>Progress</strong> counts questions that are live on the portal
+      against every question read out of the paper - so a paper you have only
+      half reviewed sits at a low bar even though nothing is wrong.
+    </p>
+    <p>
+      If a paper says its <strong>review sheet is missing</strong>, the folder
+      was moved or deleted on this computer and there is nothing left to open.
+      Start a new batch from the same two Word files to read the paper again -
+      or, if a colleague has already read it elsewhere, choose
+      <strong>New batch</strong> and bring in their finished folder.
+    </p>
+  </div>
+</details>
+
+{% endblock %}

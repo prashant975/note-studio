@@ -1,0 +1,62 @@
+# Local builds, generated notes, scratch files, and audit snapshots
+/_build/
+/dist/
+/output/
+/tmp/
+/NoteStudio_Kit/baseline.json
+/NoteStudio_Kit/before_*.json
+/NoteStudio_Kit/after_*.json
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Installed dependencies and tool state
+node_modules/
+.vercel/
+.DS_Store
+Thumbs.db
+
+# Credentials and machine-specific settings (keep examples)
+.env
+.env.*
+!.env.example
+!.env.*.example
+.streamlit/secrets*.toml
+!.streamlit/secrets.toml.example
+service_account*.json
+service-account*.json
+credentials.json
+credentials-*.json
+client_secret*.json
+content-creation-*.json
+proxy_session.json
+token.json
+tokens.json
+cookies.txt
+cookies.json
+*.pem
+*.key
+*.p12
+*.pfx
+.shortnotes_bridge/
+.note_studio/
+
+# Local databases, logs, and backups
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.log
+*.bak
+*.tmp

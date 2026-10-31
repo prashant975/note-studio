@@ -1,0 +1,7 @@
+{#- Check category: what is right and wrong, in plain words. -#}
+{% import "_icons.html" as ico with context %}
+<ul class="check-lines cat-check">
+  {% for f in findings %}
+  <li class="{{ 'ok' if f.kind == 'ok' else 'bad' if f.kind == 'bad' else '' }}">{{ ico.state(f.kind, 13) }} {{ f.text }}</li>
+  {% endfor %}
+</ul>

@@ -1,0 +1,18 @@
+{#- Preview requirements: the exact layers a run of this choice follows (requirements.resolve). -#}
+{% import "_icons.html" as ico with context %}
+<div class="preview-box">
+  <ol class="layers">
+    {% for l in resolved.layers %}
+    <li class="layer {{ 'engine' if l.layer == 'engine' }}">
+      <span class="layer-name">{{ {'engine': "The engine's own prompt", 'type': 'Note type rules', 'category': 'Every subject',
+                                   'subject': 'This subject', 'category_type': 'This note type in this category',
+                                   'profile': 'Sheet rules', 'run': 'This run'}.get(l.layer, l.layer) }}</span>
+      <span class="mono small muted">{{ l.path }}</span>
+      {% if l.text %}<pre class="layer-text">{{ l.text }}</pre>{% else %}<span class="small muted">Unchanged; never edited here.</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+  {% if resolved.switches %}<p class="small"><strong>Switches:</strong>
+    {% for k, v in resolved.switches.items() if k != 'summary' %}<span class="chip xs">{{ k | replace('_', ' ') }}: {{ v }}</span> {% endfor %}</p>{% endif %}
+  <p class="small muted">{% if resolved.fingerprint %}Fingerprint {{ resolved.fingerprint }}: a rule change makes fresh notes; no change reuses them.{% else %}No extra rules: the standard notes.{% endif %}</p>
+</div>

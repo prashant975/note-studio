@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}Practice - {{ brand.APP_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="grow">
+    <h1>Practice</h1>
+    {% if upsc_available %}<p class="sub">Mains practice and DPP sets from UPSC notes that are already made: {{ brand.APP_NAME }}'s and the UPSC Notes app's. The old app's runs are only read; everything made here stays in {{ brand.APP_NAME }}.</p>{% endif %}
+  </div>
+</div>
+
+{% if not upsc_available %}
+<div class="note info">{{ ico.i('info', 16, 'nico') }}<div class="ntext"><div class="hd">Mains practice and DPP are not in this installation.</div>
+  <div class="bd">Open <a href="/new">New notes</a> for the note styles included here.</div></div></div>
+{% else %}
+{% include "_queue_strip.html" %}
+{% if not upsc_on %}
+<div class="note info">{{ ico.i('info', 16, 'nico') }}<div class="ntext"><div class="hd">The UPSC category is switched off</div>
+  <div class="bd">Switch it on in <a href="/settings/categories">Settings → Categories</a> to make UPSC notes and practice.</div></div></div>
+{% endif %}
+
+{% if sets %}
+<section class="card">
+  <div class="hd"><div class="grow"><h2>Your practice sets</h2></div></div>
+  <div class="tablewrap"><table class="data">
+    <thead><tr><th>Practice set</th><th>State</th><th class="num">Cost</th><th>Started</th></tr></thead>
+    <tbody>{% for s in sets %}
+      <tr><td><a class="run-link" href="/practice/{{ s.id }}">{{ s.title }}</a>
+          <div class="small muted">{{ s.message or '' }}</div></td>
+        <td>{% if s.state == 'running' %}<span class="chip xs info"><span class="spinner sm"></span> Working</span>
+            {% else %}<span class="chip xs ok">Ready</span>{% endif %}</td>
+        <td class="num">{% if s.cost_inr %}&#8377;{{ '%.2f' % s.cost_inr }}{% else %}<span class="muted">-</span>{% endif %}</td>
+        <td><span class="small muted" data-time="{{ s.created_at }}"></span></td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+{% endif %}
+
+<section class="card">
+  <div class="hd"><div class="grow"><h2>Make practice from finished notes</h2>
+    <p class="d">Mains practice: questions, tick the ones you want, model answers, then the question paper and answer sheet (uses PW AI credit). DPP: topics, how many Easy, Medium and Hard, replace or remove any, then the PDFs (no AI, no cost).</p></div></div>
+  {% if not masters.ready %}
+  <div class="bd"><div class="note warn">{{ ico.state('warn', 16, 'nico') }}<div class="ntext">
+    <div class="hd">DPP needs the question bank</div>
+    <div class="bd">The QBG tag workbook and the question bank are not in <span class="mono">{{ masters.folder }}</span>. Choose their folder in <a href="/settings/system#dpp">Settings → System</a>.</div></div></div></div>
+  {% endif %}
+  {% if sources %}
+  <div class="tablewrap"><table class="data">
+    <thead><tr><th>Lecture</th><th>From</th><th>Language</th><th>Made</th><th></th></tr></thead>
+    <tbody>{% for s in sources %}
+      <tr><td>{{ s.title }}{% if s.test_run %} <span class="chip xs">Test run</span>{% endif %}</td>
+        <td class="small">{{ brand.APP_NAME if s.kind == 'notecraft' else 'UPSC Notes app' }}</td>
+        <td class="small">{{ s.language | capitalize }}</td>
+        <td><span class="small muted" data-time="{{ s.when }}"></span></td>
+        <td class="nowrap">
+          <form class="inline" method="post" action="/practice/start"><input type="hidden" name="practice" value="dmp">
+            <input type="hidden" name="kind" value="{{ s.kind }}"><input type="hidden" name="id" value="{{ s.id }}">
+            <button class="btn sm" type="submit">{{ ico.i('pen', 13) }} Mains practice</button></form>
+          <form class="inline" method="post" action="/practice/start"><input type="hidden" name="practice" value="dpp">
+            <input type="hidden" name="kind" value="{{ s.kind }}"><input type="hidden" name="id" value="{{ s.id }}">
+            <button class="btn sm" type="submit" {% if not masters.ready %}disabled{% endif %}>{{ ico.i('list', 13) }} DPP</button></form>
+        </td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}
+  <div class="empty"><div class="eico">{{ ico.i('inbox', 20) }}</div>
+    <div class="big">No finished UPSC notes yet</div>
+    <p>Make UPSC notes from a class recording first; they will be listed here.</p>
+    <div class="btn-row center mt-4"><a class="btn primary" href="/new?category=upsc">{{ ico.i('plus', 14) }} New UPSC notes</a></div></div>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

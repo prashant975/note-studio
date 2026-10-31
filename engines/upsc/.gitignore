@@ -1,0 +1,32 @@
+.env
+.streamlit/secrets.toml
+.venv/
+__pycache__/
+*.pyc
+build/
+dist/
+*.zip
+*.log
+runs/*
+!runs/.gitkeep
+outputs/*
+!outputs/.gitkeep
+.DS_Store
+.pytest_cache/
+.pytest_runtime_*/
+*.spec.bak
+third_party/
+
+# Master question-bank workbooks for the DPP builder.
+#
+# NOT in version control, deliberately. "DPP and Infinite Practice Questions"
+# is 53 MB of PW's own question content, and this repository is public — a
+# push would publish the question bank itself. The app resolves these from an
+# uploaded file, from QBG_TAGS_PATH / QUESTION_BANK_PATH, or from this folder,
+# so a fresh clone still runs once the files are dropped in.
+data/*
+!data/.gitkeep
+!data/README.md
+
+# A PyInstaller build made with --distpath while dist/UpscNotesApp is running (see scripts/package_release.py --build)
+dist_staging/

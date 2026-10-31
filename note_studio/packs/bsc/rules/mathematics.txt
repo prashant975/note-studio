@@ -1,0 +1,2 @@
+State every definition and theorem in a definition or concept box, then its proof or method as numbered steps.
+Include every solved example from the lecture in a note box titled "Example", with each step of the working.

@@ -1,0 +1,9 @@
+{#- Check setup results (Settings -> System), loaded on demand. -#}
+{% import "_icons.html" as ico with context %}
+<ul class="needs" id="setup-check">
+  {% for c in checks %}
+  <li><span class="nico {{ c.state }}">{{ ico.state('ok' if c.state == 'ok' else ('warn' if c.state == 'warn' else 'danger'), 16) }}</span>
+    <div class="grow"><strong>{{ c.name }}</strong><span class="small muted">{{ c.words }}</span>
+      {% if c.fix and c.state != 'ok' %}<span class="small">{{ c.fix }}</span>{% endif %}</div></li>
+  {% endfor %}
+</ul>

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Smart Queue - QBG One{% endblock %}
+{% block crumb %}<span class="now">Smart Queue</span>{% endblock %}
+{% block body %}
+<div class="page-head"><div class="grow"><h1>Smart Queue <span class="chip info">New</span></h1>
+  <p class="sub">Start as many papers and tasks as you like. Whatever cannot start yet - because QBG is busy with something else - waits here and starts by itself, one at a time, in the order you added it.</p></div></div>
+<div class="note info"><div class="ntext"><div class="hd">What is new</div><div class="bd"><ul>
+  <li><strong>Many papers in one go:</strong> on Autopilot or New batch choose all the files and tick "Each file is a separate paper". Each becomes its own batch and they run one after another.</li>
+  <li><strong>No more "Another QBG portal job is already running":</strong> question creation, translation, solutions, tagging, video tagging, Verify, the bots and every Upload or Retry button join this line instead of being refused.</li>
+  <li><strong>Start another at any time:</strong> every task page has a "Start another" button; what you start while something runs waits here.</li>
+</ul></div></div></div>
+{% include '_queue_card.html' %}
+{% if not queue.active and not queue.recent %}<div class="note info"><div class="ntext"><div class="bd">Nothing is waiting.
+  Start a paper on <a href="/autopilot">Autopilot</a> or <a href="/new/any-format">New batch</a>; while one is running, the next ones you add wait here.
+  To add several at once, choose all the files and tick "Each file is a separate paper".</div></div></div>{% endif %}
+<div class="card"><div class="hd"><h2>How the Smart Queue works</h2></div><div class="bd"><ul>
+  <li>Two lines run side by side: reading papers, and work on QBG (uploads, translation, tagging, solutions, videos, Verify, Autopilot). Each line runs one at a time; when one finishes, the next in that line starts by itself. A task started while its line is free starts at once, as before.</li>
+  <li>A paper's own Upload waits until that paper has been read.</li>
+  <li>Pressing Upload, Retry or Start twice does not add it twice: it keeps its place.</li>
+  <li>What you asked for is checked again when its turn comes; if the paper or run changed meanwhile, the card says why it did not start.</li>
+  <li>A paper that fails is reported and the queue moves on to the next.</li>
+  <li>Pressing Stop on the paper that is running puts the queue on hold, so the next one does not start over your Stop. So does an expired sign-in, and closing Studio. "Continue the queue" lets it go on.</li>
+  <li>A waiting paper can be removed; nothing has been created for it yet.</li>
+  <li>In Autopilot each paper goes all the way to QBG. In New batch each paper is read and waits at its Preview for your Upload.</li>
+</ul></div></div>
+{% endblock %}

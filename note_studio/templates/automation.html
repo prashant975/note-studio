@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}Sheet automation - {{ brand.APP_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="grow">
+    <h1>Sheet automation</h1>
+    <p class="sub">Notes for every new row of your Google Sheets, filed in Drive with the links written back: the same run as the Short Notes app.</p>
+  </div>
+</div>
+
+{% include "_queue_strip.html" %}
+{% if old_app_open %}
+<div class="note warn">{{ ico.i('alert-triangle', 16, 'nico') }}<div class="ntext">
+  <div class="hd">The old Short Notes app is open</div>
+  <div class="bd">Do not run the same sheet from both apps at once. Close the old app's automation, or run a different sheet here.</div></div></div>
+{% endif %}
+{% if signin.state != 'ready' %}
+<div class="note info">{{ ico.i('key', 16, 'nico') }}<div class="ntext">
+  <div class="hd">Sign in with Google to run the sheets</div>
+  <div class="bd">The automation reads your sheets and Drive and makes notes through PW with your Google account (only whitelisted @pw.live accounts). <a href="/settings#signin">Open Sign-in</a></div></div></div>
+{% endif %}
+{% if list_problem %}
+<div class="note danger">{{ ico.state('danger', 16, 'nico') }}<div class="ntext"><div class="hd">{{ list_problem }}</div>
+  <div class="bd mono small">{{ sheet_file }}</div></div></div>
+{% endif %}
+
+<div class="auto-grid">
+  <section class="card" id="run">
+    <div class="hd"><div class="grow"><h2>Run</h2><p class="d">Pick the sheet and how its notes are made. Try it first to see what would happen.</p></div></div>
+    <form class="bd" method="post" action="/automation/run" id="run-form">
+      <div class="field-row">
+        <label class="field"><span>Sheet</span>
+          <select name="sheet" required>
+            {% set enabled = sheets | selectattr('enabled') | list %}
+            {% for s in enabled %}<option value="{{ s.name }}" data-category="{{ s.category }}">{{ s.name }}</option>{% endfor %}
+            {% if enabled | length > 1 %}<option value="__all__">All sheets ({{ enabled | length }})</option>{% endif %}
+          </select></label>
+        <label class="field"><span>Category</span>
+          <select name="category">
+            {% for c in categories %}<option value="{{ c.id }}">{{ c.label }}</option>{% endfor %}
+          </select></label>
+      </div>
+      <div class="field-row">
+        <label class="field"><span>Subject</span>
+          <select name="subject">{% for id, label in subjects.items() %}<option value="{{ id }}">{{ label }}</option>{% endfor %}</select></label>
+        <label class="field"><span>AI model</span>
+          <select name="model">{% for m in models %}<option value="{{ m.id }}" {% if m.current %}selected{% endif %}>{{ m.label }}</option>{% endfor %}</select></label>
+      </div>
+      <label class="row checkrow"><input type="checkbox" name="page_numbers" checked><span>Page numbers on the notes</span></label>
+      <details class="more-options">
+        <summary>More options <span class="hint">how many rows, one row, redo, spend limit, Sanskrit</span></summary>
+        <div class="stack">
+          <div class="field-row">
+            <label class="field"><span>At most this many rows</span><input type="number" name="limit" min="1" placeholder="All ready rows"></label>
+            <label class="field"><span>Only this row</span><input type="number" name="row" min="2" placeholder="Row number in the sheet"></label>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>Stop when the spend passes (&#8377;)</span><input type="number" name="max_cost" min="1" step="10" placeholder="The sheet's own limit"></label>
+            <label class="field"><span>Sanskrit lectures</span>
+              <select name="sanskrit_style"><option value="hindi">श्लोक + हिन्दी अर्थ</option><option value="strict">संस्कृतम् only</option></select></label>
+          </div>
+          <label class="row checkrow"><input type="checkbox" name="redo"><span>Redo rows already marked done (pays again)</span></label>
+        </div>
+      </details>
+      <div class="form-end">
+        <button class="btn" type="submit" name="mode" value="dry" {% if blocked or not sheets %}disabled{% endif %}>{{ ico.i('eye', 15) }} Try it first</button>
+        <button class="btn primary" type="button" hx-post="/automation/confirm" hx-include="#run-form" hx-target="#confirm" hx-swap="innerHTML"
+                {% if blocked or not sheets %}disabled{% endif %}>{{ ico.i('sparkles', 15) }} Run now</button>
+        {% if blocked and signin.state == 'ready' %}<span class="hint">{{ blocked }}</span>{% endif %}
+      </div>
+      <div id="confirm"></div>
+    </form>
+  </section>
+
+  {% include "_automation_live.html" %}
+</div>
+
+<section class="card" id="sheets">
+  <div class="hd"><div class="grow"><h2>Sheets</h2>
+    <p class="d">Shared with the old Short Notes app: a sheet added or changed here appears there too. Every save keeps a backup.</p></div>
+    <span class="chip">{{ sheets | length }} sheet{{ '' if sheets | length == 1 else 's' }}</span></div>
+  {% if sheets %}
+  <ul class="sheet-list">
+    {% for s in sheets %}
+    <li class="sheet-item {{ 'off' if not s.enabled }}">
+      <div class="sheet-main">
+        <div class="sheet-name">{{ s.name }}
+          {% if not s.enabled %}<span class="chip xs">Off</span>{% endif %}
+          {% if s.problem %}<span class="chip xs danger">Cannot be read: {{ s.problem }}</span>{% endif %}</div>
+        <div class="sheet-meta">
+          <span class="chip xs {{ 'info' if s.category_set }}" {% if not s.category_set %}title="Not chosen yet: Edit to set it"{% endif %}>{{ s.category_label }}{% if not s.category_set %} (default){% endif %}</span>
+          <span class="chip xs" title="{{ 'Every tab with rows ready' if s.all_tabs else 'Tab id ' ~ s.gid }}">{{ 'Every tab' if s.all_tabs else 'One tab' }}</span>
+          {% if s.output_folder %}<span class="chip xs">{{ ico.i('folder', 11) }} Notes folder set</span>{% endif %}
+          {% if s.signature %}<span class="chip xs">{{ ico.i('pen', 11) }} {{ s.signature }}</span>{% endif %}
+          {% if s.max_cost %}<span class="chip xs">Stops at &#8377;{{ s.max_cost }}</span>{% endif %}
+          <a class="small" href="https://docs.google.com/spreadsheets/d/{{ s.spreadsheet_id }}/edit#gid={{ s.gid }}" target="_blank" rel="noopener">Open the sheet</a>
+        </div>
+      </div>
+      <details class="sheet-edit">
+        <summary class="btn sm">Edit</summary>
+        <form method="post" action="/automation/sheets/edit" class="stack">
+          <input type="hidden" name="original_name" value="{{ s.name }}">
+          <div class="field-row">
+            <label class="field"><span>Name</span><input type="text" name="name" value="{{ s.name }}" maxlength="40" required></label>
+            <label class="field"><span>Signature on the notes</span><input type="text" name="signature" value="{{ s.signature }}" placeholder="From the faculty column"></label>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>Category</span><select name="category">
+              {% for c in categories %}<option value="{{ c.id }}" {% if c.id == s.category %}selected{% endif %}>{{ c.label }}</option>{% endfor %}</select></label>
+            <label class="field"><span>Note type</span><select name="note_type">
+              {% for t in types %}<option value="{{ t.id }}" {% if t.id == s.note_type %}selected{% endif %}>{{ t.label }}</option>{% endfor %}</select></label>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>Stop when the spend passes (&#8377;)</span><input type="number" name="max_cost" min="1" step="10" value="{{ s.max_cost }}" placeholder="No limit"></label>
+            <label class="field"><span>Also save a PDF copy</span><select name="also_pdf">
+              <option value="inherit" {% if s.also_pdf == 'inherit' %}selected{% endif %}>As usual</option>
+              <option value="yes" {% if s.also_pdf == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if s.also_pdf == 'no' %}selected{% endif %}>No</option></select></label>
+          </div>
+          <label class="field"><span>Notes folder in Drive (for sheets of lecture links)</span>
+            <input type="text" name="output_folder" value="{{ s.output_folder }}" placeholder="Paste a Drive folder link"></label>
+          <label class="field"><span>Batches that are not lectures (one per line)</span>
+            <textarea name="skip_batches" rows="3" placeholder="Empty: the usual list (Pi Lens, UXCC, VP LIVE, Smart DPP)">{{ s.skip_batches }}</textarea></label>
+          <label class="row checkrow"><input type="checkbox" name="enabled" {% if s.enabled %}checked{% endif %}><span>On (offered in Run)</span></label>
+          {% if s.extra_keys %}<p class="hint">Also kept as they are: {{ s.extra_keys | join(', ') }}.</p>{% endif %}
+          <div class="btn-row"><button class="btn primary sm" type="submit">Save</button></div>
+        </form>
+        <form method="post" action="/automation/sheets/remove" class="btn-row remove-row"
+              data-confirm="Remove {{ s.name }} from the sheet list? The Google Sheet itself is not touched, and a backup of the list is kept.">
+          <input type="hidden" name="name" value="{{ s.name }}">
+          <button class="btn ghost sm" type="submit">{{ ico.i('x', 13) }} Remove from the list</button>
+        </form>
+      </details>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="empty"><div class="eico">{{ ico.i('sheet', 20) }}</div><div class="big">No sheets yet</div><p>Add a Google Sheet below.</p></div>
+  {% endif %}
+  <details class="ft add-sheet">
+    <summary class="btn sm">{{ ico.i('plus', 13) }} Add a sheet</summary>
+    <form method="post" action="/automation/sheets/add" class="stack" id="add-form">
+      <div class="field-row">
+        <label class="field"><span>Name</span><input type="text" name="name" maxlength="40" required placeholder="e.g. Arjuna JEE 2027"></label>
+        <label class="field"><span>Google Sheet link</span><input type="url" name="link" required placeholder="https://docs.google.com/spreadsheets/d/..."></label>
+      </div>
+      <div class="btn-row"><button class="btn sm" type="button" hx-post="/automation/tabs" hx-include="#add-form [name='link']"
+              hx-target="#tab-picker" {% if signin.state != 'ready' %}disabled{% endif %}>{{ ico.i('list', 13) }} Load its tabs</button>
+        <label class="row checkrow"><input type="checkbox" name="all_tabs"><span>Every tab that is ready</span></label></div>
+      <div id="tab-picker"></div>
+      <label class="field"><span>Notes folder in Drive (only for sheets of lecture links)</span><input type="text" name="output_folder" placeholder="Paste a Drive folder link"></label>
+      <div class="field-row">
+        <label class="field"><span>Category</span><select name="category">{% for c in categories %}<option value="{{ c.id }}">{{ c.label }}</option>{% endfor %}</select></label>
+        <label class="field"><span>Note type</span><select name="note_type">{% for t in types %}<option value="{{ t.id }}">{{ t.label }}</option>{% endfor %}</select></label>
+      </div>
+      <div class="btn-row"><button class="btn primary sm" type="submit" {% if signin.state != 'ready' %}disabled{% endif %}>Check and add</button>
+        <span class="hint">The sheet is opened with your Google account to check it before it is added.</span></div>
+    </form>
+  </details>
+</section>
+
+<div class="grid cols-2">
+  <section class="card" id="checks">
+    <div class="hd"><div class="grow"><h2>Checks</h2><p class="d">Make sure everything is ready before a big run.</p></div></div>
+    <div class="bd stack">
+      <form method="post" action="/automation/checks/setup" class="btn-row"><button class="btn sm" type="submit">{{ ico.i('shield', 13) }} Check setup</button>
+        <span class="hint">Free. Sign-in file, libraries, PW access, the sheet list.</span></form>
+      <form method="post" action="/automation/checks/model" class="btn-row" data-confirm="Make one tiny AI call to test the model? It uses a very small amount of PW AI credit.">
+        <button class="btn sm" type="submit">{{ ico.i('sparkles', 13) }} Test the AI model</button><span class="hint">One tiny AI call.</span></form>
+      <form method="post" action="/automation/checks/probe" enctype="multipart/form-data" class="btn-row"
+            data-confirm="Try the first part of this PDF with the AI? It uses PW AI credit for one part of the lecture.">
+        <input type="file" name="file" accept="application/pdf,.pdf" required>
+        <button class="btn sm" type="submit">{{ ico.i('file-text', 13) }} Try one PDF</button></form>
+      {% include "_automation_check.html" %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="hd"><div class="grow"><h2>Recent sheet runs</h2></div><div class="acts"><a class="btn sm ghost" href="/runs">All runs</a></div></div>
+    {% if recent %}
+    <ul class="needs">
+      {% for r in recent %}
+      <li><span class="nico {{ {'complete': 'ok', 'failed': 'danger', 'needs_attention': 'warn', 'stopped': 'warn'}.get(r.state, '') }}">{{ ico.i('sheet', 15) }}</span>
+        <div class="grow"><a class="run-link" href="/runs/{{ r.id }}">{{ r.title }}</a>
+          <span class="small muted">{{ r.message }}</span></div>
+        <span class="small muted" data-time="{{ r.created_at }}"></span></li>
+      {% endfor %}
+    </ul>
+    {% else %}<div class="bd"><p class="quiet-line">{{ ico.i('inbox', 15) }} No sheet runs in {{ brand.APP_NAME }} yet.</p></div>{% endif %}
+  </section>
+</div>
+{% endblock %}

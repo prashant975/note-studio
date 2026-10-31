@@ -1,0 +1,33 @@
+# UPSC PDF QC — standalone quality control for already-generated UPSC notes PDFs.
+#
+# Only what the QC path actually needs. The note-generation project's video,
+# transcription, PPTX and DOCX-writing dependencies are deliberately absent:
+# this app reads PDFs and writes one XLSX.
+
+# --- frontend + sign-in -----------------------------------------------------
+# Gemini runs through the shared PW proxy, which authorises the signed-in
+# @pw.live Google account. Streamlit's native Google login (st.login) needs the
+# [auth] extra, and 1.58+ for the OAuth fixes the note-generation app pinned to.
+streamlit[auth]>=1.58
+# Keep Authlib 1.7.x — the version Streamlit's OAuth login is tested against.
+Authlib>=1.7,<2
+
+# --- configuration ----------------------------------------------------------
+python-dotenv>=1.0
+
+# --- the PW proxy client (pw_access.py) -------------------------------------
+requests>=2.31
+
+# --- PDF reading, page rendering, layout geometry ---------------------------
+# fitz. Also provides find_tables(), used to locate table zones on a page.
+pymupdf>=1.24
+# Offline English dictionary for the deterministic typo check (src/qc/spelling_check.py).
+pyspellchecker>=0.8,<1
+# Downscales rendered pages before they are sent to the visual check.
+Pillow>=10.0
+
+# --- the QC rule set (config/upsc_qc_*.yaml) --------------------------------
+PyYAML>=6.0
+
+# --- the Error Report XLSX --------------------------------------------------
+openpyxl>=3.1

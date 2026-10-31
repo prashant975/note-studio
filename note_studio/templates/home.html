@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}Overview - {{ brand.APP_NAME }}{% endblock %}
+
+{% block body %}
+{#-
+  The first screen of the day, in the order it matters:
+    Start         what people come to do
+    Running now   what NoteCraft is working on
+    Needs you     what waits for a decision or a fix
+    Note engines  the note makers NoteCraft carries
+    Recent        what happened last
+  Nothing here starts work; every action links to the page that does it.
+-#}
+<section class="hero">
+  <div class="hero-in">
+    <span class="hero-kicker">{{ brand.APP_NAME }}</span>
+    <h1>Every kind of notes,<br>made in one place.</h1>
+    <p class="sub">Hand-drawn notes for NEET-JEE and Foundation, UPSC class notes, practice and checks,
+      and the Google Sheet automation, together.</p>
+    <div class="hero-acts">
+      <a class="btn primary lg" href="/new">{{ ico.i('plus', 16) }} New notes</a>
+      <a class="btn lg" href="/automation">{{ ico.i('sheet', 16) }} Sheet automation</a>
+    </div>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <div class="sheet s3"></div>
+    <div class="sheet s2"></div>
+    <div class="sheet s1">
+      <span class="ln w80"></span><span class="ln w60 hl"></span><span class="ln w90"></span>
+      <span class="ln w50"></span><span class="ln w70"></span><span class="ln w40 hl"></span>
+    </div>
+  </div>
+</section>
+
+<h2 class="section-title">Start</h2>
+<div class="tiles">
+  {% for t in start %}
+  <a class="tile {{ 'lead' if t.lead }}" href="{{ t.href }}">
+    <span class="tico">{{ ico.i(t.icon, 18) }}</span>
+    <span class="tt">{{ t.title }}{% if not t.ready %} <span class="navtag">Soon</span>{% endif %}</span>
+    <span class="td">{{ t.about }}</span>
+  </a>
+  {% endfor %}
+</div>
+
+<div class="grid cols-2 home-cols">
+  <section class="card">
+    <div class="hd">
+      <div class="grow"><h2>Running now</h2></div>
+      <div class="acts"><a class="btn sm ghost" href="/queue">{{ ico.i('layers', 13) }} Smart Queue{% if queue.waiting %} &middot; {{ queue.waiting }} waiting{% endif %}</a></div>
+    </div>
+    <div class="bd">
+      {% if active %}
+        {% for run in active %}
+        <div class="runrow">
+          <div class="row runrow-head">
+            <div class="grow"><a class="run-link" href="/runs/{{ run.id }}"><strong>{{ run.title or 'Notes' }}</strong></a>
+              <div class="small muted">{{ run.message or 'Starting...' }}</div></div>
+            <span class="chip info"><span class="spinner sm"></span> {{ run.pct or 0 }}%</span>
+          </div>
+          <div class="bar"><i style="width: {{ run.pct or 0 }}%"></i></div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="quiet-line">{{ ico.i('pause', 15) }} Nothing is running.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card" id="needs">
+    <div class="hd"><div class="grow"><h2>Needs you</h2></div>{% if needs %}<span class="chip warn">{{ needs|length }}</span>{% endif %}</div>
+    {% if not needs %}
+      <div class="bd"><p class="quiet-line">{{ ico.i('check-circle', 15) }} Nothing needs you right now.</p></div>
+    {% else %}
+      <ul class="needs">
+        {% for n in needs %}
+        <li><span class="nico {{ n.kind }}">{{ ico.i(n.icon, 16) }}</span>
+          <div class="grow"><strong>{{ n.title }}</strong><span class="small muted">{{ n.about }}</span></div>
+          <a class="btn sm" href="{{ n.href }}">{{ n.action }}</a></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+</div>
+
+<h2 class="section-title spaced">Note engines</h2>
+<div class="engines">
+  {% for e in engines %}
+  <div class="engine {{ 'ready' if e.copied else 'later' }}">
+    <div class="engine-top">
+      <span class="eico">{{ ico.i(e.icon, 18) }}</span>
+      {% if e.copied %}<span class="chip ok xs"><span class="dot"></span> On board</span>
+      {% else %}<span class="chip xs">Not in this installation</span>{% endif %}
+    </div>
+    <div class="engine-name">{{ e.label }}</div>
+    <div class="engine-about">{{ e.makes }}</div>
+    <div class="engine-meta">{{ e.for }}{% if e.copied and e.files %} &middot; {{ e.files }} files{% endif %}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<section class="card">
+  <div class="hd"><div class="grow"><h2>Recent</h2></div><div class="acts"><a class="btn sm ghost" href="/runs">{{ ico.i('file-text', 13) }} All runs</a></div></div>
+  {% if recent %}
+    <div class="tablewrap"><table class="data">
+      <thead><tr><th>Notes</th><th>Type</th><th>State</th><th class="num">Cost</th></tr></thead>
+      <tbody>
+      {% for run in recent %}{% set w = states.get(run.state, (run.state, '')) %}
+        <tr><td><a class="run-link" href="/runs/{{ run.id }}">{{ run.title or 'Notes' }}</a></td><td>{{ run.note_type or run.engine }}</td>
+          <td><span class="chip xs {{ w[1] }}">{{ w[0] }}</span></td>
+          <td class="num">&#8377;{{ '%.2f' % run.cost_inr }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  {% else %}
+    <div class="empty">
+      <div class="eico">{{ ico.i('inbox', 20) }}</div>
+      <div class="big">No notes made in {{ brand.APP_NAME }} yet</div>
+      <p>Notes you make here, and their cost, will be listed here. The old apps' notes stay where they are.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,10 @@
+{#- One line on the task pages: what the Smart Queue holds right now. -#}
+{% import "_icons.html" as ico with context %}
+{% if queue_counts.waiting or queue_counts.running or queue_counts.hold %}
+<a class="queue-strip {{ 'held' if queue_counts.hold }}" href="/queue" id="queue-strip"
+   hx-get="/queue/strip" hx-trigger="every 4s" hx-swap="outerHTML">
+  {{ ico.i('layers', 15) }}
+  <span>Smart Queue: {% if queue_counts.running %}{{ queue_counts.running }} running{% endif %}{% if queue_counts.running and queue_counts.waiting %} &middot; {% endif %}{% if queue_counts.waiting %}{{ queue_counts.waiting }} waiting{% endif %}{% if queue_counts.hold %} &middot; holding: {{ hold_words }}{% endif %}</span>
+  <span class="go">Open {{ ico.i('arrow-right', 13) }}</span>
+</a>
+{% endif %}

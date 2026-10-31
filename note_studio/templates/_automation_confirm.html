@@ -1,0 +1,21 @@
+{#- "Run now": what the run would touch (the old app's preview), then one button to go. -#}
+{% import "_icons.html" as ico with context %}
+<div class="confirm-box">
+  {% if not ok %}
+    <div class="note warn">{{ ico.i('alert-triangle', 16, 'nico') }}<div class="ntext"><div class="hd">{{ problem }}</div></div></div>
+  {% elif not ready %}
+    <div class="note info">{{ ico.i('info', 16, 'nico') }}<div class="ntext"><div class="hd">Nothing is ready to run in this sheet.</div>
+      {% for i in items if i.problem %}<div class="bd small">{{ i.tab }}: {{ i.problem }}</div>{% endfor %}</div></div>
+  {% else %}
+    <p class="lead-strong">Ready to make notes for {{ ready }} row{{ '' if ready == 1 else 's' }}{% if options.limit and options.limit < ready %} (at most {{ options.limit }}){% endif %}{% if options.row %} (only row {{ options.row }}){% endif %}</p>
+    <ul class="confirm-list">
+      {% for i in items %}<li><strong>{{ i.tab }}</strong> <span class="muted">({{ i.profile }})</span>: {{ i.ready }} ready{% if i.problem %} &middot; <span class="danger">{{ i.problem }}</span>{% endif %}</li>{% endfor %}
+    </ul>
+    <p class="hint">This makes notes with PW AI credit, files them in Drive and writes the links into the sheet.</p>
+    <form method="post" action="/automation/run" class="btn-row">
+      {% for key, value in form.items() if key not in ('mode',) %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+      <input type="hidden" name="mode" value="run">
+      <button class="btn primary" type="submit" data-busy>{{ ico.i('sparkles', 15) }} Yes, make the notes</button>
+    </form>
+  {% endif %}
+</div>

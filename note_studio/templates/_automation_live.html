@@ -1,0 +1,53 @@
+{#- The sheet run as it is now (the old app's RunController.status()). Polled every 2 s while it runs. -#}
+{% import "_icons.html" as ico with context %}
+{% set st = live.state %}
+{% set progress = live.progress or {} %}
+{% set summary = live.summary or {} %}
+{% set counts = summary.get('counts', {}) %}
+<section class="card live-card state-{{ st }}" id="live" {% if running %}hx-get="/automation/live" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+  <div class="hd">
+    <div class="grow"><h2>Now</h2>
+      <p class="d">{% if running %}{{ (live.options or {}).get('dryRun') and 'Trying it: nothing is made or written.' or 'Making notes row by row.' }}{% elif st in ('finished', 'error') %}The last run on this computer since {{ brand.APP_NAME }} started.{% else %}Nothing is running.{% endif %}</p></div>
+    {% if st == 'auth' %}<span class="chip info"><span class="spinner sm"></span> Signing in</span>
+    {% elif st == 'running' %}<span class="chip info"><span class="spinner sm"></span> Running</span>
+    {% elif st == 'finished' %}<span class="chip ok">{{ ico.i('check-circle', 13) }} Finished</span>
+    {% elif st == 'error' %}<span class="chip danger">{{ ico.i('alert-circle', 13) }} Stopped with a problem</span>
+    {% else %}<span class="chip">Idle</span>{% endif %}
+  </div>
+  <div class="bd">
+    {% if running and progress.get('total') %}
+      <div class="bar"><i style="width: {{ ((progress.position or 0) * 100 / progress.total) | int }}%"></i></div>
+      <p class="small muted mt-2">Row {{ progress.row }} &middot; {{ progress.position }} of {{ progress.total }}{% if progress.sheet %} &middot; {{ progress.sheet }}{% endif %}</p>
+    {% elif running %}
+      <div class="bar idle"><i></i></div><p class="small muted mt-2">Reading the sheet and finding the lectures...</p>
+    {% endif %}
+    <div class="facts">
+      <div class="fact"><span class="n">{{ counts.get('done', progress.get('done', 0)) }}</span><span class="l">made</span></div>
+      <div class="fact"><span class="n">{{ counts.get('failed', progress.get('failed', 0)) }}</span><span class="l">failed</span></div>
+      {% if counts.get('planned') %}<div class="fact"><span class="n">{{ counts.planned }}</span><span class="l">would be made</span></div>{% endif %}
+      {% if counts.get('stopped') %}<div class="fact"><span class="n">{{ counts.stopped }}</span><span class="l">not reached</span></div>{% endif %}
+      <div class="fact"><span class="n">&#8377;{{ '%.2f' % (summary.get('totalCostInr', progress.get('costInr', 0)) or 0) }}</span><span class="l">spent</span></div>
+    </div>
+    {% if st == 'error' and live.error %}<div class="note danger mt-4">{{ ico.state('danger', 16, 'nico') }}<div class="ntext"><div class="hd">The run stopped with a problem.</div><div class="bd small mono">{{ live.error }}</div></div></div>{% endif %}
+    <div class="btn-row mt-4">
+      {% if running %}
+        <form method="post" action="/automation/stop" data-confirm="Stop after the row being made now? Rows not reached stay ready for the next run.">
+          <button class="btn danger sm" type="submit" {% if live.stopRequested %}disabled{% endif %}>{{ ico.i('stop', 13) }} {{ 'Stopping after this row' if live.stopRequested else 'Stop after this row' }}</button></form>
+      {% endif %}
+      {% if run_id %}<a class="btn sm" href="/runs/{{ run_id }}">{{ ico.i('file-text', 13) }} Open this run</a>{% endif %}
+    </div>
+  </div>
+  {% if summary.get('outcomes') %}
+  <div class="tablewrap"><table class="data">
+    <thead><tr><th>Row</th><th>Outcome</th><th>Notes</th><th class="num">&#8377;</th></tr></thead>
+    <tbody>{% for o in summary.outcomes %}{% set w = outcome_words.get(o.outcome, (o.outcome, '')) %}
+      <tr><td>{{ o.row }}</td><td><span class="chip xs {{ w[1] }}">{{ w[0] }}</span>{% if o.code %} <span class="small muted">{{ o.code }}</span>{% endif %}</td>
+        <td>{% if o.link %}<a href="{{ o.link }}" target="_blank" rel="noopener">Open in Drive</a>{% endif %}</td>
+        <td class="num">{% if o.cost_inr %}{{ '%.2f' % o.cost_inr }}{% endif %}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% endif %}
+  {% if live.log %}
+  <details class="ft log-box"><summary class="small">Full log ({{ live.log | length }} lines)</summary>
+    <pre class="log">{{ live.log[-200:] | join('\n') }}</pre></details>
+  {% endif %}
+</section>

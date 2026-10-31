@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico with context %}
+{% block title %}Check notes - {{ brand.APP_NAME }}{% endblock %}
+
+{% block body %}
+<div class="page-head">
+  <div class="grow">
+    <h1>Check notes</h1>
+    <p class="sub">An error report (Excel) for a finished notes file, so mistakes are caught before students see them: the UPSC file QC tool's checks. Any finished run also has a Check these notes button.</p>
+  </div>
+</div>
+
+{% include "_queue_strip.html" %}
+<section class="card">
+  <div class="hd"><div class="grow"><h2>Check a file</h2>
+    <p class="d">UPSC notes get the full check: spelling, names and structure, then PW AI reviews the facts (with web lookups) and writes the error report. Other notes get the checks that need no AI: spelling, names, leftover markers and repeats (no sign-in, no cost), because the AI check is written for UPSC notes.</p></div></div>
+  <form class="bd stack" method="post" action="/check" enctype="multipart/form-data">
+    <label class="dropzone" data-dropzone>
+      <input type="file" name="file" required accept="{{ accepted | join(',') }}" data-files>
+      <span class="dz-ico">{{ ico.i('download', 22) }}</span>
+      <span class="dz-main">Drop the notes file here, or <u>choose a file</u></span>
+      <span class="dz-sub">PDF, Word, PowerPoint, text or an image, up to {{ max_mb }} MB. Anything that is not a PDF is turned into one first (Word and PowerPoint need Microsoft Office).</span>
+      <span class="dz-list" data-file-list></span>
+    </label>
+    <div class="field"><span>These notes are</span>
+      <label class="row checkrow"><input type="radio" name="kind" value="upsc" checked><span>UPSC notes: full check (uses PW AI credit)</span></label>
+      <label class="row checkrow"><input type="radio" name="kind" value="other"><span>Other notes: basic checks only (no AI, no cost)</span></label></div>
+    <div class="btn-row"><button class="btn primary" type="submit">{{ ico.i('shield', 14) }} Check</button></div>
+  </form>
+</section>
+
+{% if checks %}
+<section class="card">
+  <div class="hd"><div class="grow"><h2>Recent checks</h2></div></div>
+  <div class="tablewrap"><table class="data">
+    <thead><tr><th>File</th><th>Check</th><th>Result</th><th class="num">Cost</th><th>When</th></tr></thead>
+    <tbody>{% for c in checks %}
+      <tr><td><a class="run-link" href="/runs/{{ c.id }}">{{ c.title }}</a></td>
+        <td class="small">{{ 'Full (UPSC)' if c.category == 'upsc' else 'Basic' }}</td>
+        <td class="small">{{ c.message or c.state }}</td>
+        <td class="num">{% if c.cost_inr %}&#8377;{{ '%.2f' % c.cost_inr }}{% else %}<span class="muted">-</span>{% endif %}</td>
+        <td><span class="small muted" data-time="{{ c.created_at }}"></span></td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+{% endif %}
+{% endblock %}

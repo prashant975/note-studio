@@ -1,0 +1,599 @@
+{
+  "categories": [
+    "neet_jee",
+    "foundation"
+  ],
+  "default": "neet_jee",
+  "fingerprints": {
+    "foundation": "5c1765fe18008cee",
+    "jee": "",
+    "neet": "",
+    "neet_jee": ""
+  },
+  "labels": {
+    "foundation": "Foundation",
+    "neet_jee": "NEET-JEE"
+  },
+  "legacy": {
+    "jee": "neet_jee",
+    "neet": "neet_jee"
+  },
+  "normalize": {
+    "Foundation": "foundation",
+    "NEET-JEE": "neet_jee",
+    "neet": "neet_jee"
+  },
+  "normalize_unknown": "ValueError: unknown category",
+  "pairs": {
+    "foundation/": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "88a6938ae6cb0c7602cc2a005d12d26c6c8f6eff097f947df6ff9f43480cd44a",
+        "hindi": "087f3ee6fb65a6378a14a3df5a4d84b8eb051ea405dab37ec71028f1825c8cae"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "foundation/auto": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "2699855336e6f7b05871c7c208ac6ca7ea695b1d47964bd8779062bb3046ff4e",
+        "hindi": "3015152afa3fc8dc221f1d0a531227fcff20e4cf8045ad42157001218bdb316b"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "foundation/biology": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "19f2b9c0b0988c2966745a63f4e5b57d4dccd7a4cb20875dabd39fe0dc75d764",
+        "hindi": "251f8bce1c4d17ff770d2dbd5957a58f60bf480ea7ab9e1e507b38233b26e0c1"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "foundation/chemistry": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "1680e9bbea3c59460cf7d9e993f0b18da4516065c8155a3c17910986b0339e2a",
+        "hindi": "6d68f8a61933a91bcc864e75ce1c9d1de1ab84751eb09e70cfda7e650dee4059"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "foundation/english": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "447a4736ae73ec9d754471ff56533dba955ad7451d028de3e075646d14f5f6f7",
+        "hindi": "fe39c03b53684543453688f97cb7c765e50a53c74656cf9c0cd362d35460ab9e"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "foundation/hindi": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "513805aecae99fd0d47328d7399789aa3af4e20b9fe8f7f9f39ae22e1ab381a0",
+        "hindi": "d18b811eddb8ae86521c510987ca4b1ab815bf7b93b75dac4752a528f0f5124b"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "foundation/mathematics": {
+      "commands": "FOUNDATION MATHS NOTES (class 9-10) - theory plus the teacher's solved examples.\n- Theory first in each section: definitions, theorems, formulas and identities\n  with their conditions, as short points.\n- Then that section's solved examples in worked_examples, in the order the\n  teacher solves them: the full question with its numbers, every step of the\n  teacher's working (one step per entry, each equation in $...$), and the final\n  answer. Do not skip or merge steps the teacher shows.\n- Keep each example under the concept it practises. Do not turn an example's\n  working into theory bullets as well.",
+      "prompt_block": "\n\nCATEGORY: Foundation notes. Follow these format commands for selection and presentation only; they never add facts beyond the lecture PDF:\nFOUNDATION MATHS NOTES (class 9-10) - theory plus the teacher's solved examples.\n- Theory first in each section: definitions, theorems, formulas and identities\n  with their conditions, as short points.\n- Then that section's solved examples in worked_examples, in the order the\n  teacher solves them: the full question with its numbers, every step of the\n  teacher's working (one step per entry, each equation in $...$), and the final\n  answer. Do not skip or merge steps the teacher shows.\n- Keep each example under the concept it practises. Do not turn an example's\n  working into theory bullets as well.",
+      "prompt_sha256": {
+        "english": "a43c3a6923c982c2e11414e1515a7dec9b079547ab6374596627264705e54a6b",
+        "hindi": "015bceb68923c949d6a8c73854347fcd46d81d95e0e1ddebc60c3401a6af9c98"
+      },
+      "solved_examples": true,
+      "switches": {
+        "solved_examples": true,
+        "summary": "Class 9-10 Maths: theory plus the teacher's solved examples (question, steps, answer)."
+      }
+    },
+    "foundation/maths": {
+      "commands": "FOUNDATION MATHS NOTES (class 9-10) - theory plus the teacher's solved examples.\n- Theory first in each section: definitions, theorems, formulas and identities\n  with their conditions, as short points.\n- Then that section's solved examples in worked_examples, in the order the\n  teacher solves them: the full question with its numbers, every step of the\n  teacher's working (one step per entry, each equation in $...$), and the final\n  answer. Do not skip or merge steps the teacher shows.\n- Keep each example under the concept it practises. Do not turn an example's\n  working into theory bullets as well.",
+      "prompt_block": "\n\nCATEGORY: Foundation notes. Follow these format commands for selection and presentation only; they never add facts beyond the lecture PDF:\nFOUNDATION MATHS NOTES (class 9-10) - theory plus the teacher's solved examples.\n- Theory first in each section: definitions, theorems, formulas and identities\n  with their conditions, as short points.\n- Then that section's solved examples in worked_examples, in the order the\n  teacher solves them: the full question with its numbers, every step of the\n  teacher's working (one step per entry, each equation in $...$), and the final\n  answer. Do not skip or merge steps the teacher shows.\n- Keep each example under the concept it practises. Do not turn an example's\n  working into theory bullets as well.",
+      "prompt_sha256": {
+        "english": "f22ce9db1101b4c18265cbe6b3e7f87d1eb74c2391a6610fb697197a196f0f34",
+        "hindi": "958d4e348973de850f04dd7a43d11d1869261377b23b7f27586be995eb4a1981"
+      },
+      "solved_examples": true,
+      "switches": {
+        "solved_examples": true,
+        "summary": "Class 9-10 Maths: theory plus the teacher's solved examples (question, steps, answer)."
+      }
+    },
+    "foundation/other": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "701678dd106219f4db871f21e36748763b2a785b1ff8ef5cf42df79cf664dcfa",
+        "hindi": "4bce6e0cc45361438a2523d82fa82ffa2be33d69dc442139098100949b255565"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "foundation/physics": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "28f36fff3e6fe0bfb06f3543059c9e713ddc71794b343fb1dc910dd1f6128446",
+        "hindi": "c726fa3131dcde6d839e06ca529b6e10ea275699659da32d183503ba2f64414c"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "foundation/sanskrit": {
+      "commands": "FOUNDATION SANSKRIT NOTES - keep to the lesson itself.\n- Cover only the lesson: its introduction, its opening verse and numbered verses\n  (१, २, ३ ...) with their पदच्छेद / अन्वय / अर्थ, one शब्दार्थ table and its\n  teachings. Leave out everything else in the PDF, even though it is printed there:\n  extra or closing verses outside the numbered lesson verses (e.g. a \"गीता-पाठ\"\n  or \"हित-सन्देश\" verse), reference lists and tables (e.g. \"गीता के अठारह अध्याय\"),\n  and grammar drills (e.g. \"विभक्तियों का प्रयोग\"). Leaving these out is not a\n  coverage gap.\n- Exactly ONE \"महत्त्वपूर्ण शब्दार्थ\" table: the words of the lesson's verses that\n  matter most. Never a second word list (\"शब्दार्थ विस्तार\", a repeated\n  \"महत्त्वपूर्ण शब्दार्थ\" or similar).",
+      "prompt_block": "\n\nCATEGORY: Foundation notes. Follow these format commands for selection and presentation only; they never add facts beyond the lecture PDF:\nFOUNDATION SANSKRIT NOTES - keep to the lesson itself.\n- Cover only the lesson: its introduction, its opening verse and numbered verses\n  (१, २, ३ ...) with their पदच्छेद / अन्वय / अर्थ, one शब्दार्थ table and its\n  teachings. Leave out everything else in the PDF, even though it is printed there:\n  extra or closing verses outside the numbered lesson verses (e.g. a \"गीता-पाठ\"\n  or \"हित-सन्देश\" verse), reference lists and tables (e.g. \"गीता के अठारह अध्याय\"),\n  and grammar drills (e.g. \"विभक्तियों का प्रयोग\"). Leaving these out is not a\n  coverage gap.\n- Exactly ONE \"महत्त्वपूर्ण शब्दार्थ\" table: the words of the lesson's verses that\n  matter most. Never a second word list (\"शब्दार्थ विस्तार\", a repeated\n  \"महत्त्वपूर्ण शब्दार्थ\" or similar).",
+      "prompt_sha256": {
+        "english": "c6c2598bbda28bbcab375a5c1f497b2968bad09515c6fa39e66f329f707a268c",
+        "hindi": "98619ca427726c2a97e430bbe4f01ab79e1c2818293d85aa485e31141679056a"
+      },
+      "solved_examples": false,
+      "switches": {
+        "mind_map": false,
+        "one_word_table": true,
+        "summary": "श्लोक + हिन्दी अर्थ; only the lesson's verses, one शब्दार्थ table, no mind map."
+      }
+    },
+    "foundation/science": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "09afff7161e7376b1924748acb1f576d1132183d04e841c8b4125859d7d1fd42",
+        "hindi": "18d7c8ed4fd1d5a332afc3aee29645afb6a53c266df2bef6f5aede62ee6277e2"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "foundation/social_science": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "e2009908bbac6f3ab9cd6bae7c5eab6f1f1577c04f5684976037e5e429fb49c1",
+        "hindi": "7559646d35ed4f4813fa9e7e8fd311d12404223fe208d464b730fd503a22f9d6"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "foundation/sst": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "4c6208ac423149ffe2202bee18e84dbea3ae9e454033772ad8040a564e724915",
+        "hindi": "1b832adf2049cbb56e108d4bacc6d60e7db951d213ed4fc6531bc7a7fcf5fe80"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "88a6938ae6cb0c7602cc2a005d12d26c6c8f6eff097f947df6ff9f43480cd44a",
+        "hindi": "087f3ee6fb65a6378a14a3df5a4d84b8eb051ea405dab37ec71028f1825c8cae"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/auto": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "2699855336e6f7b05871c7c208ac6ca7ea695b1d47964bd8779062bb3046ff4e",
+        "hindi": "3015152afa3fc8dc221f1d0a531227fcff20e4cf8045ad42157001218bdb316b"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/biology": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "19f2b9c0b0988c2966745a63f4e5b57d4dccd7a4cb20875dabd39fe0dc75d764",
+        "hindi": "251f8bce1c4d17ff770d2dbd5957a58f60bf480ea7ab9e1e507b38233b26e0c1"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/chemistry": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "1680e9bbea3c59460cf7d9e993f0b18da4516065c8155a3c17910986b0339e2a",
+        "hindi": "6d68f8a61933a91bcc864e75ce1c9d1de1ab84751eb09e70cfda7e650dee4059"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/english": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "447a4736ae73ec9d754471ff56533dba955ad7451d028de3e075646d14f5f6f7",
+        "hindi": "fe39c03b53684543453688f97cb7c765e50a53c74656cf9c0cd362d35460ab9e"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/hindi": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "513805aecae99fd0d47328d7399789aa3af4e20b9fe8f7f9f39ae22e1ab381a0",
+        "hindi": "d18b811eddb8ae86521c510987ca4b1ab815bf7b93b75dac4752a528f0f5124b"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/mathematics": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "22150b880393bab74a2cb7ed523a3b072788280c88dd1b9bb2fa06c7ac861e12",
+        "hindi": "477b4bdaf4730e97203d087161f1ce9aa6e029e65c87930fe9a2fada807d2a0e"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/maths": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "06c5b8c52838f29a1f1540d44f8647a4e7a698f34f6f8ee753221c09f7385bcd",
+        "hindi": "6af2e217c074ab712454d172377d1d3bb110db66b5b312d1dc9fffe20c899e87"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/other": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "701678dd106219f4db871f21e36748763b2a785b1ff8ef5cf42df79cf664dcfa",
+        "hindi": "4bce6e0cc45361438a2523d82fa82ffa2be33d69dc442139098100949b255565"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/physics": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "28f36fff3e6fe0bfb06f3543059c9e713ddc71794b343fb1dc910dd1f6128446",
+        "hindi": "c726fa3131dcde6d839e06ca529b6e10ea275699659da32d183503ba2f64414c"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/sanskrit": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "c6c2598bbda28bbcab375a5c1f497b2968bad09515c6fa39e66f329f707a268c",
+        "hindi": "4e33c60d012424991932cc94a13cc0cec61f3fcf0019be36beabbdcef0a00cd0"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/science": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "09afff7161e7376b1924748acb1f576d1132183d04e841c8b4125859d7d1fd42",
+        "hindi": "18d7c8ed4fd1d5a332afc3aee29645afb6a53c266df2bef6f5aede62ee6277e2"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/social_science": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "e2009908bbac6f3ab9cd6bae7c5eab6f1f1577c04f5684976037e5e429fb49c1",
+        "hindi": "7559646d35ed4f4813fa9e7e8fd311d12404223fe208d464b730fd503a22f9d6"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "jee/sst": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "4c6208ac423149ffe2202bee18e84dbea3ae9e454033772ad8040a564e724915",
+        "hindi": "1b832adf2049cbb56e108d4bacc6d60e7db951d213ed4fc6531bc7a7fcf5fe80"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "88a6938ae6cb0c7602cc2a005d12d26c6c8f6eff097f947df6ff9f43480cd44a",
+        "hindi": "087f3ee6fb65a6378a14a3df5a4d84b8eb051ea405dab37ec71028f1825c8cae"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/auto": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "2699855336e6f7b05871c7c208ac6ca7ea695b1d47964bd8779062bb3046ff4e",
+        "hindi": "3015152afa3fc8dc221f1d0a531227fcff20e4cf8045ad42157001218bdb316b"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/biology": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "19f2b9c0b0988c2966745a63f4e5b57d4dccd7a4cb20875dabd39fe0dc75d764",
+        "hindi": "251f8bce1c4d17ff770d2dbd5957a58f60bf480ea7ab9e1e507b38233b26e0c1"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/chemistry": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "1680e9bbea3c59460cf7d9e993f0b18da4516065c8155a3c17910986b0339e2a",
+        "hindi": "6d68f8a61933a91bcc864e75ce1c9d1de1ab84751eb09e70cfda7e650dee4059"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/english": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "447a4736ae73ec9d754471ff56533dba955ad7451d028de3e075646d14f5f6f7",
+        "hindi": "fe39c03b53684543453688f97cb7c765e50a53c74656cf9c0cd362d35460ab9e"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/hindi": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "513805aecae99fd0d47328d7399789aa3af4e20b9fe8f7f9f39ae22e1ab381a0",
+        "hindi": "d18b811eddb8ae86521c510987ca4b1ab815bf7b93b75dac4752a528f0f5124b"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/mathematics": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "22150b880393bab74a2cb7ed523a3b072788280c88dd1b9bb2fa06c7ac861e12",
+        "hindi": "477b4bdaf4730e97203d087161f1ce9aa6e029e65c87930fe9a2fada807d2a0e"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/maths": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "06c5b8c52838f29a1f1540d44f8647a4e7a698f34f6f8ee753221c09f7385bcd",
+        "hindi": "6af2e217c074ab712454d172377d1d3bb110db66b5b312d1dc9fffe20c899e87"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/other": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "701678dd106219f4db871f21e36748763b2a785b1ff8ef5cf42df79cf664dcfa",
+        "hindi": "4bce6e0cc45361438a2523d82fa82ffa2be33d69dc442139098100949b255565"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/physics": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "28f36fff3e6fe0bfb06f3543059c9e713ddc71794b343fb1dc910dd1f6128446",
+        "hindi": "c726fa3131dcde6d839e06ca529b6e10ea275699659da32d183503ba2f64414c"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/sanskrit": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "c6c2598bbda28bbcab375a5c1f497b2968bad09515c6fa39e66f329f707a268c",
+        "hindi": "4e33c60d012424991932cc94a13cc0cec61f3fcf0019be36beabbdcef0a00cd0"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/science": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "09afff7161e7376b1924748acb1f576d1132183d04e841c8b4125859d7d1fd42",
+        "hindi": "18d7c8ed4fd1d5a332afc3aee29645afb6a53c266df2bef6f5aede62ee6277e2"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/social_science": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "e2009908bbac6f3ab9cd6bae7c5eab6f1f1577c04f5684976037e5e429fb49c1",
+        "hindi": "7559646d35ed4f4813fa9e7e8fd311d12404223fe208d464b730fd503a22f9d6"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet/sst": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "4c6208ac423149ffe2202bee18e84dbea3ae9e454033772ad8040a564e724915",
+        "hindi": "1b832adf2049cbb56e108d4bacc6d60e7db951d213ed4fc6531bc7a7fcf5fe80"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "88a6938ae6cb0c7602cc2a005d12d26c6c8f6eff097f947df6ff9f43480cd44a",
+        "hindi": "087f3ee6fb65a6378a14a3df5a4d84b8eb051ea405dab37ec71028f1825c8cae"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/auto": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "2699855336e6f7b05871c7c208ac6ca7ea695b1d47964bd8779062bb3046ff4e",
+        "hindi": "3015152afa3fc8dc221f1d0a531227fcff20e4cf8045ad42157001218bdb316b"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/biology": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "19f2b9c0b0988c2966745a63f4e5b57d4dccd7a4cb20875dabd39fe0dc75d764",
+        "hindi": "251f8bce1c4d17ff770d2dbd5957a58f60bf480ea7ab9e1e507b38233b26e0c1"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/chemistry": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "1680e9bbea3c59460cf7d9e993f0b18da4516065c8155a3c17910986b0339e2a",
+        "hindi": "6d68f8a61933a91bcc864e75ce1c9d1de1ab84751eb09e70cfda7e650dee4059"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/english": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "447a4736ae73ec9d754471ff56533dba955ad7451d028de3e075646d14f5f6f7",
+        "hindi": "fe39c03b53684543453688f97cb7c765e50a53c74656cf9c0cd362d35460ab9e"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/hindi": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "513805aecae99fd0d47328d7399789aa3af4e20b9fe8f7f9f39ae22e1ab381a0",
+        "hindi": "d18b811eddb8ae86521c510987ca4b1ab815bf7b93b75dac4752a528f0f5124b"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/mathematics": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "22150b880393bab74a2cb7ed523a3b072788280c88dd1b9bb2fa06c7ac861e12",
+        "hindi": "477b4bdaf4730e97203d087161f1ce9aa6e029e65c87930fe9a2fada807d2a0e"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/maths": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "06c5b8c52838f29a1f1540d44f8647a4e7a698f34f6f8ee753221c09f7385bcd",
+        "hindi": "6af2e217c074ab712454d172377d1d3bb110db66b5b312d1dc9fffe20c899e87"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/other": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "701678dd106219f4db871f21e36748763b2a785b1ff8ef5cf42df79cf664dcfa",
+        "hindi": "4bce6e0cc45361438a2523d82fa82ffa2be33d69dc442139098100949b255565"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/physics": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "28f36fff3e6fe0bfb06f3543059c9e713ddc71794b343fb1dc910dd1f6128446",
+        "hindi": "c726fa3131dcde6d839e06ca529b6e10ea275699659da32d183503ba2f64414c"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/sanskrit": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "c6c2598bbda28bbcab375a5c1f497b2968bad09515c6fa39e66f329f707a268c",
+        "hindi": "4e33c60d012424991932cc94a13cc0cec61f3fcf0019be36beabbdcef0a00cd0"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/science": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "09afff7161e7376b1924748acb1f576d1132183d04e841c8b4125859d7d1fd42",
+        "hindi": "18d7c8ed4fd1d5a332afc3aee29645afb6a53c266df2bef6f5aede62ee6277e2"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/social_science": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "e2009908bbac6f3ab9cd6bae7c5eab6f1f1577c04f5684976037e5e429fb49c1",
+        "hindi": "7559646d35ed4f4813fa9e7e8fd311d12404223fe208d464b730fd503a22f9d6"
+      },
+      "solved_examples": false,
+      "switches": {}
+    },
+    "neet_jee/sst": {
+      "commands": "",
+      "prompt_block": "",
+      "prompt_sha256": {
+        "english": "4c6208ac423149ffe2202bee18e84dbea3ae9e454033772ad8040a564e724915",
+        "hindi": "1b832adf2049cbb56e108d4bacc6d60e7db951d213ed4fc6531bc7a7fcf5fe80"
+      },
+      "solved_examples": false,
+      "switches": {}
+    }
+  }
+}

@@ -1,0 +1,550 @@
+{
+  "document": "trail.pdf",
+  "note": "Seeded errors in the graded trial document. 'any' lists alternative keyword sets - a finding matches if ANY set is fully present in the row text (statement + concern + correction), case-insensitive. Round 2 scored 21/40 by human grading. Round 3 update: patterns corrected where they under-credited, and errors 41-43 added - real defects the model found that the original 40-item list did not cover. 2026-08-26: error 26 (\"UDISE+ Report 2025-26 cannot exist yet\") is REMOVED. It was seeded when that edition was still future-dated; today is August 2026 and a 2025-26 report can exist, so the notes are no longer wrong and a tool reporting it would be making a false positive. 42 errors remain. 2026-08-26: errors 38 and 43 are also REMOVED. Both were added in round 3 from the MODEL'S OWN claims, which is circular, and both are contradicted by the page: the notes give PGI-S 1,000 points/70 indicators and PGI-D 600/70, and use one grading ladder (Utkarsh > Uttam-1 > Uttam-2 > Uttam-3 > Prachesta > Akanshi) consistently throughout. Judged independently against the page, the model's 'Daksh is the highest grade' claim is the older PGI framework, not an error in these notes. An entry belongs in this key only if it is provable from the document or from durable checkable knowledge. 40 errors remain (41 and 42 stay: the duplicated UDISE+ acronym and 'It measure' are both visible on the page).",
+  "errors": [
+    {
+      "id": 1,
+      "page": 1,
+      "topic": "Prambanan country (context line)",
+      "any": [
+        [
+          "indonesia",
+          "malaysia"
+        ]
+      ]
+    },
+    {
+      "id": 2,
+      "page": 1,
+      "topic": "Prambanan largest complex in Malaysia",
+      "any": [
+        [
+          "indonesia"
+        ],
+        [
+          "not in malaysia"
+        ]
+      ]
+    },
+    {
+      "id": 3,
+      "page": 1,
+      "topic": "bas-reliefs of Chola Kings (should be Ramayana)",
+      "any": [
+        [
+          "ramayana"
+        ],
+        [
+          "chola",
+          "bas-relief"
+        ],
+        [
+          "chola",
+          "reliefs"
+        ]
+      ]
+    },
+    {
+      "id": 4,
+      "page": 1,
+      "topic": "built 12th century (should be 9th)",
+      "any": [
+        [
+          "9th century"
+        ],
+        [
+          "ninth century"
+        ]
+      ]
+    },
+    {
+      "id": 5,
+      "page": 1,
+      "topic": "Angkor Dynasty (should be Sanjaya)",
+      "any": [
+        [
+          "sanjaya"
+        ]
+      ]
+    },
+    {
+      "id": 6,
+      "page": 1,
+      "topic": "Vaishnavite/Vaishnavism (should be Shaivite)",
+      "any": [
+        [
+          "shaivite"
+        ],
+        [
+          "shaivism"
+        ],
+        [
+          "shiva",
+          "vaishnav"
+        ]
+      ]
+    },
+    {
+      "id": 7,
+      "page": 1,
+      "topic": "Mount Etna (should be Merapi)",
+      "any": [
+        [
+          "merapi"
+        ]
+      ]
+    },
+    {
+      "id": 8,
+      "page": 1,
+      "topic": "UNESCO 1998 (should be 1991)",
+      "any": [
+        [
+          "1991"
+        ]
+      ]
+    },
+    {
+      "id": 9,
+      "page": 2,
+      "topic": "Tiruvarur district in Kerala (should be Tamil Nadu)",
+      "any": [
+        [
+          "tiruvarur",
+          "tamil nadu"
+        ],
+        [
+          "kerala",
+          "tamil nadu"
+        ]
+      ]
+    },
+    {
+      "id": 10,
+      "page": 2,
+      "topic": "First Nations 2,000 years (should be ~65,000)",
+      "any": [
+        [
+          "65,000"
+        ],
+        [
+          "65000"
+        ],
+        [
+          "2,000 years",
+          "understate"
+        ],
+        [
+          "2,000 years",
+          "60,000"
+        ]
+      ]
+    },
+    {
+      "id": 11,
+      "page": 2,
+      "topic": "antiquity governed by AMASAR 1958 (should be Antiquities and Art Treasures Act 1972)",
+      "any": [
+        [
+          "1972"
+        ],
+        [
+          "art treasures act"
+        ]
+      ]
+    },
+    {
+      "id": 12,
+      "page": 2,
+      "topic": "Sushruta called a mathematician (should be surgeon/physician)",
+      "any": [
+        [
+          "surgeon"
+        ],
+        [
+          "physician"
+        ],
+        [
+          "mathematician",
+          "not"
+        ]
+      ]
+    },
+    {
+      "id": 13,
+      "page": 2,
+      "topic": "Royal Australasian College of Surgeons in Perth (should be Melbourne)",
+      "any": [
+        [
+          "melbourne"
+        ]
+      ]
+    },
+    {
+      "id": 14,
+      "page": 4,
+      "topic": "Taj Mahal on the Tons River (should be Yamuna)",
+      "any": [
+        [
+          "yamuna"
+        ]
+      ]
+    },
+    {
+      "id": 15,
+      "page": 4,
+      "topic": "Taj Mahal UNESCO 1999 (should be 1983)",
+      "any": [
+        [
+          "1983"
+        ]
+      ]
+    },
+    {
+      "id": 16,
+      "page": 5,
+      "topic": "Bhawaiya non-emotional bonds (should be emotional)",
+      "any": [
+        [
+          "non-emotional"
+        ],
+        [
+          "emotional bond"
+        ]
+      ]
+    },
+    {
+      "id": 17,
+      "page": 5,
+      "topic": "Bhawaiya reflects industrial customs (should be agrarian/rural)",
+      "any": [
+        [
+          "agrarian"
+        ],
+        [
+          "rural",
+          "industrial"
+        ],
+        [
+          "industrial",
+          "not"
+        ]
+      ]
+    },
+    {
+      "id": 18,
+      "page": 6,
+      "topic": "Shastrarth described as non-structured random debate (should be structured)",
+      "any": [
+        [
+          "structured"
+        ],
+        [
+          "non-structured",
+          "not"
+        ],
+        [
+          "random",
+          "not"
+        ]
+      ]
+    },
+    {
+      "id": 19,
+      "page": 7,
+      "topic": "Rath Yatra called Festival of Fairs (should be Festival of Chariots)",
+      "any": [
+        [
+          "chariot"
+        ]
+      ]
+    },
+    {
+      "id": 20,
+      "page": 7,
+      "topic": "Jagannath temple built 15th century (should be 12th)",
+      "any": [
+        [
+          "12th century",
+          "jagannath"
+        ],
+        [
+          "12th century",
+          "chodaganga"
+        ],
+        [
+          "eastern ganga"
+        ],
+        [
+          "15th century",
+          "ruled"
+        ]
+      ]
+    },
+    {
+      "id": 21,
+      "page": 7,
+      "topic": "Jagannath built of Sangmarmar stone (should be Khondalite)",
+      "any": [
+        [
+          "khondalite"
+        ],
+        [
+          "sangmarmar",
+          "marble"
+        ]
+      ]
+    },
+    {
+      "id": 22,
+      "page": 8,
+      "topic": "Gen Z born 1996-2013 (commonly 1997-2012)",
+      "any": [
+        [
+          "1997"
+        ],
+        [
+          "2012"
+        ]
+      ]
+    },
+    {
+      "id": 23,
+      "page": 8,
+      "topic": "global generation connected by fast travel experiences (should be digital connectivity)",
+      "any": [
+        [
+          "digital",
+          "travel"
+        ],
+        [
+          "travel experiences",
+          "not"
+        ],
+        [
+          "internet",
+          "travel"
+        ]
+      ]
+    },
+    {
+      "id": 24,
+      "page": 10,
+      "topic": "Millennial unemployment 2% implausible",
+      "any": [
+        [
+          "2%",
+          "millennial"
+        ],
+        [
+          "millennials",
+          "implausib"
+        ],
+        [
+          "millennials",
+          "unemploy"
+        ]
+      ]
+    },
+    {
+      "id": 25,
+      "page": 12,
+      "topic": "Section 26(1)(d) vs Section 20(1)(d) internal contradiction",
+      "any": [
+        [
+          "26(1)(d)"
+        ],
+        [
+          "20(1)(d)",
+          "contradict"
+        ],
+        [
+          "20(1)(d)",
+          "inconsistent"
+        ]
+      ]
+    },
+    {
+      "id": 27,
+      "page": 13,
+      "topic": "PTR compared against NEP 30:1 (NEP recommends 30:1 primary only)",
+      "any": [
+        [
+          "30:1"
+        ],
+        [
+          "pupil-teacher",
+          "nep"
+        ]
+      ]
+    },
+    {
+      "id": 28,
+      "page": 14,
+      "topic": "spelling: helthy",
+      "any": [
+        [
+          "helthy"
+        ]
+      ]
+    },
+    {
+      "id": 29,
+      "page": 15,
+      "topic": "spelling: refrms",
+      "any": [
+        [
+          "refrms"
+        ]
+      ]
+    },
+    {
+      "id": 30,
+      "page": 15,
+      "topic": "spelling: Perfomance",
+      "any": [
+        [
+          "perfomance"
+        ]
+      ]
+    },
+    {
+      "id": 31,
+      "page": 16,
+      "topic": "spelling: Prity (Gender Parity Index)",
+      "any": [
+        [
+          "prity"
+        ]
+      ]
+    },
+    {
+      "id": 32,
+      "page": 19,
+      "topic": "TribeX 'It was a comprehensive platform' (tense: should be is)",
+      "any": [
+        [
+          "tense"
+        ],
+        [
+          "\"was\"",
+          "\"is\""
+        ],
+        [
+          "was",
+          "should be is"
+        ]
+      ]
+    },
+    {
+      "id": 33,
+      "page": 5,
+      "topic": "Abathsahayeswarar Panchayatan Style (questionable attribution)",
+      "any": [
+        [
+          "panchayatan"
+        ]
+      ]
+    },
+    {
+      "id": 34,
+      "page": 2,
+      "topic": "Naganathaswamy temple attributed to Rajaraja Chola",
+      "any": [
+        [
+          "rajaraja"
+        ],
+        [
+          "naganathaswamy"
+        ]
+      ]
+    },
+    {
+      "id": 35,
+      "page": 3,
+      "topic": "Manas centre CSIR expansion wrong (CSIR = Council of Scientific and Industrial Research)",
+      "any": [
+        [
+          "csir"
+        ]
+      ]
+    },
+    {
+      "id": 36,
+      "page": 1,
+      "topic": "Prambanan dedicated to Trimurti - Brahma/Vishnu/Shiva ordering or emphasis",
+      "any": [
+        [
+          "trimurti",
+          "shiva"
+        ],
+        [
+          "dedicated",
+          "shiva"
+        ]
+      ]
+    },
+    {
+      "id": 37,
+      "page": 7,
+      "topic": "149th Rath Yatra number questionable",
+      "any": [
+        [
+          "149"
+        ]
+      ]
+    },
+    {
+      "id": 39,
+      "page": 18,
+      "topic": "SRB lowest performers Nagaland and Lakshadweep both 865",
+      "any": [
+        [
+          "865"
+        ],
+        [
+          "nagaland",
+          "lakshadweep"
+        ],
+        [
+          "sex ratio",
+          "crs"
+        ]
+      ]
+    },
+    {
+      "id": 40,
+      "page": 9,
+      "topic": "Anthony Giddens attributed to Cultural Globalisation",
+      "any": [
+        [
+          "giddens"
+        ]
+      ]
+    },
+    {
+      "id": 41,
+      "page": 13,
+      "topic": "UDISE+ acronym duplicated consecutively",
+      "any": [
+        [
+          "acronym",
+          "duplicat"
+        ]
+      ]
+    },
+    {
+      "id": 42,
+      "page": 14,
+      "topic": "grammar: 'It measure' subject-verb disagreement",
+      "any": [
+        [
+          "subject-verb"
+        ],
+        [
+          "it measure"
+        ]
+      ]
+    }
+  ]
+}

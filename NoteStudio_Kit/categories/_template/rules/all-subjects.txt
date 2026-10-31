@@ -1,0 +1,12 @@
+# Requirements for every subject in this category.
+# Write plain commands, one per line. Lines starting with # are ignored.
+# These are added AFTER the note type's own rules, so they can narrow or
+# override them. Keep them about WHAT the notes must contain or avoid.
+#
+# Examples (delete these and write your own):
+# Keep every date, article number and case name exactly as the teacher says it.
+# End each topic with a 3-line "Quick revision" box.
+# Do not include solved examples or practice questions.
+# Use the exam's own terms (e.g. "Statement-I / Statement-II").
+#
+# Subject-specific commands go in rules/<subject id>.txt.

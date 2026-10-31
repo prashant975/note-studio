@@ -1,0 +1,92 @@
+{
+  "_comment": "EXAMPLE registry. The real note_types.json is written from the real code (ids, option values, model names and cache revisions must match what each engine accepts). One entry = one kind of output. Categories (categories/<id>/category.json) choose which types they offer. See docs/07 and docs/08.",
+  "version": 2,
+  "engines": {
+    "notesbot": {"runs": "in_process", "source": "shortnotes-core (copied to engines/shortnotes; notesbot + sheets_bridge imported from there)"},
+    "upsc": {"runs": "child_process", "source": "Upsc_Notes_2/upsc_Notes (copied to engines/upsc)"},
+    "pw_books": {"runs": "child_process", "source": "handwritten_notes_automation_complete (copied to engines/pw_books)"},
+    "notes_to_dpp": {"runs": "child_process", "source": "Upsc_Notes_2/upsc_Notes/src/notes_to_dpp (the newer copy)"},
+    "notes_qc": {"runs": "child_process", "source": "upsc_file_QC (copied to engines/notes_qc)"}
+  },
+  "types": [
+    {
+      "id": "concise_handdrawn",
+      "label": "Concise notes (hand-drawn PDF)",
+      "summary": "Lecture PDF -> Studygram-style hand-drawn concise theory notes. Today's shortnotes output, unchanged.",
+      "engine": "notesbot",
+      "inputs": ["pdf_upload", "pdf_link", "sheet_row"],
+      "outputs": ["pdf"],
+      "languages": ["auto", "english", "hindi", "sanskrit"],
+      "options": {
+        "signature": {"type": "text", "remembered": true},
+        "page_numbers": {"type": "bool", "default": true},
+        "watermark_logo": {"type": "bool", "default": true},
+        "watermark_teacher": {"type": "bool", "default": true},
+        "sanskrit_style": {"choices": ["shloka_hindi", "strict_sanskrit"], "shown_when": "subject == sanskrit", "advanced": true},
+        "instructions": {"type": "textarea", "advanced": true}
+      },
+      "requirements": {"type_rules": "note_types/concise_handdrawn/rules.txt (empty: notesbot's prompt already is the type)"},
+      "models": {"notes": ["<notesbot default: gemini-3.7-flash>", "<fallbacks from SELECTABLE_MODELS>"], "images": ["<IMAGE_MODEL>"]},
+      "cache_revision": "<unchanged: concise-theory-only-v6 / concise-theory-quality-v2>"
+    },
+    {
+      "id": "upsc_dcn",
+      "label": "Daily Class Notes (DCN)",
+      "summary": "Class recording (+ optional slides) -> OnlyIAS DCN typed notes DOCX + PDF + error report.",
+      "engine": "upsc",
+      "engine_format": "dcn",
+      "inputs": ["video_link", "slides_upload"],
+      "outputs": ["docx", "pdf", "xlsx_error_report"],
+      "languages": ["english", "hindi", "marathi"],
+      "options": {"slides": {"type": "file", "required": false}, "instructions": {"type": "textarea", "advanced": true}},
+      "requirements": {"engine_prompts": "engines/upsc/prompts/upsc_dcn_{en,hi,mr}.txt (byte-identical)"},
+      "models": {"notes": ["<upsc MODEL_NAME>", "<FALLBACK_MODEL_NAME>"], "transcribe": ["<AUDIO_MODEL_NAME>", "<AUDIO_FALLBACK_MODEL_NAME>"], "images": ["<IMAGE_MODEL_NAME>"]}
+    },
+    {"id": "upsc_simple", "label": "Simple notes (UPSC)", "engine": "upsc", "engine_format": "simple", "inputs": ["video_link", "slides_upload"], "outputs": ["docx", "pdf"], "languages": ["english", "hindi", "marathi"]},
+    {"id": "upsc_mains", "label": "Mains-ready notes", "engine": "upsc", "engine_format": "mains", "inputs": ["video_link", "slides_upload"], "outputs": ["docx", "pdf"], "languages": ["english", "hindi", "marathi"]},
+    {"id": "upsc_prelims", "label": "Prelims-ready notes", "engine": "upsc", "engine_format": "prelims", "inputs": ["video_link", "slides_upload"], "outputs": ["docx", "pdf"], "languages": ["english", "hindi", "marathi"]},
+    {
+      "id": "upsc_mains_practice",
+      "label": "Mains practice (DMP)",
+      "summary": "Questions + model answers DOCX from finished UPSC notes.",
+      "engine": "upsc",
+      "engine_format": "dmp",
+      "inputs": ["finished_run", "docx_upload"],
+      "outputs": ["docx"],
+      "options": {"difficulty_mix": {"choices": ["easy", "moderate", "applied"]}}
+    },
+    {
+      "id": "pw_books_handwritten",
+      "label": "PW Books handwritten notes (Word + PDF)",
+      "summary": "Lecture PPT/PDF -> Kalam-font PW Books DOCX + PDF; slide images where the deck says 'Note to DTP'.",
+      "engine": "pw_books",
+      "inputs": ["pdf_upload", "pptx_upload"],
+      "outputs": ["docx", "pdf"],
+      "languages": ["english", "hindi"],
+      "options": {
+        "mode": {"choices": ["complete", "summary"], "default": "summary"},
+        "exam": {"choices": ["jee", "neet", "jee_neet"], "advanced": true}
+      },
+      "needs": ["LibreOffice or Microsoft Word", "PowerPoint or LibreOffice for .pptx", "Kalam font"]
+    },
+    {
+      "id": "dpp_from_notes",
+      "label": "DPP set from notes",
+      "summary": "Notes PDF -> matching chapter/topic tags -> Easy/Medium/Hard question set (CSV of ids + question and solution PDFs). No AI.",
+      "engine": "notes_to_dpp",
+      "inputs": ["pdf_upload", "finished_run"],
+      "outputs": ["csv", "pdf"],
+      "settings_needed": ["tags_workbook", "question_bank_workbook"]
+    }
+  ],
+  "tools": [
+    {
+      "id": "notes_qc",
+      "label": "Check notes (QC report)",
+      "summary": "Any finished notes file -> qc_report.xlsx. Offered on every finished run; rules per category.",
+      "engine": "notes_qc",
+      "inputs": ["finished_run", "pdf_upload", "docx_upload", "pptx_upload"],
+      "outputs": ["xlsx"]
+    }
+  ]
+}

@@ -1,0 +1,451 @@
+# Approved-source registry per subject, from the "Sources to be used" table of
+# the Notes QC Framework. Loaded/validated by src/qc/qc_config.py.
+#
+# local_index paths are RELATIVE to the writable app-data dir (see
+# src/qc/paths.py app_data_dir) in frozen mode, and to the repo root in source
+# mode. Missing indexes are a warning, never a crash (spec §12).
+
+version: "1.0"
+
+source_priority:
+  - constitution_or_bare_act
+  - official_government_source
+  - official_institutional_report
+  - ncert
+  - approved_standard_book
+  - recognised_academic_source
+
+blocked_source_types:
+  - wikipedia
+  - coaching_website
+  - random_blog
+  - anonymous_content
+  - ai_generated_summary
+
+# UI labels / detector outputs -> registry keys. Normalisation is
+# case/whitespace-insensitive; see SourceRouter.normalise().
+subject_aliases:
+  polity: polity
+  "indian polity": polity
+  "भारतीय राजव्यवस्था": polity
+  economy: economy
+  "indian economy": economy
+  "अर्थव्यवस्था": economy
+  geography: indian_geography
+  "indian geography": indian_geography
+  "भारतीय भूगोल": indian_geography
+  "world geography": world_geography
+  ancient: ancient_history
+  "ancient history": ancient_history
+  "प्राचीन इतिहास": ancient_history
+  medieval: medieval_history
+  "medieval history": medieval_history
+  "मध्यकालीन इतिहास": medieval_history
+  modern: modern_history
+  "modern history": modern_history
+  "modern history & freedom struggle": modern_history
+  "आधुनिक इतिहास": modern_history
+  "world history": world_history
+  "post independence": post_independence
+  "post independence india": post_independence
+  culture: art_culture
+  "art & culture": art_culture
+  "art and culture": art_culture
+  environment: environment
+  "environment & ecology": environment
+  science: science_technology
+  "science & tech": science_technology
+  "science & technology": science_technology
+  "s&t": science_technology
+  ir: international_relations
+  "international relations": international_relations
+  society: society_social_justice
+  "indian society": society_social_justice
+  "society and social justice": society_social_justice
+  security: internal_security
+  "internal security": internal_security
+  governance: governance
+  "governance & public administration": governance
+  ethics: ethics
+  "ethics, integrity & aptitude": ethics
+  agriculture: agriculture
+  "disaster management": disaster_management
+  "government schemes": government_schemes
+  essay: essay
+  # Umbrella key from the app's area picker: router merges the three history
+  # subjects and records a warning.
+  history: _history_umbrella
+
+subjects:
+  polity:
+    display_name: "Indian Polity"
+    books:
+      - id: "laxmikanth"
+        name: "M. Laxmikanth - Indian Polity"
+        local_index: "reference_index/polity/laxmikanth"
+      - id: "ncert_polity"
+        name: "NCERT Political Science"
+        local_index: "reference_index/polity/ncert"
+      - id: "bare_act_pm_bakshi"
+        name: "Bare Act - P. M. Bakshi"
+        local_index: "reference_index/polity/bare_act"
+    official_domains:
+      - "legislative.gov.in"
+      - "lawcommissionofindia.nic.in"
+      - "pib.gov.in"
+    claim_types:
+      - constitutional_article
+      - schedule
+      - amendment
+      - legal_provision
+      - judgment
+      - government_policy
+
+  modern_history:
+    display_name: "Modern History"
+    books:
+      - id: "ncert_modern_history"
+        name: "NCERT"
+        local_index: "reference_index/history/modern/ncert"
+      - id: "spectrum"
+        name: "Spectrum - A Brief History of Modern India"
+        local_index: "reference_index/history/modern/spectrum"
+      - id: "bipan_chandra"
+        name: "India's Struggle for Independence - Bipan Chandra"
+        local_index: "reference_index/history/modern/bipan_chandra"
+    official_domains: []
+    claim_types:
+      - historical_date
+      - historical_person
+      - movement
+      - act
+      - event
+      - chronology
+
+  ancient_history:
+    display_name: "Ancient History"
+    books:
+      - id: "rs_sharma"
+        name: "R. S. Sharma - India's Ancient Past"
+        local_index: "reference_index/history/ancient/rs_sharma"
+      - id: "ncert_ancient"
+        name: "NCERT"
+        local_index: "reference_index/history/ancient/ncert"
+      - id: "poonam_dalal_dahiya"
+        name: "Ancient and Medieval India - Poonam Dalal Dahiya"
+        local_index: "reference_index/history/ancient/poonam_dalal"
+    official_domains: []
+    claim_types:
+      - historical_date
+      - historical_person
+      - dynasty
+      - text_or_inscription
+      - event
+      - chronology
+
+  medieval_history:
+    display_name: "Medieval History"
+    books:
+      - id: "satish_chandra"
+        name: "Satish Chandra - Medieval India"
+        local_index: "reference_index/history/medieval/satish_chandra"
+      - id: "ncert_medieval"
+        name: "NCERT"
+        local_index: "reference_index/history/medieval/ncert"
+      - id: "poonam_dalal_dahiya"
+        name: "Ancient and Medieval India - Poonam Dalal Dahiya"
+        local_index: "reference_index/history/medieval/poonam_dalal"
+    official_domains: []
+    claim_types:
+      - historical_date
+      - historical_person
+      - dynasty
+      - event
+      - chronology
+
+  world_history:
+    display_name: "World History"
+    books:
+      - id: "ncert_world_history"
+        name: "NCERT"
+        local_index: "reference_index/history/world/ncert"
+    official_domains: []
+    claim_types:
+      - historical_date
+      - historical_person
+      - event
+      - chronology
+
+  post_independence:
+    display_name: "Post Independence"
+    books:
+      - id: "ncert_post_independence"
+        name: "NCERT Class 12"
+        local_index: "reference_index/history/post_independence/ncert"
+      - id: "india_after_gandhi"
+        name: "India After Gandhi - Ramachandra Guha"
+        local_index: "reference_index/history/post_independence/india_after_gandhi"
+    official_domains: []
+    claim_types:
+      - historical_date
+      - historical_person
+      - event
+      - chronology
+
+  indian_geography:
+    display_name: "Indian Geography"
+    books:
+      - id: "gc_leong"
+        name: "G. C. Leong - Certificate Physical & Human Geography"
+        local_index: "reference_index/geography/gc_leong"
+      - id: "ncert_geography"
+        name: "NCERT"
+        local_index: "reference_index/geography/ncert"
+    official_domains: []
+    claim_types:
+      - physical_feature
+      - climate
+      - demographic_statistic
+      - location
+
+  world_geography:
+    display_name: "World Geography"
+    books:
+      - id: "gc_leong"
+        name: "G. C. Leong"
+        local_index: "reference_index/geography/gc_leong"
+      - id: "oxford_atlas"
+        name: "Oxford Atlas"
+        local_index: "reference_index/geography/atlas"
+      - id: "ncert_world_geography"
+        name: "NCERT"
+        local_index: "reference_index/geography/ncert"
+    official_domains: []
+    claim_types:
+      - physical_feature
+      - climate
+      - location
+
+  economy:
+    display_name: "Economy"
+    books:
+      - id: "ncert_economy"
+        name: "NCERT"
+        local_index: "reference_index/economy/ncert"
+      - id: "ramesh_singh"
+        name: "Ramesh Singh"
+        local_index: "reference_index/economy/ramesh_singh"
+      - id: "vivek_singh"
+        name: "Vivek Singh"
+        local_index: "reference_index/economy/vivek_singh"
+    official_domains:
+      - "rbi.org.in"
+      - "mospi.gov.in"
+      - "dea.gov.in"
+      - "finmin.gov.in"
+      - "indiabudget.gov.in"
+    official_publications:
+      - "Economic Survey"
+      - "Union Budget"
+    claim_types:
+      - gdp
+      - inflation
+      - fiscal_deficit
+      - monetary_policy
+      - banking
+      - budget
+      - economic_statistic
+      - government_scheme
+
+  environment:
+    display_name: "Environment"
+    books:
+      - id: "shankar_environment"
+        name: "Shankar IAS Environment"
+        local_index: "reference_index/environment/shankar"
+      - id: "ncert_environment"
+        name: "NCERT"
+        local_index: "reference_index/environment/ncert"
+    official_domains:
+      - "moef.gov.in"
+      - "cpcb.nic.in"
+      - "ntca.gov.in"
+      - "forestsurveyofindia.gov.in"
+    claim_types:
+      - protected_area
+      - species_status
+      - environmental_statistic
+      - treaty_or_convention
+
+  science_technology:
+    display_name: "Science and Technology"
+    books:
+      - id: "ncert_science"
+        name: "NCERT"
+        local_index: "reference_index/science/ncert"
+      - id: "ravi_agrahari"
+        name: "Ravi P. Agrahari"
+        local_index: "reference_index/science/ravi_agrahari"
+    official_domains:
+      - "isro.gov.in"
+      - "dst.gov.in"
+      - "dbtindia.gov.in"
+      - "drdo.gov.in"
+    claim_types:
+      - mission_or_launch
+      - technology
+      - institution
+      - scientific_fact
+
+  art_culture:
+    display_name: "Art and Culture"
+    books:
+      - id: "nitin_singhania"
+        name: "Nitin Singhania"
+        local_index: "reference_index/art_culture/nitin_singhania"
+      - id: "ncert_art_culture"
+        name: "NCERT"
+        local_index: "reference_index/art_culture/ncert"
+    official_domains: []
+    claim_types:
+      - monument
+      - dance_or_music_form
+      - school_or_style
+      - heritage_listing
+
+  internal_security:
+    display_name: "Internal Security"
+    books:
+      - id: "second_arc"
+        name: "Second ARC Reports"
+        local_index: "reference_index/internal_security/second_arc"
+      - id: "ashok_kumar"
+        name: "Challenges to Internal Security of India - Ashok Kumar"
+        local_index: "reference_index/internal_security/ashok_kumar"
+    official_domains: []
+    claim_types:
+      - institution
+      - act
+      - operation
+      - security_statistic
+
+  disaster_management:
+    display_name: "Disaster Management"
+    books:
+      - id: "ndma_guidelines"
+        name: "NDMA Guidelines"
+        local_index: "reference_index/disaster_management/ndma"
+    official_domains:
+      - "ndma.gov.in"
+      - "imd.gov.in"
+    claim_types:
+      - guideline
+      - institution
+      - event
+
+  governance:
+    display_name: "Governance"
+    books:
+      - id: "second_arc_governance"
+        name: "Second ARC Reports"
+        local_index: "reference_index/governance/second_arc"
+    official_domains:
+      - "rti.gov.in"
+    claim_types:
+      - act
+      - institution
+      - government_policy
+
+  international_relations:
+    display_name: "International Relations"
+    books:
+      - id: "rajiv_sikri"
+        name: "Challenges to Indian Foreign Policy - Rajiv Sikri"
+        local_index: "reference_index/international_relations/rajiv_sikri"
+    official_domains:
+      - "mea.gov.in"
+      - "idsa.in"
+    claim_types:
+      - treaty_or_agreement
+      - organisation
+      - bilateral_fact
+      - event
+
+  society_social_justice:
+    display_name: "Society and Social Justice"
+    books:
+      - id: "ncert_indian_society"
+        name: "NCERT Class 12 - Indian Society"
+        local_index: "reference_index/society/ncert"
+      - id: "ram_ahuja"
+        name: "Social Problems in India - Ram Ahuja"
+        local_index: "reference_index/society/ram_ahuja"
+    official_domains:
+      - "mohfw.gov.in"
+      - "nhm.gov.in"
+      - "nmc.org.in"
+      - "socialjustice.gov.in"
+      - "tribal.nic.in"
+      - "wcd.gov.in"
+    claim_types:
+      - scheme
+      - demographic_statistic
+      - social_indicator
+      - institution
+
+  agriculture:
+    display_name: "Agriculture"
+    books:
+      - id: "niti_reports"
+        name: "NITI Aayog Agriculture Reports"
+        local_index: "reference_index/agriculture/niti"
+      - id: "yojana_kurukshetra"
+        name: "Yojana and Kurukshetra"
+        local_index: "reference_index/agriculture/yojana_kurukshetra"
+    official_domains:
+      - "agricoop.nic.in"
+      - "icar.org.in"
+      - "niti.gov.in"
+    claim_types:
+      - scheme
+      - agricultural_statistic
+      - institution
+
+  ethics:
+    display_name: "Ethics"
+    books:
+      - id: "lexicon_ethics"
+        name: "Lexicon for Ethics"
+        local_index: "reference_index/ethics/lexicon"
+    official_domains: []
+    claim_types:
+      - thinker_or_philosopher
+      - definition
+      - case_study
+
+  government_schemes:
+    display_name: "Government Schemes"
+    books:
+      - id: "india_year_book"
+        name: "India Year Book"
+        local_index: "reference_index/government_schemes/india_year_book"
+    official_domains:
+      - "pib.gov.in"
+      - "myscheme.gov.in"
+    claim_types:
+      - scheme
+      - ministry
+      - beneficiary_data
+
+  essay:
+    display_name: "Essay"
+    books:
+      - id: "previous_year_essays"
+        name: "Previous Year Essays"
+        local_index: "reference_index/essay/previous_year"
+    official_domains: []
+    claim_types:
+      - quotation
+      - philosopher
+      - real_example
+      - historical_example

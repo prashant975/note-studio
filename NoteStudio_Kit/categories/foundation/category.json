@@ -1,0 +1,29 @@
+{
+  "_comment": "Built-in pack. On first start its rules/ are SEEDED byte-for-byte from engines/shortnotes/notesbot/format_rules/foundation/ (mathematics.txt, sanskrit.txt) and switches.json from the foundation/* entries of format_rules/rules.json. Label must stay exactly 'Foundation'. Subjects are rules.json category_subjects.foundation with labels from rules.json subject_labels.",
+  "id": "foundation",
+  "label": "Foundation",
+  "enabled": true,
+  "subjects": [
+    {"id": "science", "label": "Science"},
+    {"id": "mathematics", "label": "Maths"},
+    {"id": "physics", "label": "Physics"},
+    {"id": "chemistry", "label": "Chemistry"},
+    {"id": "biology", "label": "Biology"},
+    {"id": "social_science", "label": "Social Science (SST)"},
+    {"id": "english", "label": "English"},
+    {"id": "hindi", "label": "Hindi"},
+    {"id": "sanskrit", "label": "Sanskrit"}
+  ],
+  "languages": ["auto", "english", "hindi", "sanskrit"],
+  "language_required": false,
+  "note_types": ["concise_handdrawn"],
+  "default_note_type": "concise_handdrawn",
+  "inputs": ["pdf_upload", "pdf_link"],
+  "branding": {"signature_label": "Faculty", "footer": "", "logo": "<today's notesbot branding>", "watermark": true},
+  "rules_dir": "rules",
+  "seed_from": "engines/shortnotes/notesbot/format_rules/foundation",
+  "qc_rules": "",
+  "automation": {"sheet_layouts": ["batch", "catalog"]},
+  "output_naming": "<unchanged: notesbot/output_naming.py ' - Concise Notes.pdf'>",
+  "models": {}
+}

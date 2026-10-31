@@ -1,0 +1,23 @@
+{#- The last check's result. Polled while a check runs. -#}
+{% import "_icons.html" as ico with context %}
+<div id="check-card" {% if check and check.state == 'running' %}hx-get="/automation/checks/card" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+  {% if check %}
+  <div class="check-result">
+    <div class="row gap-2">
+      {% if check.state == 'running' %}<span class="chip info"><span class="spinner sm"></span> {{ check.label }}: working</span>
+      {% elif check.ok %}<span class="chip ok">{{ ico.i('check-circle', 13) }} {{ check.label }}: all good</span>
+      {% else %}<span class="chip warn">{{ ico.i('alert-triangle', 13) }} {{ check.label }}: needs attention</span>{% endif %}
+      <span class="small muted" data-time="{{ check.started }}"></span>
+    </div>
+    {% if check.lines %}
+    <ul class="check-lines">
+      {% for line in check.lines %}
+        {% if line.startswith('[ok]') %}<li class="ok">{{ ico.i('check', 13) }} {{ line[4:].strip() }}</li>
+        {% elif line.startswith('[!!]') %}<li class="bad">{{ ico.i('alert-circle', 13) }} {{ line[4:].strip() }}</li>
+        {% else %}<li>{{ line }}</li>{% endif %}
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>

@@ -1,0 +1,91 @@
+{#- One run, as it is now. Polled every 2 s while it is waiting or running.
+    A New notes run lists its PDF; a sheet run lists its rows with their Drive links. -#}
+{% import "_icons.html" as ico with context %}
+<section class="card run-card state-{{ run.state }}" id="run-card"
+  {% if run.active %}hx-get="/runs/{{ run.id }}/card" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+  <div class="hd">
+    <div class="grow">
+      <div class="row gap-2">
+        <span class="chip {{ run.state_cls }} lg">
+          {% if run.state == 'running' %}<span class="spinner sm"></span>{% else %}{{ ico.state(run.state_cls or 'info', 13) }}{% endif %}
+          {{ run.state_words }}</span>
+        {% if run.cost_inr %}<span class="chip">&#8377;{{ '%.2f' % run.cost_inr }}</span>{% endif %}
+      </div>
+      <p class="run-msg">
+        {% if run.state == 'waiting' %}Waiting in the Smart Queue{% if hold %}, which is holding: press Continue there{% endif %}.
+        {% elif run.state in ('failed', 'stopped') and run.error %}{{ 'Nothing was made.' if not run.cost_inr else 'It stopped part way.' }}
+        {% else %}{{ run.message or '' }}{% endif %}
+      </p>
+    </div>
+    <div class="acts">
+      {% if run.sheet and run.state == 'running' %}
+        <form method="post" action="/automation/stop" data-confirm="Stop after the row being made now? Rows not reached stay ready for the next run.">
+          <button class="btn danger sm" type="submit">{{ ico.i('stop', 13) }} Stop after this row</button></form>
+      {% elif run.sheet and not run.active %}
+        <a class="btn sm" href="/automation">{{ ico.i('sheet', 13) }} Sheet automation</a>
+      {% elif run.stoppable %}
+        <form method="post" action="/runs/{{ run.id }}/stop" data-confirm="Stop making these notes now? What was paid for so far is not refunded, and the Smart Queue holds until you press Continue.">
+          <button class="btn danger sm" type="submit">{{ ico.i('stop', 13) }} Stop</button></form>
+      {% elif run.state == 'waiting' %}
+        <a class="btn sm" href="/queue">{{ ico.i('layers', 13) }} Smart Queue</a>
+      {% elif not run.active %}
+        {% if run.checkable %}
+        <form method="post" action="/runs/{{ run.id }}/check" data-confirm="{{ 'Check these notes with the full UPSC check? This uses PW AI credit.' if run.category == 'upsc' else 'Run the basic checks on these notes? No AI, no cost.' }}">
+          <button class="btn sm" type="submit">{{ ico.i('shield', 13) }} Check these notes</button></form>
+        {% endif %}
+        <form method="post" action="/runs/{{ run.id }}/again" data-confirm="{{ 'Check this file again?' if run.source == 'check' else 'Make these notes again with the same choices? This uses PW AI credit again.' }}">
+          <button class="btn sm {{ 'primary' if run.state != 'complete' }}" type="submit">{{ ico.i('arrow-right', 13) }} {{ 'Try again' if run.state != 'complete' else ('Check again' if run.source == 'check' else 'Make again') }}</button></form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if run.active %}
+  <div class="bd">
+    <div class="bar {{ 'idle' if run.state == 'waiting' or (run.sheet and not run.pct) }}"><i style="width: {{ run.pct or 3 }}%"></i></div>
+    {% if run.state == 'running' and not run.sheet and not run.stoppable %}<p class="small muted mt-2">Making notes cannot be stopped half-way; it finishes this lecture.</p>{% endif %}
+  </div>
+  {% endif %}
+
+  {% if run.files and run.sheet %}
+  <div class="tablewrap"><table class="data">
+    <thead><tr><th>Row</th><th>Outcome</th><th>Notes</th><th class="num">&#8377;</th></tr></thead>
+    <tbody>{% for f in run.files %}
+      <tr><td>{{ f.label }}</td><td><span class="chip xs {{ f.cls }}">{{ f.words }}</span>{% if f.message %} <span class="small muted">{{ f.message }}</span>{% endif %}</td>
+        <td>{% if f.output_path %}<a href="{{ f.output_path }}" target="_blank" rel="noopener">Open in Drive</a>{% endif %}</td>
+        <td class="num">{% if f.cost_inr %}{{ '%.2f' % f.cost_inr }}{% endif %}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% elif run.files %}
+  <ul class="needs files">
+    {% for f in run.files %}
+    <li><span class="nico ok">{{ ico.i('file-text', 16) }}</span>
+      <div class="grow"><strong>{{ f.label }}</strong><span class="small muted">{{ f.kind_words }} &middot; ready</span></div>
+      <a class="btn primary sm" href="/runs/{{ run.id }}/files/{{ f.id }}">{{ ico.i('download', 13) }} Download</a></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if run.state == 'needs_attention' and not run.sheet and run.message %}
+  <div class="bd"><div class="note warn">{{ ico.state('warn', 16, 'nico') }}
+    <div class="ntext"><div class="hd">{{ run.message }}</div>
+      <div class="bd">The notes themselves were made; download what is ready below.</div></div></div></div>
+  {% endif %}
+  {% if run.state in ('failed', 'stopped') and run.error %}
+  <div class="bd"><div class="note {{ 'danger' if run.state == 'failed' else 'warn' }}">{{ ico.state('danger' if run.state == 'failed' else 'warn', 16, 'nico') }}
+    <div class="ntext"><div class="hd">{{ run.error }}</div>
+      {% if 'sign' in run.error | lower %}<div class="bd"><a href="/settings#signin">Open Sign-in</a></div>{% endif %}</div></div></div>
+  {% endif %}
+
+  {% if run.events %}
+  <div class="ft steps-ft">
+    <ol class="steps">
+      {% for e in run.events %}
+      <li class="step k-{{ e.kind }}"><span class="dot"></span><span class="txt">{{ e.text }}</span><span class="when" data-time="{{ e.at }}"></span></li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% endif %}
+  {% if run.log %}
+  <details class="ft log-box"><summary class="small">Full log ({{ run.log | length }} lines)</summary>
+    <pre class="log">{{ run.log[-400:] | join('\n') }}</pre></details>
+  {% endif %}
+</section>
