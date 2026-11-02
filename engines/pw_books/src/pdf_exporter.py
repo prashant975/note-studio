@@ -94,6 +94,9 @@ def _export_with_word(docx_path: Path, output_dir: Path) -> tuple[Path | None, s
 
 def export_docx_to_pdf(docx_path: Path, output_dir: Path) -> tuple[Path | None, str | None]:
     output_dir.mkdir(parents=True, exist_ok=True)
+    if sys.platform == "darwin":
+        from .pdf_browser import export_pdf
+        return export_pdf(docx_path, output_dir)
     pdf, err1 = _export_with_libreoffice(docx_path, output_dir)
     if pdf:
         return pdf, None

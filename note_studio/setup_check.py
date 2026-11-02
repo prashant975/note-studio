@@ -10,6 +10,7 @@ from __future__ import annotations
 import glob
 import os
 import shutil
+import sys
 from pathlib import Path
 
 from . import engine_catalog, engine_host
@@ -103,7 +104,15 @@ def run() -> list[dict]:
         say("ffmpeg and ffprobe", "bad", "Not found: recordings without captions cannot be transcribed.",
             "Install FFmpeg and FFprobe on this computer, then restart NoteCraft.")
     which = office()
-    if which:
+    if sys.platform == "darwin":
+        ready = bool(shutil.which("pandoc") or (Path.home()/".local/bin/pandoc").is_file())
+        ready = ready and bool(os.environ.get("PW_BOOKS_CHROME_EXE") or os.environ.get("CHROMIUM_PATH") or
+                               any((folder/"Google Chrome.app/Contents/MacOS/Google Chrome").is_file()
+                                   for folder in (Path("/Applications"), Path.home()/"Applications")))
+        say("PDF from Word notes", "ok" if ready else "warn",
+            "UPSC uses its bundled renderer. PW Books uses local Pandoc and Chrome; no office suite is needed.",
+            "Install Pandoc and Google Chrome." if not ready else "")
+    elif which:
         say("PDF from Word notes", "ok", f"UPSC uses its bundled PDF renderer. PW Books can use {which}.")
     elif not engine_catalog.available("pw_books"):
         say("PDF from Word notes", "ok", "UPSC uses its bundled PDF renderer.")
