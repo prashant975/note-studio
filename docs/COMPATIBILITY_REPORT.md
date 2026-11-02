@@ -8,7 +8,7 @@ The real process-tree test verifies Stop ends both a child and its grandchild. T
 
 ## Windows CI
 
-[Compatibility run](https://github.com/prashant975/note-studio/actions/runs/41538755738) runs the main regression suite, browser pages, full native executable/installer build, packaged mock child-engine runs and temporary fresh-install/reinstall checks. Inspect the linked run for final results.
+[Compatibility run](https://github.com/prashant975/note-studio/actions/workflows/compatibility.yml?query=branch%3Acodex%2Fmacos-windows-compatibility) runs the main regression suite, browser pages, full native executable/installer build, packaged mock child-engine runs and temporary fresh-install/reinstall checks. Inspect the linked run for final results.
 
 ## Checks requiring the real computers/accounts
 
