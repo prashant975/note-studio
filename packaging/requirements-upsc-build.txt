@@ -1,0 +1,4 @@
+# Preserve the full installer's optional local transcription and Drive browser support.
+# No speech model or browser is downloaded by this requirements file.
+faster-whisper>=1.1,<2
+playwright>=1.57,<2

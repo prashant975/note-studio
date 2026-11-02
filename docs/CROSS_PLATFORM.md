@@ -11,7 +11,7 @@ mkdir -p ~/Projects
 git clone https://github.com/prashant975/note-studio.git ~/Projects/note-studio
 cd ~/Projects/note-studio
 git switch codex/macos-windows-compatibility
-python3.13 scripts/setup.py --dev
+python3.13 scripts/setup.py --dev --desktop-build
 bash scripts/start.sh
 ```
 
@@ -22,7 +22,7 @@ New-Item -ItemType Directory -Force "$HOME\Projects"
 git clone https://github.com/prashant975/note-studio.git "$HOME\Projects\note-studio"
 cd "$HOME\Projects\note-studio"
 git switch codex/macos-windows-compatibility
-py -3.13 scripts/setup.py --dev
+py -3.13 scripts/setup.py --dev --desktop-build
 .\.venv\Scripts\python.exe run_studio.py
 ```
 
@@ -76,7 +76,7 @@ open "dist/NoteCraft.app"
 
 The .app contains its own Python, libraries and source, including independent libraries for all three child engines. It needs no repository or external Python to run. It is built for the Mac's CPU architecture. Builds are unsigned local apps: public distribution needs an Apple signing identity and notarization, which this repository does not contain. Move an older generated dist/NoteCraft.app aside before rebuilding. The Mac bundle uses the existing browser UI and has a native Dock menu: Quit stops its server. Logs are in ~/Library/Logs/live.pw.NoteCraft/studio.log. Windows automatic installer updates are not used on macOS. Stop a running bundle before replacing it. For reliable manual start/stop, run "dist/NoteCraft.app/Contents/MacOS/launch" in Terminal and use Ctrl+C.
 
-Install Inno Setup 6, then run .\.venv\Scripts\python.exe packaging/build_installer.py --no-signin --no-team-key. Child libraries come from engines/<engine>/.venv first, with the original Windows environment as a fallback. --no-signin and --no-team-key deliberately create an unconfigured package; configure Google and update access separately. Existing full/smaller-edition flags and installer identity are preserved.
+Install Inno Setup 6, then run .\.venv\Scripts\python.exe packaging/build_installer.py --no-signin --no-team-key. The --desktop-build setup option installs the optional local-transcription and QBG-browser libraries needed by the full installer; speech models still require a separate download when that feature is used. Child libraries come from engines/<engine>/.venv first, with the original Windows environment as a fallback. --no-signin and --no-team-key deliberately create an unconfigured package; configure Google and update access separately. Existing full/smaller-edition flags and installer identity are preserved.
 
 ## Moving development between computers
 
@@ -88,7 +88,7 @@ git status
 git fetch origin
 git switch codex/macos-windows-compatibility
 git pull --ff-only
-py -3.13 scripts/setup.py --dev
+py -3.13 scripts/setup.py --dev --desktop-build
 .\.venv\Scripts\python.exe -m pytest -q tests
 .\.venv\Scripts\python.exe run_studio.py
 ```
