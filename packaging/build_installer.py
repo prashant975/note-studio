@@ -217,6 +217,8 @@ def third_party_imports(files, local):
     google): a namespace is shared by many packages."""
     names = set()
     for path in files:
+        if Path(path).name == 'macos_credentials.py' and os.name == 'nt':
+            continue
         tree = ast.parse(Path(path).read_text(encoding='utf-8-sig'), str(path))
         guarded = set()
         for node in ast.walk(tree):

@@ -74,9 +74,12 @@ def main():
                         'export PYTHONPATH="$BASE/libs:$BASE/source"\n'
                         'exec "$BASE/runtime/bin/python3.13" "$BASE/bootstrap.py" "$@"\n', encoding="utf-8")
     launcher.chmod(0o755)
+    subprocess.run(["xcrun", "swiftc", "-framework", "AppKit",
+                    str(ROOT/"packaging/macos_launcher.swift"),
+                    "-o", str(macos/"DesktopLauncher")], check=True)
     with (app / "Contents/Info.plist").open("wb") as stream:
         plistlib.dump({"CFBundleName": NAME, "CFBundleDisplayName": NAME,
-                      "CFBundleIdentifier": "live.pw.NoteCraft", "CFBundleExecutable": "launch",
+                      "CFBundleIdentifier": "live.pw.NoteCraft", "CFBundleExecutable": "DesktopLauncher",
                       "CFBundleVersion": "1", "CFBundlePackageType": "APPL"}, stream)
     with tempfile.TemporaryDirectory(prefix="mac-package-check-") as folder:
         env = dict(os.environ, STUDIO_ROOT=folder, NOTE_STUDIO_HOME=folder,

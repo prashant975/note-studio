@@ -60,6 +60,14 @@ jobs:
           python = ".venv/bin/python"
           browser = subprocess.check_output([python, "-c", "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()"], text=True).strip()
           subprocess.run([python, "scripts/desktop_smoke.py", "--packaged"], check=True, env=dict(os.environ, CHROMIUM_PATH=browser))
+      - name: Build Windows executable and installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { choco install innosetup --yes --no-progress }
+          & .\.venv\Scripts\python.exe packaging/build_installer.py --no-signin --no-team-key --compression zip
+          if ($LASTEXITCODE -ne 0) { throw "Windows package build failed" }
       - name: Upload test evidence
         if: always()
         uses: actions/upload-artifact@v4
