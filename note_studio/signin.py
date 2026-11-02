@@ -59,8 +59,9 @@ def registration_ready() -> bool:
     # Existing Windows/source installs may use the original app's registration
     # or an explicit environment path rather than the new per-user location.
     current = _state["auth"]
-    if current is not None:
-        candidate = Path(current.settings.client_secret_path)
+    settings = getattr(current, "settings", None)
+    if settings is not None:
+        candidate = Path(settings.client_secret_path)
         if not candidate.is_absolute():
             candidate = Path(current._dir) / candidate
         if candidate.is_file():
