@@ -24,14 +24,19 @@ os.environ["NOTE_STUDIO_SHORTNOTES_ORIGINAL"] = str(_SESSION / "shortnotes_origi
 os.environ["NOTE_STUDIO_OFFLINE"] = "1"          # never restore a Google sign-in in tests
 os.environ["NOTE_STUDIO_OLD_APP_PORT"] = "1"      # the real old app being open must not change a test
 # The UPSC engine child runs on the original app's own Python (read only); its runs/ are never read in tests.
-UPSC_PYTHON = Path.home() / "Downloads" / "Upsc_Notes_2" / "upsc_Notes" / ".venv" / "Scripts" / "python.exe"
+_PYTHON = Path("Scripts/python.exe") if os.name == "nt" else Path("bin/python")
+UPSC_PYTHON = ROOT / "engines/upsc/.venv" / _PYTHON
+if not UPSC_PYTHON.is_file():
+    UPSC_PYTHON = Path.home() / "Downloads/Upsc_Notes_2/upsc_Notes/.venv" / _PYTHON
 if UPSC_PYTHON.is_file():
     os.environ["NOTE_STUDIO_UPSC_PYTHON"] = str(UPSC_PYTHON)
 os.environ["NOTE_STUDIO_UPSC_ORIGINAL"] = str(_SESSION / "upsc_original")
 # The same for the other child-process engines (their originals' own Pythons, read only).
 for _engine, _parts in (("PW_BOOKS", ("handwritten_notes_automation_complete", "handwritten_notes_automation_complete")),
                         ("NOTES_QC", ("upsc_file_QC",))):
-    _python = Path.home().joinpath("Downloads", *_parts, ".venv", "Scripts", "python.exe")
+    _python = ROOT / "engines" / _engine.lower() / ".venv" / _PYTHON
+    if not _python.is_file():
+        _python = Path.home().joinpath("Downloads", *_parts, ".venv") / _PYTHON
     if _python.is_file():
         os.environ[f"NOTE_STUDIO_{_engine}_PYTHON"] = str(_python)
     os.environ[f"NOTE_STUDIO_{_engine}_ORIGINAL"] = str(_SESSION / f"{_engine.lower()}_original")
