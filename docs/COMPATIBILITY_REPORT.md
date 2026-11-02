@@ -2,9 +2,9 @@
 
 ## This Mac (Apple Silicon, Python 3.13.18)
 
-Full main regression suite: **349 passed, 19 skipped**. Further build/engine checks: **49 passed, 3 skipped**. Source and native packaged app passed six browser page checks with no JavaScript errors. The self-contained macOS app built/import-checked its independent main and three child-engine libraries. Synthetic QC produced a real report; PW Books converted synthetic DOCX files with spaces in their paths using local Pandoc and Chrome, with equations, Hindi text, tables and images. LibreOffice is no longer required on macOS. FFmpeg/FFprobe generated and probed synthetic audio. Optional transcription/browser libraries import successfully; no speech models were downloaded.
+Full main regression suite: **352 passed, 19 skipped**. Further build/engine checks: **49 passed, 3 skipped**. Source and native packaged app passed six browser page checks with no JavaScript errors. The self-contained macOS app built/import-checked its independent main and three child-engine libraries. Synthetic QC produced a real report; PW Books converted synthetic DOCX files with spaces in their paths using local Pandoc and Chrome, with equations, Hindi text, tables and images. LibreOffice is no longer required on macOS. FFmpeg/FFprobe generated and probed synthetic audio. Optional transcription/browser libraries import successfully; no speech models were downloaded.
 
-The real process-tree test verifies Stop ends both a child and its grandchild. The Git engine drift gate passed with only explicitly listed compatibility changes, including credentials and LibreOffice discovery. Original Windows Downloads folders are absent; the Git baseline comparison does not claim those folders were compared. Before/after snapshots found no pre-existing local data and no losses on this fresh Mac. Prompts and engine business rules were preserved.
+The real process-tree test verifies Stop ends both a child and its grandchild. The Git engine drift gate passed with only explicitly listed compatibility changes, including credentials and the local Chrome PDF adapter. Original Windows Downloads folders are absent; the Git baseline comparison does not claim those folders were compared. Before/after snapshots found no pre-existing local data and no losses on this fresh Mac. Prompts and engine business rules were preserved.
 
 ## Windows CI
 
