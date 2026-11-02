@@ -93,6 +93,10 @@ def register(app, render, go):
                    else f"{APP} keeps its own sheets and sign-in.")
         return go("/settings#old-app", message, "ok")
 
+    @app.get("/signin")
+    def signin_landing(request: Request):
+        return render(request, "signin.html", signin=signin.snapshot())
+
     @app.get("/settings/signin-card")
     def signin_card(request: Request):
         return render(request, "_signin_card.html", signin=signin.snapshot())

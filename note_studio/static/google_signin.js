@@ -19,3 +19,10 @@ document.addEventListener('click', async event => {
     window.alert(error.message || 'Google sign-in could not start.');
   } finally { button.disabled = false; }
 });
+
+function continueAfterGoogleSignIn() {
+  const landing=document.querySelector('[data-auth-start]');
+  if (landing && landing.querySelector(landing.dataset.authReady)) location.replace(landing.dataset.authNext || '/');
+}
+new MutationObserver(continueAfterGoogleSignIn).observe(document.body,{childList:true,subtree:true});
+continueAfterGoogleSignIn();

@@ -28,7 +28,7 @@ py -3.13 scripts/setup.py --dev --desktop-build
 
 For an existing clone skip git clone and keep all existing local changes. After the compatibility branch is merged, use main instead. Setup installs into independent environments and never overwrites .env or saved data. Windows also has scripts/start.ps1; if your execution policy prevents scripts, use the Python command above.
 
-Startup binds to 127.0.0.1, chooses an available port, and opens your browser when ready. Stop source apps with Ctrl+C in their terminal. Child-engine Stop also ends its process tree on macOS and Windows.
+Startup binds to 127.0.0.1, chooses an available port, and opens the sign-in entry page. A valid saved sign-in continues into the workspace. Stop source apps with Ctrl+C in their terminal. Child-engine Stop also ends its process tree on macOS and Windows.
 
 ## Authentication
 

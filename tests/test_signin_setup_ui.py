@@ -70,3 +70,20 @@ def test_web_registration_callback_rejects_wrong_state_and_keeps_pkce(tmp_path, 
     worker.join(3)
     assert not worker.is_alive()
     assert observed['result'] is creds and observed['exchange'] == {'code':'synthetic'}
+
+
+def test_startup_signin_page_is_available(client):
+    response=client.get('/signin')
+    assert response.status_code==200
+    assert 'data-auth-start' in response.text and 'Sign in to' in response.text
+    assert 'Set up my separate sign-in' in response.text
+
+
+def test_launcher_opens_signin_entry_point(monkeypatch):
+    from note_studio import launch
+    opened=[]
+    monkeypatch.setattr(launch,'answering_instance',lambda port:launch.paths.instance_id())
+    monkeypatch.setattr(launch.webbrowser,'open',opened.append)
+    monkeypatch.delenv('NOTE_STUDIO_NO_BROWSER',raising=False)
+    launch._open_when_ready('http://127.0.0.1:3100',3100)
+    assert opened==['http://127.0.0.1:3100/signin']

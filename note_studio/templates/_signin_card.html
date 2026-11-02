@@ -9,7 +9,7 @@
     </div>
     {% if signin.state == 'ready' %}<span class="chip ok">{{ ico.i('check-circle', 13) }} Signed in</span>
     {% elif busy %}<span class="chip info"><span class="spinner sm"></span> {{ 'Waiting for the browser' if signin.state == 'pending' else 'Checking' }}</span>
-    {% elif signin.state == 'undecided' %}<span class="chip warn">{{ ico.i('alert-triangle', 13) }} Choose above first</span>
+    {% elif signin.state == 'undecided' %}<span class="chip warn">{{ ico.i('alert-triangle', 13) }} Choose sign-in storage</span>
     {% else %}<span class="chip warn">{{ ico.i('alert-triangle', 13) }} Not signed in</span>{% endif %}
   </div>
   <div class="bd">
