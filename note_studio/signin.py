@@ -8,6 +8,7 @@ pages only read the result (`snapshot`). Sign in opens the browser once.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import threading
 
 from . import old_app, paths
@@ -54,8 +55,24 @@ def warm() -> None:
         threading.Thread(target=current.status, name="signin-restore", daemon=True).start()
 
 
+def registration_ready() -> bool:
+    # Existing Windows/source installs may use the original app's registration
+    # or an explicit environment path rather than the new per-user location.
+    current = _state["auth"]
+    if current is not None:
+        candidate = Path(current.settings.client_secret_path)
+        if not candidate.is_absolute():
+            candidate = Path(current._dir) / candidate
+        if candidate.is_file():
+            return True
+    configured = os.environ.get("SHEETS_BRIDGE_CLIENT_SECRET", "")
+    return bool((configured and Path(configured).expanduser().is_file()) or
+                (paths.shortnotes_original()/"client_secret.json").is_file() or
+                paths.signin_registration().is_file())
+
+
 def snapshot() -> dict:
-    return _snapshot() | {"configured": paths.signin_registration().is_file()}
+    return _snapshot() | {"configured": registration_ready()}
 
 
 def _snapshot() -> dict:
