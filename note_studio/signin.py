@@ -103,6 +103,21 @@ def start() -> None:
     current.start_sign_in()
 
 
+def start_popup() -> str:
+    current = auth()
+    if current is None:
+        raise SignInNeeded("Choose a separate sign-in in Settings first.")
+    ready = threading.Event()
+    result = {}
+    def on_url(url):
+        result["url"] = url
+        ready.set()
+    current.start_sign_in(open_browser=False, on_url=on_url)
+    if not ready.wait(5):
+        raise SignInNeeded("Google sign-in could not start. Check registration and close any earlier sign-in.")
+    return result["url"]
+
+
 def sign_out() -> None:
     current = auth()
     if current is not None:

@@ -35,10 +35,10 @@
       <p class="small muted">Checking the saved Google sign-in with PW...</p>
     {% else %}
       {% if signin.error %}<div class="note warn">{{ ico.i('alert-triangle', 16, 'nico') }}<div class="ntext"><div class="hd">{{ signin.error }}</div></div></div>{% endif %}
-      <form method="post" action="/settings/signin" class="btn-row">
-        <button class="btn primary" type="submit" {% if not signin.configured %}disabled{% endif %}>{{ ico.i('key', 15) }} Sign in with Google</button>
-        <span class="hint">Opens Google in your browser, once.</span>
-      </form>
+      <div class="btn-row">
+        <button class="btn primary" type="button" data-google-signin-popup data-endpoint="/settings/signin/start" data-status="/settings/signin-card" data-target="#signin" {% if not signin.configured %}disabled{% endif %}>{{ ico.i('key', 15) }} Sign in with Google</button>
+        <span class="hint">Opens one Google sign-in window in this browser.</span>
+      </div>
     {% endif %}
   </div>
 </section>

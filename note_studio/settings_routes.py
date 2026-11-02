@@ -12,6 +12,7 @@ import os
 import platform
 
 from fastapi import Request
+from fastapi.responses import JSONResponse
 
 from . import (brand, categories, category_admin, db, models, note_types, old_app, paths, practice_service,
                requirements, settings_store, setup_check, signin, updater)
@@ -95,6 +96,13 @@ def register(app, render, go):
     @app.get("/settings/signin-card")
     def signin_card(request: Request):
         return render(request, "_signin_card.html", signin=signin.snapshot())
+
+    @app.post("/settings/signin/start")
+    def signin_popup():
+        try:
+            return {"url": signin.start_popup()}
+        except Exception:
+            return JSONResponse({"detail":"Google sign-in could not start. Check the registration and close any earlier sign-in."}, status_code=400)
 
     @app.post("/settings/signin")
     def sign_in():

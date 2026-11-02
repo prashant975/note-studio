@@ -211,6 +211,7 @@ def interactive_sign_in(
     base: Path | None = None,
     open_browser: bool = True,
     verify=None,
+    on_url=None,
 ):
     """Run the browser sign-in and file the token under the account's own path.
 
@@ -237,24 +238,38 @@ def interactive_sign_in(
             "(or set SHEETS_BRIDGE_CLIENT_SECRET).",
         )
 
-    from google_auth_oauthlib.flow import InstalledAppFlow
+    config = json.loads(client_secret_path.read_text(encoding="utf-8-sig"))
+    if "web" in config:
+        from .web_oauth import authorize
+        creds = authorize(config, SCOPES, on_url=on_url, open_browser=open_browser,
+                          timeout=SIGN_IN_TIMEOUT_SECONDS, domain=ALLOWED_DOMAIN)
+    else:
+        from google_auth_oauthlib.flow import InstalledAppFlow
 
-    flow = InstalledAppFlow.from_client_secrets_file(str(client_secret_path), list(SCOPES))
-    try:
-        creds = flow.run_local_server(
-            port=0,
-            open_browser=open_browser,
-            prompt="consent",
-            timeout_seconds=SIGN_IN_TIMEOUT_SECONDS,
-            hd=ALLOWED_DOMAIN,          # ask Google to offer only @pw.live accounts
-        )
-    except Exception as exc:  # noqa: BLE001 - the library's timeout class name varies by version
-        if "timeout" in type(exc).__name__.lower():
-            raise BridgeError(
-                "sign_in_timed_out",
-                "no Google sign-in was completed in time; press Continue with Google again",
-            ) from exc
-        raise
+        flow = InstalledAppFlow.from_client_secrets_file(str(client_secret_path), list(SCOPES))
+        if on_url is not None:
+            original_authorization_url = flow.authorization_url
+            def authorization_url(**kwargs):
+                url, state = original_authorization_url(**kwargs)
+                on_url(url)
+                return url, state
+            flow.authorization_url = authorization_url
+        try:
+            creds = flow.run_local_server(
+                port=0,
+                open_browser=open_browser,
+                prompt="consent",
+                authorization_prompt_message="" if on_url is not None else "Please visit this URL to authorize this application: {url}",
+                timeout_seconds=SIGN_IN_TIMEOUT_SECONDS,
+                hd=ALLOWED_DOMAIN,          # ask Google to offer only @pw.live accounts
+            )
+        except Exception as exc:  # noqa: BLE001 - the library's timeout class name varies by version
+            if "timeout" in type(exc).__name__.lower():
+                raise BridgeError(
+                    "sign_in_timed_out",
+                    "no Google sign-in was completed in time; press Continue with Google again",
+                ) from exc
+            raise
     email = user_email(creds)
     if not email:
         raise BridgeError("sign_in_failed", "signed in, but Google did not return an email address")

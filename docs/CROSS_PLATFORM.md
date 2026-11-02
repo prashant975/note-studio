@@ -32,7 +32,9 @@ Startup binds to 127.0.0.1, chooses an available port, and opens your browser wh
 
 ## Authentication
 
-Obtain a Google Desktop OAuth registration from your administrator. Keep it outside Git at ~/.note_studio/google-client.json, or point NOTE_STUDIO_GOOGLE_CLIENT at the external file. This is an application registration, not another person's saved login. In Settings, choose independent sheets/sign-in, then Sign in with Google using an allowed @pw.live account. Google Drive/Sheets permissions and PW allowlisting are checked by the existing flow.
+The Google button opens one popup in the same browser profile. Each app keeps its own encrypted token. A Web registration can be shared with Doubt Desk; finish one app’s login before starting another because their callback port is shared. Google may require verification/administrator approval for the existing Drive and Sheets permissions even when basic Google sign-in works for that registration.
+
+Obtain a Google Desktop OAuth registration, or an existing Web registration with a registered `http://127.0.0.1:8765/auth/google/callback`, from your administrator. Keep it outside Git at ~/.note_studio/google-client.json, or point NOTE_STUDIO_GOOGLE_CLIENT at the external file. This is an application registration, not another person's saved login. In Settings, choose independent sheets/sign-in, then Sign in with Google using an allowed @pw.live account. Google Drive/Sheets permissions and PW allowlisting are checked by the existing flow.
 
 New macOS tokens are encrypted with a per-app key stored in the native login Keychain. New Windows tokens use DPAPI in *.protected.json sidecars. Existing Windows shared files are preserved for the older standalone app; it keeps its independent login. Existing plaintext legacy files are not deleted automatically. Do not copy them to another computer. A Windows-encrypted or legacy plaintext token is never imported as a macOS sign-in.
 

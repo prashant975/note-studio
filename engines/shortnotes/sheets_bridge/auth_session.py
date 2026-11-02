@@ -105,13 +105,15 @@ class AutomationAuth:
         return [account.email] if account else []
 
     # -- control -------------------------------------------------------------
-    def start_sign_in(self, owner: str = "") -> None:
+    def start_sign_in(self, owner: str = "", *, open_browser=True, on_url=None) -> None:
         """Open the browser once, for an install with no cached token."""
         with self._lock:
             if self._thread is not None and self._thread.is_alive():
                 raise BridgeError("sign_in_pending", "a sign-in is already in progress")
             self._state = STATE_PENDING
             self._error = ""
+            self._open_browser = open_browser
+            self._on_url = on_url
             self._thread = threading.Thread(target=self._work, name="automation-signin", daemon=True)
             self._thread.start()
 
@@ -135,6 +137,7 @@ class AutomationAuth:
         try:
             creds, email = interactive_sign_in(
                 self.settings.client_secret_path, base=self._dir, verify=self._verify,
+                **({"open_browser":False, "on_url":self._on_url} if not getattr(self, "_open_browser", True) else {}),
             )
             self._adopt(creds, email)
         except BridgeError as exc:

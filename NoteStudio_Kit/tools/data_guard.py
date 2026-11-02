@@ -96,7 +96,9 @@ ENGINE_COPIES = {
     "shortnotes": {
         "copy": "engines/shortnotes",
         "allowed": {
-            "sheets_bridge/google_auth.py": "macOS Keychain encryption; never reuse credentials from another computer",
+            "sheets_bridge/google_auth.py": "native credential protection and browser-owned OAuth popup; retain domain and allowlist gates",
+            "sheets_bridge/web_oauth.py": "explicit Web registration support with PKCE and state-checked loopback callback",
+            "sheets_bridge/auth_session.py": "optional browser-owned popup; preserve standalone login defaults",
             "sheets_bridge/macos_credentials.py": "native macOS Keychain encryption adapter",
             "sheets_bridge/windows_credentials.py": "DPAPI sidecars protect new sign-ins while preserving legacy shared files",
             "notesbot/categories.py": "category list read from the packs; labels/prompt_block/fingerprint byte-identical",

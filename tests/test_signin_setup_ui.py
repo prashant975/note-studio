@@ -16,3 +16,57 @@ def test_existing_registration_path_keeps_signin_available(tmp_path, monkeypatch
     monkeypatch.setenv('SHEETS_BRIDGE_CLIENT_SECRET',str(registration))
     monkeypatch.setitem(signin._state,'auth',None)
     assert signin.registration_ready()
+
+
+def test_popup_start_uses_browser_owned_window(monkeypatch):
+    from note_studio import signin
+    class Auth:
+        def start_sign_in(self, *, open_browser, on_url):
+            assert open_browser is False
+            on_url('https://accounts.google.com/o/oauth2/v2/auth?state=synthetic')
+    monkeypatch.setattr(signin, 'auth', lambda: Auth())
+    assert signin.start_popup().startswith('https://accounts.google.com/')
+
+
+def test_web_registration_callback_rejects_wrong_state_and_keeps_pkce(tmp_path, monkeypatch):
+    import socket
+    from threading import Event, Thread
+    import requests
+    from pathlib import Path
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1]/'engines/shortnotes'))
+    from sheets_bridge import web_oauth
+    import google_auth_oauthlib.flow
+    with socket.socket() as sock:
+        sock.bind(('127.0.0.1',0))
+        port = sock.getsockname()[1]
+    target = f'http://127.0.0.1:{port}/auth/google/callback'
+    observed = {}
+    creds = object()
+    class Flow:
+        credentials = creds
+        def authorization_url(self, **kwargs):
+            return 'https://accounts.google.com/o/oauth2/auth?state=expected', 'expected'
+        def fetch_token(self, **kwargs):
+            observed['exchange'] = kwargs
+    def create(config, **kwargs):
+        assert kwargs['autogenerate_code_verifier'] is True
+        assert kwargs['redirect_uri'] == target
+        return Flow()
+    monkeypatch.setattr(google_auth_oauthlib.flow.Flow, 'from_client_config', create)
+    ready = Event()
+    def run():
+        observed['result'] = web_oauth.authorize({'web': {
+            'auth_uri':'https://accounts.google.com/o/oauth2/auth',
+            'token_uri':'https://oauth2.googleapis.com/token', 'redirect_uris':[target]}},
+            ['openid'], open_browser=False, on_url=lambda url: ready.set(), timeout=5)
+    worker = Thread(target=run)
+    worker.start()
+    assert ready.wait(3)
+    session = requests.Session(); session.trust_env = False
+    bad = session.get(target,params={'state':'wrong','code':'synthetic'},timeout=2)
+    assert bad.status_code == 400 and 'exchange' not in observed
+    good = session.get(target,params={'state':'expected','code':'synthetic'},timeout=2)
+    assert good.status_code == 200 and 'synthetic' not in good.text
+    worker.join(3)
+    assert not worker.is_alive()
+    assert observed['result'] is creds and observed['exchange'] == {'code':'synthetic'}
