@@ -3,6 +3,13 @@
 /dist/
 /output/
 /tmp/
+runs/
+outputs/
+uploads/
+logs/
+runtime/
+_build_cache/
+google-client.json
 /NoteStudio_Kit/baseline.json
 /NoteStudio_Kit/before_*.json
 /NoteStudio_Kit/after_*.json

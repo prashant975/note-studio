@@ -271,7 +271,7 @@ def _matches(rel: str, patterns) -> bool:
     return any(fnmatch.fnmatch(rel, p) for p in patterns)
 
 
-def drift(project: Path) -> int:
+def drift(project: Path, normalize_line_endings: bool = False) -> int:
     bad_total = 0
     for name, spec in ENGINE_COPIES.items():
         copy_root = project / spec["copy"]
@@ -293,6 +293,8 @@ def drift(project: Path) -> int:
                     bad.append(f"{rel} (added inside a protected prompt/rules path)")
                 continue
             if _sha256(f) == _sha256(src):
+                continue
+            if normalize_line_endings and f.read_bytes().replace(b"\r\n", b"\n") == src.read_bytes().replace(b"\r\n", b"\n"):
                 continue
             changed.append(rel)
             if _matches(rel, spec["protected"]):
@@ -377,8 +379,8 @@ def main(argv=None) -> int:
                     source.extractall(folder, filter="data")
                 for name in ORIGINALS:
                     ORIGINALS[name]["root"] = Path(folder) / "engines" / name
-                print(f"Git engine baseline: {args.baseline_ref} (original folders were not compared)")
-                return drift(project)
+                print(f"Git engine baseline: {args.baseline_ref} (original folders were not compared; checkout line endings normalized)")
+                return drift(project, normalize_line_endings=True)
         return drift(args.project.resolve())
     return 0
 
