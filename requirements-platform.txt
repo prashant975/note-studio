@@ -1,0 +1,2 @@
+keyring>=25,<26; sys_platform == "darwin"
+cryptography>=42,<47

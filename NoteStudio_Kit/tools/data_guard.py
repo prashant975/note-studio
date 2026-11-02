@@ -28,6 +28,10 @@ import fnmatch
 import hashlib
 import json
 import os
+import io
+import subprocess
+import tarfile
+import tempfile
 import sys
 import zipfile
 from pathlib import Path
@@ -92,6 +96,9 @@ ENGINE_COPIES = {
     "shortnotes": {
         "copy": "engines/shortnotes",
         "allowed": {
+            "sheets_bridge/google_auth.py": "macOS Keychain encryption; never reuse credentials from another computer",
+            "sheets_bridge/macos_credentials.py": "native macOS Keychain encryption adapter",
+            "sheets_bridge/windows_credentials.py": "DPAPI sidecars protect new sign-ins while preserving legacy shared files",
             "notesbot/categories.py": "category list read from the packs; labels/prompt_block/fingerprint byte-identical",
             "notesbot/generation_profile.py": "per-run model as a context variable",
             "sheets_bridge/pw_transport.py": "per-run model/account context; current original's budget-stop "
@@ -353,6 +360,7 @@ def main(argv=None) -> int:
     c.add_argument("after", type=Path)
     d = sub.add_parser("drift")
     d.add_argument("--project", type=Path, default=DEFAULT_PROJECT)
+    d.add_argument("--baseline-ref", help="Compare engine copies with this trusted Git ref when originals are unavailable.")
     args = ap.parse_args(argv)
     if args.cmd == "snapshot":
         snapshot(args.out, args.extra)
@@ -361,6 +369,16 @@ def main(argv=None) -> int:
     elif args.cmd == "compare":
         return compare(args.before, args.after)
     else:
+        if args.baseline_ref:
+            project = args.project.resolve()
+            archive = subprocess.check_output(["git", "-C", str(project), "archive", args.baseline_ref, "engines"])
+            with tempfile.TemporaryDirectory(prefix="notecraft-engine-baseline-") as folder:
+                with tarfile.open(fileobj=io.BytesIO(archive)) as source:
+                    source.extractall(folder, filter="data")
+                for name in ORIGINALS:
+                    ORIGINALS[name]["root"] = Path(folder) / "engines" / name
+                print(f"Git engine baseline: {args.baseline_ref} (original folders were not compared)")
+                return drift(project)
         return drift(args.project.resolve())
     return 0
 

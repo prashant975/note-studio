@@ -1,0 +1,68 @@
+name: macOS and Windows compatibility
+on:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install isolated environments
+        run: |
+          python -m pip install uv==0.13.6
+          uv python install 3.13
+          uv run --no-project --python 3.13 scripts/setup.py --dev
+      - name: Install browser tools
+        shell: python
+        run: |
+          import os, subprocess
+          python = ".venv/Scripts/python.exe" if os.name == "nt" else ".venv/bin/python"
+          subprocess.run([python, "-m", "pip", "install", "-r", "requirements-browser.txt"], check=True)
+          subprocess.run([python, "-m", "playwright", "install", "chromium"], check=True)
+      - name: Regression and native credential tests
+        shell: python
+        run: |
+          import os, subprocess
+          python = ".venv/Scripts/python.exe" if os.name == "nt" else ".venv/bin/python"
+          probe = subprocess.check_output([python, "-c", "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()"], text=True).strip()
+          env = dict(os.environ, CHROMIUM_PATH=probe)
+          subprocess.run([python, "-m", "pytest", "-q", "--junitxml=compatibility-tests.xml", *["tests"]], check=True, env=env)
+      - name: Browser workflows with synthetic data
+        shell: python
+        run: |
+          import os, subprocess
+          python = ".venv/Scripts/python.exe" if os.name == "nt" else ".venv/bin/python"
+          browser = subprocess.check_output([python, "-c", "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()"], text=True).strip()
+          subprocess.run([python, "scripts/desktop_smoke.py"], check=True, env=dict(os.environ, CHROMIUM_PATH=browser))
+      - name: Build and check macOS application
+        if: runner.os == 'macOS'
+        run: .venv/bin/python packaging/build_macos.py
+      - name: Check packaged macOS pages
+        if: runner.os == 'macOS'
+        shell: python
+        run: |
+          import os, subprocess
+          python = ".venv/bin/python"
+          browser = subprocess.check_output([python, "-c", "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()"], text=True).strip()
+          subprocess.run([python, "scripts/desktop_smoke.py", "--packaged"], check=True, env=dict(os.environ, CHROMIUM_PATH=browser))
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-${{ matrix.os }}
+          path: compatibility-tests.xml

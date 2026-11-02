@@ -21,7 +21,9 @@ FONTS = {"Coming Soon": "[Cc]oming*[Ss]oon*.[to]tf", "Kalam": "[Kk]alam*.[to]tf"
 
 
 def _font_dirs() -> list[str]:
-    return [r"C:\Windows\Fonts", os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Windows\Fonts")]
+    return [r"C:\Windows\Fonts", os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Windows\Fonts"),
+            str(Path.home() / "Library/Fonts"), "/Library/Fonts", "/System/Library/Fonts",
+            str(Path.home() / ".local/share/fonts"), "/usr/share/fonts"]
 
 
 def font_installed(pattern: str) -> bool:
@@ -33,7 +35,8 @@ def soffice() -> str:
     if found:
         return found
     for candidate in (r"C:\Program Files\LibreOffice\program\soffice.exe",
-                      r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"):
+                      r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+                      "/Applications/LibreOffice.app/Contents/MacOS/soffice"):
         if Path(candidate).exists():
             return candidate
     return ""
@@ -61,7 +64,8 @@ def ffmpeg() -> tuple[str, str]:
     bundled = engine_catalog.engine_dir("upsc") / "third_party" / "ffmpeg"
     found = []
     for name in ("ffmpeg", "ffprobe"):
-        path = shutil.which(name) or (str(bundled / f"{name}.exe") if (bundled / f"{name}.exe").is_file() else "")
+        path = shutil.which(name) or (str(bundled / f"{name}.exe")
+                                     if os.name == "nt" and (bundled / f"{name}.exe").is_file() else "")
         found.append(path)
     return found[0], found[1]
 

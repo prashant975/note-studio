@@ -425,7 +425,9 @@ def copy_distribution(dist, target):
 def copy_engine_libraries(engine, target, source=None):
     """The original app's own environment, exactly as it runs the original."""
     original = paths.original(engine)
-    site = Path(source) if source else (original / '.venv' / 'Lib' / 'site-packages' if original else None)
+    local = paths.ENGINES_DIR / engine / '.venv' / 'Lib' / 'site-packages'
+    site = (Path(source) if source else local if local.is_dir()
+            else original / '.venv' / 'Lib' / 'site-packages' if original else None)
     if not site or not site.is_dir():
         raise SystemExit(f'{engine}: the original app\'s environment is missing ({site}). The build copies '
                          'each engine\'s libraries from its original\'s .venv.')

@@ -1,0 +1,6 @@
+# Preserve existing source line endings; launch scripts use native conventions.
+*.sh text eol=lf
+*.command text eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+* whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

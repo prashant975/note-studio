@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 
 from .errors import BridgeError
@@ -47,11 +48,27 @@ def client_id_of(client_secret_path: Path) -> str:
 def _load_cached(token_path: Path, client_id: str = ""):
     from google.oauth2.credentials import Credentials
 
+    # A sidecar preserves older standalone apps' shared files. New credentials
+    # are never written in plaintext; those apps keep their independent login.
+    secure = token_path.with_suffix(".protected.json")
+    if os.name == "nt" and not token_path.name.endswith(".protected.json") and secure.is_file():
+        token_path = secure
+
     if not token_path.is_file():
         return None
     try:
         info = json.loads(token_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        if not isinstance(info, dict):
+            return None
+        if sys.platform == "darwin":
+            from .macos_credentials import unprotect
+            info = json.loads(unprotect(info))
+        elif os.name == "nt" and info.get("enc") == "dpapi":
+            from .windows_credentials import transform
+            info = json.loads(transform(info["value"], decrypt=True))
+        elif isinstance(info, dict) and info.get("enc") == "keychain-aesgcm-v1":
+            return None
+    except Exception:
         return None
     if not isinstance(info, dict):
         return None
@@ -75,9 +92,18 @@ def _load_cached(token_path: Path, client_id: str = ""):
 
 
 def _save(creds, token_path: Path) -> None:
+    if os.name == "nt" and not token_path.name.endswith(".protected.json"):
+        token_path = token_path.with_suffix(".protected.json")
     token_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = token_path.with_suffix(token_path.suffix + ".tmp")
-    tmp.write_text(creds.to_json(), encoding="utf-8")
+    value = creds.to_json()
+    if sys.platform == "darwin":
+        from .macos_credentials import protect
+        value = json.dumps(protect(value))
+    elif os.name == "nt":
+        from .windows_credentials import transform
+        value = json.dumps({"enc": "dpapi", "value": transform(value)})
+    tmp.write_text(value, encoding="utf-8")
     try:
         os.chmod(tmp, 0o600)
     except OSError:

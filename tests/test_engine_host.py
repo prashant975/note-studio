@@ -40,6 +40,12 @@ emit("done", status="complete", reason="")
 
 
 def _alive(pid: int) -> bool:
+    if os.name != "nt":
+        try:
+            os.kill(pid, 0)
+            return True
+        except ProcessLookupError:
+            return False
     out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True).stdout
     return str(pid) in out
 
@@ -81,7 +87,6 @@ def test_a_crash_is_a_failed_run_with_its_last_lines(fake_engine, tmp_path):
     assert "a plain line" in result["tail"]
 
 
-@pytest.mark.skipif(os.name != "nt", reason="Windows process tree")
 def test_stop_ends_the_child_and_what_it_started(fake_engine, tmp_path):
     events, box = [], {}
     worker = threading.Thread(target=lambda: box.update(result=engine_host.run(

@@ -60,3 +60,12 @@ cookies.json
 *.log
 *.bak
 *.tmp
+.DS_Store
+pw_auth.json
+pw-auth.json
+qbg_portal.json
+youtube_connection.json
+video_engine_connection.json
+*.protected.json
+*.app/
+compatibility-tests.xml
