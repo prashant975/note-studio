@@ -3432,11 +3432,13 @@ def _flow_stub(monkeypatch, email, *, captured=None):
 
 def test_the_account_chooser_is_asked_for_the_allowed_domain(tmp_path, monkeypatch):
     import sheets_bridge.google_auth as ga
+    registration = tmp_path / "client.json"
+    registration.write_text('{"installed": {}}')
 
     seen: dict = {}
     _flow_stub(monkeypatch, "someone@pw.live", captured=seen)
     monkeypatch.setattr(ga, "_save", lambda creds, path: None)
-    ga.interactive_sign_in(pathlib.Path(__file__), base=tmp_path)
+    ga.interactive_sign_in(registration, base=tmp_path)
     assert seen["hd"] == "pw.live" and seen["prompt"] == "consent"
 
 
@@ -3445,6 +3447,8 @@ def test_a_rejected_sign_in_leaves_no_token_on_the_machine(tmp_path, monkeypatch
     a stranger who completes Google consent would otherwise leave a usable
     credential in ~/.shortnotes_bridge/tokens."""
     import sheets_bridge.google_auth as ga
+    registration = tmp_path / "client.json"
+    registration.write_text('{"installed": {}}')
 
     _flow_stub(monkeypatch, "outsider@gmail.com")
     saved: list = []
@@ -3454,14 +3458,14 @@ def test_a_rejected_sign_in_leaves_no_token_on_the_machine(tmp_path, monkeypatch
         raise BridgeError("not_pw_account", f"{email} is not an @pw.live account")
 
     with pytest.raises(BridgeError) as excinfo:
-        ga.interactive_sign_in(pathlib.Path(__file__), base=tmp_path, verify=verify)
+        ga.interactive_sign_in(registration, base=tmp_path, verify=verify)
     assert excinfo.value.code == "not_pw_account"
     assert saved == []                                   # nothing persisted
     assert list((tmp_path / "tokens").glob("*.json")) == []
 
     # an allowed account is saved exactly once
     _flow_stub(monkeypatch, "ok@pw.live")
-    ga.interactive_sign_in(pathlib.Path(__file__), base=tmp_path, verify=lambda creds, email: None)
+    ga.interactive_sign_in(registration, base=tmp_path, verify=lambda creds, email: None)
     assert len(saved) == 1
 
 

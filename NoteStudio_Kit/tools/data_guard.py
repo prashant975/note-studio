@@ -98,6 +98,7 @@ ENGINE_COPIES = {
         "allowed": {
             "sheets_bridge/google_auth.py": "native credential protection and browser-owned OAuth popup; retain domain and allowlist gates",
             "sheets_bridge/web_oauth.py": "explicit Web registration support with PKCE and state-checked loopback callback",
+            "tests/test_sheets_bridge.py": "OAuth tests use synthetic registration JSON when selecting Desktop/Web flow",
             "sheets_bridge/auth_session.py": "optional browser-owned popup; preserve standalone login defaults",
             "sheets_bridge/macos_credentials.py": "native macOS Keychain encryption adapter",
             "sheets_bridge/windows_credentials.py": "DPAPI sidecars protect new sign-ins while preserving legacy shared files",
