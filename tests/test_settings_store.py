@@ -56,7 +56,7 @@ def test_precedence_outside_value_then_imported_then_default(monkeypatch):
 
 def test_settings_shows_the_values_and_the_sign_in_card(client):
     page = client.get("/settings").text
-    assert "Sign-in" in page and "Choose above first" in page
+    assert "Sign-in" in page and "Choose sign-in storage" in page
     for tab in ("AI models", "Categories", "Values", "System"):
         assert tab in page, tab
     values = client.get("/settings/values").text

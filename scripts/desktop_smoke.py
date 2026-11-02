@@ -17,7 +17,7 @@ import urllib.request
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
-ROUTES = ["/","/new","/runs","/settings","/queue","/automation"]
+ROUTES = ["/signin","/","/new","/runs","/settings","/queue","/automation"]
 
 
 def main():
