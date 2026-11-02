@@ -23,6 +23,7 @@ ROUTES = ["/","/new","/runs","/settings","/queue","/automation"]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--packaged", action="store_true")
+    parser.add_argument("--native", action="store_true", help="Check the native macOS Dock launcher.")
     args = parser.parse_args()
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -36,6 +37,8 @@ def main():
                    NOTE_STUDIO_OFFLINE="1", NOTE_STUDIO_NO_BROWSER="1", NOTE_STUDIO_PORT=str(port))
         command = ([str(ROOT/"dist/NoteCraft.app/Contents/MacOS/launch")] if args.packaged
                    else [sys.executable, str(ROOT/"run_studio.py")])
+        if args.native:
+            command = [str(ROOT/"dist/NoteCraft.app/Contents/MacOS/DesktopLauncher")]
         with (temp/"server.log").open("w") as log:
             proc = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log, stderr=log)
             try:
@@ -69,9 +72,14 @@ def main():
                     page.set_viewport_size({"width": 390, "height": 844})
                     page.goto(base+ROUTES[0])
                     browser.close()
-                print(json.dumps({"packaged": args.packaged, "pages": checked, "javascript_errors": errors}))
+                print(json.dumps({"packaged": args.packaged or args.native, "native": args.native,
+                                  "pages": checked, "javascript_errors": errors}))
             finally:
-                proc.terminate()
+                if os.name == "nt":
+                    subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                                   capture_output=True, timeout=20)
+                else:
+                    proc.terminate()
                 try:
                     proc.wait(timeout=20)
                 except subprocess.TimeoutExpired:

@@ -68,6 +68,13 @@ jobs:
           if (!(Test-Path $iscc)) { choco install innosetup --yes --no-progress }
           & .\.venv\Scripts\python.exe packaging/build_installer.py --no-signin --no-team-key --compression zip
           if ($LASTEXITCODE -ne 0) { throw "Windows package build failed" }
+      - name: Upload Windows installer
+        if: runner.os == 'Windows' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/team/*/NoteCraft_Setup_*.exe
+          retention-days: 7
       - name: Upload test evidence
         if: always()
         uses: actions/upload-artifact@v4

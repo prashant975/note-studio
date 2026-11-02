@@ -284,17 +284,21 @@ def test_settings_offers_the_upsc_model_stages(client):
     assert models.order("upsc_dcn", "speech") == ["gemini-3.6-flash"]          # GPT has no speech route
 
 
-def test_a_seeded_upsc_pack_from_phase_2_is_brought_up_to_date():
+@pytest.mark.parametrize("newline", ["lf", "crlf"])
+def test_a_seeded_upsc_pack_from_phase_2_is_brought_up_to_date(newline):
     from note_studio import categories
 
     root = categories.packs_dir()
     folder = root / "upsc"
     folder.mkdir(parents=True)
     old = (ROOT / "tests" / "data" / "upsc_category_phase2.json")
-    (folder / "category.json").write_bytes(old.read_bytes())
+    original = old.read_bytes().replace(b"\r\n", b"\n")
+    if newline == "crlf":
+        original = original.replace(b"\n", b"\r\n")
+    (folder / "category.json").write_bytes(original)
     assert "upsc" in categories.seed()
     assert categories.get("upsc")["enabled"] is True
-    assert (folder / "category.json.bak").read_bytes() == old.read_bytes()
+    assert (folder / "category.json.bak").read_bytes() == original
     edited = json.loads(old.read_text(encoding="utf-8"))
     edited["label"] = "UPSC (edited)"
     (folder / "category.json").write_text(json.dumps(edited), encoding="utf-8")

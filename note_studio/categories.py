@@ -146,7 +146,9 @@ SHIPPED_BEFORE = {
 
 
 def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    # Git may check the same shipped JSON out as CRLF on Windows. Newline
+    # conversion is not an operator edit; all other bytes must still match.
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
 def _upgrade_builtin(root: Path) -> list[str]:

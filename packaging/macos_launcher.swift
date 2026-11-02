@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import Darwin
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var server: Process?
@@ -68,5 +69,11 @@ let application = NSApplication.shared
 let delegate = AppDelegate()
 application.delegate = delegate
 application.setActivationPolicy(.regular)
+let signalSources = [SIGTERM, SIGINT].map { number -> DispatchSourceSignal in
+    signal(number, SIG_IGN)
+    let source = DispatchSource.makeSignalSource(signal: number, queue: .main)
+    source.setEventHandler { NSApp.terminate(nil) }
+    source.resume()
+    return source
+}
 application.run()
-
