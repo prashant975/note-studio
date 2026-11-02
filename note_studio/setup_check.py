@@ -58,6 +58,12 @@ def word_installed() -> bool:
 
 def office() -> str:
     """'LibreOffice' / 'Word' / '' - what will turn the Word notes into a PDF."""
+    if sys.platform == "darwin":
+        pandoc = shutil.which("pandoc") or (Path.home()/".local/bin/pandoc").is_file()
+        chrome = os.environ.get("PW_BOOKS_CHROME_EXE") or os.environ.get("CHROMIUM_PATH") or any(
+            (folder/"Google Chrome.app/Contents/MacOS/Google Chrome").is_file()
+            for folder in (Path("/Applications"), Path.home()/"Applications"))
+        return "Pandoc and Chrome" if pandoc and chrome else ""
     return "LibreOffice" if soffice() else "Word" if word_installed() else ""
 
 

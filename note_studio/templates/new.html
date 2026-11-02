@@ -105,8 +105,8 @@
       {% if is_class %}
       <h2>The class</h2>
       {% if no_pdf_maker %}<div class="note warn">{{ ico.state('warn', 16, 'nico') }}<div class="ntext">
-        <div class="hd">Needs LibreOffice or Word for the PDF</div>
-        <div class="bd">Neither was found on this computer, so these notes come as a Word file only. <a href="/settings/system#setup">Check setup</a></div></div></div>{% endif %}
+        <div class="hd">Set up PDF export</div>
+        <div class="bd">The PDF converter was not found. On macOS use Pandoc and Chrome; Windows can use Word or LibreOffice. The editable Word file remains available. <a href="/settings/system#setup">Check setup</a></div></div></div>{% endif %}
       <label class="field"><span>Class recording link</span>
         <input type="text" inputmode="url" name="video_url" required maxlength="2000" autocomplete="off"
                value="{{ values.get('video_url', '') }}" placeholder="Paste a Google Drive, YouTube or direct video link">

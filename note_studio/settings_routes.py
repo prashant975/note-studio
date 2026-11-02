@@ -104,8 +104,8 @@ def register(app, render, go):
             return go("/settings#signin", str(problem), "warn")
         except Exception:
             return go("/settings#signin", "Google sign-in could not be opened: its registration file "
-                      "(client_secret.json) is missing. Reinstall " + APP + ", or on a project-folder copy keep "
-                      "the shortnotes-core folder.", "danger")
+                      "is missing or could not be read. Ask your administrator for the Google Desktop registration JSON, "
+                      "save it as ~/.note_studio/google-client.json, and restart NoteCraft.", "danger")
         return go("/settings#signin", "Google sign-in opened in your browser. Finish it there.", "info")
 
     @app.post("/settings/signout")

@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 import threading
 
-from . import old_app
+from . import old_app, paths
 
 _lock = threading.Lock()
 _state: dict = {"auth": None, "folder": None}
@@ -55,6 +55,10 @@ def warm() -> None:
 
 
 def snapshot() -> dict:
+    return _snapshot() | {"configured": paths.signin_registration().is_file()}
+
+
+def _snapshot() -> dict:
     """{'state': undecided|checking|pending|ready|signed_out|error, 'email', 'error'}."""
     if not old_app.choice():
         return {"state": "undecided", "email": "", "error": ""}
