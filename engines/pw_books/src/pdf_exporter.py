@@ -10,6 +10,11 @@ def find_soffice() -> str | None:
     exe = shutil.which("soffice") or shutil.which("libreoffice")
     if exe:
         return exe
+    if sys.platform == "darwin":
+        for folder in (Path("/Applications"), Path.home() / "Applications"):
+            executable = folder / "LibreOffice.app/Contents/MacOS/soffice"
+            if executable.is_file():
+                return str(executable)
     for c in [r"C:\Program Files\LibreOffice\program\soffice.exe", r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"]:
         if Path(c).exists():
             return c

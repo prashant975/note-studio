@@ -36,7 +36,8 @@ def soffice() -> str:
         return found
     for candidate in (r"C:\Program Files\LibreOffice\program\soffice.exe",
                       r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
-                      "/Applications/LibreOffice.app/Contents/MacOS/soffice"):
+                      "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+                      str(Path.home() / "Applications/LibreOffice.app/Contents/MacOS/soffice")):
         if Path(candidate).exists():
             return candidate
     return ""
@@ -89,7 +90,7 @@ def run() -> list[dict]:
     missing = _missing_modules()
     if missing is None:
         say("UPSC engine's Python", "bad", f"It could not be started ({where}).",
-            "Reinstall NoteCraft, or on a project-folder copy keep the UPSC Notes app's own folder (with its .venv).")
+            "Run this project's setup on this computer, or reinstall NoteCraft.")
     elif missing:
         say("UPSC engine's Python", "bad", f"Missing: {', '.join(UPSC_MODULES[m] + ' (' + m + ')' for m in missing)}.",
             f"Install the UPSC Notes app's requirements into {where}.")
@@ -100,18 +101,20 @@ def run() -> list[dict]:
         say("ffmpeg and ffprobe", "ok", "Found: class recordings can be turned into a transcript.")
     else:
         say("ffmpeg and ffprobe", "bad", "Not found: recordings without captions cannot be transcribed.",
-            "The engine copy's third_party/ffmpeg folder is missing; copy it again.")
+            "Install FFmpeg and FFprobe on this computer, then restart NoteCraft.")
     which = office()
     if which:
-        say("PDF from Word notes", "ok", f"{which} makes the PDF.")
+        say("PDF from Word notes", "ok", f"UPSC uses its bundled PDF renderer. PW Books can use {which}.")
+    elif not engine_catalog.available("pw_books"):
+        say("PDF from Word notes", "ok", "UPSC uses its bundled PDF renderer.")
     else:
-        say("PDF from Word notes", "warn", "Neither LibreOffice nor Microsoft Word was found: the Word notes are made, "
-            "but not the PDF.", "Install LibreOffice (free) or Microsoft Word.")
+        say("PDF from Word notes", "warn", "UPSC uses its bundled PDF renderer. PW Books needs LibreOffice "
+            "or Microsoft Word for its PDF.", "Install LibreOffice on macOS, or LibreOffice/Microsoft Word on Windows.")
     missing_fonts = [name for name, pattern in FONTS.items() if not font_installed(pattern)]
     if missing_fonts:
         say("Handwriting fonts", "warn", f"Not installed: {', '.join(missing_fonts)}. The Word file carries them, "
             "but the PDF falls back to another face.",
-            "Install them from engines/upsc/assets/fonts (right-click the .ttf, Install).")
+            "Open and install the font files from engines/upsc/assets/fonts for this account.")
     else:
         say("Handwriting fonts", "ok", "Coming Soon and Kalam are installed.")
     from . import practice_service

@@ -44,7 +44,7 @@ Google client configuration and PW/network access cannot be supplied through Git
 
 Back up local data with the application stopped. Git moves source only; it does not synchronize workspaces or installed applications. Updating/rebuilding keeps data separate. Do not use git clean -xfd in a working data folder.
 
-All copied child engines get their own environment through setup.py; the original Downloads folders are optional. FFmpeg and FFprobe are external prerequisites for recording/audio workflows (macOS with Homebrew: brew install ffmpeg). Use Settings → System → Check setup. DPP needs the two private master workbooks configured there. Handwriting fonts and Word/LibreOffice may be needed by particular engines. Microsoft Word COM automation is Windows-only; portable PDF renderers remain available.
+All copied child engines get their own environment through setup.py; the original Downloads folders are optional. FFmpeg and FFprobe are external prerequisites for recording/audio workflows (macOS with Homebrew: brew install ffmpeg). Use Settings → System → Check setup. DPP needs the two private master workbooks configured there. PW Books PDF conversion requires LibreOffice on macOS (in /Applications or ~/Applications), or LibreOffice/Microsoft Word on Windows. UPSC uses its bundled PDF renderer. The bundled Coming Soon and Kalam fonts should be installed for this account when Word/LibreOffice needs them. Microsoft Word COM automation is Windows-only; portable PDF renderers remain available.
 
 ## Tests
 

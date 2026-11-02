@@ -117,6 +117,7 @@ ENGINE_COPIES = {
     "pw_books": {
         "copy": "engines/pw_books",
         "allowed": {
+            "src/pdf_exporter.py": "discover LibreOffice in native macOS application folders; preserve Windows conversion",
             "src/prompt_builder.py": "append-only 'extra instructions' hook",
             "src/pw_auth.py": "token from the Studio (environment) instead of Streamlit",
         },

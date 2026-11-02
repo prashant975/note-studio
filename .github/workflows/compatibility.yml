@@ -71,6 +71,9 @@ jobs:
           if (!(Test-Path $iscc)) { choco install innosetup --yes --no-progress }
           & .\.venv\Scripts\python.exe packaging/build_installer.py --no-signin --no-team-key --compression zip
           if ($LASTEXITCODE -ne 0) { throw "Windows package build failed" }
+      - name: Verify Windows installation and preserved data
+        if: runner.os == 'Windows'
+        run: .venv/Scripts/python.exe packaging/verify_windows_install.py
       - name: Upload Windows installer
         if: runner.os == 'Windows' && success()
         uses: actions/upload-artifact@v4
