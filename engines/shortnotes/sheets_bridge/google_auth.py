@@ -33,13 +33,22 @@ def token_path_for(email: str, base: Path | None = None) -> Path:
     return root / f"{digest[:32]}.json"
 
 
+def client_config(client_secret_path: Path) -> dict:
+    info = json.loads(Path(client_secret_path).read_text(encoding="utf-8-sig"))
+    if info.get("enc") == "keychain-aesgcm-v1":
+        from .macos_credentials import unprotect
+        info = json.loads(unprotect(info))
+    elif info.get("enc") == "dpapi":
+        from .windows_credentials import transform
+        info = json.loads(transform(info["value"], decrypt=True))
+    return info
+
+
 def client_id_of(client_secret_path: Path) -> str:
     """The OAuth client this install is configured to use, or ""."""
-    import json
-
     try:
-        info = json.loads(Path(client_secret_path).read_text(encoding="utf-8-sig"))
-    except (OSError, ValueError):
+        info = client_config(client_secret_path)
+    except Exception:
         return ""
     block = info.get("installed") or info.get("web") or {}
     return str(block.get("client_id", "") or "")
@@ -146,7 +155,7 @@ def load_credentials(client_secret_path: Path, token_path: Path, *, interactive:
 
     from google_auth_oauthlib.flow import InstalledAppFlow
 
-    flow = InstalledAppFlow.from_client_secrets_file(str(client_secret_path), list(SCOPES))
+    flow = InstalledAppFlow.from_client_config(client_config(client_secret_path), list(SCOPES))
     creds = flow.run_local_server(port=0, open_browser=True, prompt="consent")
     _save(creds, token_path)
     return creds
@@ -238,7 +247,7 @@ def interactive_sign_in(
             "(or set SHEETS_BRIDGE_CLIENT_SECRET).",
         )
 
-    config = json.loads(client_secret_path.read_text(encoding="utf-8-sig"))
+    config = client_config(client_secret_path)
     if "web" in config:
         from .web_oauth import authorize
         creds = authorize(config, SCOPES, on_url=on_url, open_browser=open_browser,
@@ -246,7 +255,7 @@ def interactive_sign_in(
     else:
         from google_auth_oauthlib.flow import InstalledAppFlow
 
-        flow = InstalledAppFlow.from_client_secrets_file(str(client_secret_path), list(SCOPES))
+        flow = InstalledAppFlow.from_client_config(client_config(client_secret_path), list(SCOPES))
         if on_url is not None:
             original_authorization_url = flow.authorization_url
             def authorization_url(**kwargs):

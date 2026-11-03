@@ -3422,7 +3422,7 @@ def _flow_stub(monkeypatch, email, *, captured=None):
 
     class _Loader:
         @staticmethod
-        def from_client_secrets_file(path, scopes):
+        def from_client_config(config, scopes):
             return _Flow()
 
     import google_auth_oauthlib.flow as flow_module

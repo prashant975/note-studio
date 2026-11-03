@@ -48,3 +48,15 @@ def test_keychain_failure_never_returns_plaintext(vault, monkeypatch):
     monkeypatch.setattr(vault, "_key", unavailable)
     with pytest.raises(RuntimeError):
         vault.protect("synthetic")
+
+
+def test_google_registration_is_read_without_plaintext_temporary_file(vault, tmp_path):
+    import json
+    from sheets_bridge import google_auth
+    registration={'web':{'client_id':'synthetic.apps.googleusercontent.com','client_secret':'synthetic-private-registration'}}
+    target=tmp_path/'google-client.json'
+    target.write_text(json.dumps(vault.protect(json.dumps(registration))))
+    assert google_auth.client_config(target)==registration
+    assert google_auth.client_id_of(target)=='synthetic.apps.googleusercontent.com'
+    assert 'synthetic-private-registration' not in target.read_text()
+    assert list(tmp_path.iterdir())==[target]
