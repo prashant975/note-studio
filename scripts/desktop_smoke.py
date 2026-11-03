@@ -11,6 +11,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.request
 
@@ -40,7 +41,17 @@ def main():
         if args.native:
             command = [str(ROOT/"dist/NoteCraft.app/Contents/MacOS/DesktopLauncher")]
         with (temp/"server.log").open("w") as log:
-            proc = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log, stderr=log)
+            # Only this test owns the file handle. Windows venv redirectors
+            # and late probe children must not inherit a handle to server.log.
+            proc = subprocess.Popen(command, cwd=ROOT, env=env, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+            def drain_output():
+                with proc.stdout:
+                    for line in proc.stdout:
+                        log.write(line)
+                        log.flush()
+            output = threading.Thread(target=drain_output, daemon=True)
+            output.start()
             try:
                 base = f"http://127.0.0.1:{port}"
                 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -85,6 +96,9 @@ def main():
                 except subprocess.TimeoutExpired:
                     proc.kill()
                     proc.wait()
+                output.join(timeout=20)
+                if output.is_alive():
+                    raise RuntimeError("The owned test process tree did not close its output pipe.")
 
 
 if __name__ == "__main__":
