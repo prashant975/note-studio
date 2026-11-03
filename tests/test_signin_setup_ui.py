@@ -87,3 +87,18 @@ def test_launcher_opens_signin_entry_point(monkeypatch):
     monkeypatch.delenv('NOTE_STUDIO_NO_BROWSER',raising=False)
     launch._open_when_ready('http://127.0.0.1:3100',3100)
     assert opened==['http://127.0.0.1:3100/signin']
+
+
+def test_imported_registration_wins_over_legacy_but_preserves_fallback(tmp_path, monkeypatch):
+    from note_studio import old_app, paths
+    home=tmp_path/'new home';home.mkdir()
+    original=tmp_path/'original';original.mkdir()
+    legacy=original/'client_secret.json';legacy.write_text('{"installed":{}}')
+    configured=home/'google-client.json';configured.write_text('{"enc":"synthetic"}')
+    monkeypatch.setattr(paths,'home',lambda:home)
+    monkeypatch.setattr(paths,'shortnotes_original',lambda:original)
+    monkeypatch.delenv('NOTE_STUDIO_GOOGLE_CLIENT',raising=False)
+    assert old_app.environment('no')['SHEETS_BRIDGE_CLIENT_SECRET']==str(configured)
+    configured.unlink()
+    assert old_app.environment('no')['SHEETS_BRIDGE_CLIENT_SECRET']==str(legacy)
+    assert legacy.read_text()=='{"installed":{}}'
