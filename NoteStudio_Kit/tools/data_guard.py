@@ -99,7 +99,10 @@ ENGINE_COPIES = {
             "sheets_bridge/google_auth.py": "native credential protection and browser-owned OAuth popup; retain domain and allowlist gates",
             "sheets_bridge/web_oauth.py": "explicit Web registration support with PKCE and state-checked loopback callback",
             "tests/test_sheets_bridge.py": "OAuth tests use synthetic registration JSON when selecting Desktop/Web flow",
-            "sheets_bridge/auth_session.py": "optional browser-owned popup; preserve standalone login defaults",
+            "sheets_bridge/auth_session.py": "optional browser-owned popup; preserve standalone login defaults; "
+                                             "sign-out clears pw-app-kit 2026-11-18's per-token passes",
+            "pw_access.py": "pw-app-kit 2026-11-18 (owner, 19 November 2026); only APP_NAME kept",
+            "sheets_bridge/pw_openai.py": "no timeout to the 2026-11-18 kit's gpt_generate, which rejects one",
             "sheets_bridge/macos_credentials.py": "native macOS Keychain encryption adapter",
             "sheets_bridge/windows_credentials.py": "DPAPI sidecars protect new sign-ins while preserving legacy shared files",
             "notesbot/categories.py": "category list read from the packs; labels/prompt_block/fingerprint byte-identical",
@@ -114,6 +117,8 @@ ENGINE_COPIES = {
         "copy": "engines/upsc",
         "allowed": {
             "src/prompt_builder.py": "append-only 'extra instructions' hook (doc 08); prompt without it unchanged",
+            "pw_access.py": "pw-app-kit 2026-11-18 (owner, 19 November 2026); only APP_NAME kept",
+            "src/ai_client.py": "no timeout to the 2026-11-18 kit's gemini/gpt_generate, which reject one",
         },
         "protected": ["prompts/*", "src/dmp/prompts.py", "config/*.yaml"],
     },
@@ -125,12 +130,18 @@ ENGINE_COPIES = {
             "requirements.txt": "conditional macOS browser dependency for PDF export",
             "src/prompt_builder.py": "append-only 'extra instructions' hook",
             "src/pw_auth.py": "token from the Studio (environment) instead of Streamlit",
+            "pw_access.py": "pw-app-kit 2026-11-18 (owner, 19 November 2026); only APP_NAME kept",
+            "src/ai_client.py": "no timeout to the 2026-11-18 kit's gemini_generate, which rejects one",
+            "src/model_router.py": "no timeout to the 2026-11-18 kit's gemini_generate (model probe)",
         },
         "protected": ["prompts/*"],
     },
     "notes_qc": {
         "copy": "engines/notes_qc",
-        "allowed": {},
+        "allowed": {
+            "pw_access.py": "pw-app-kit 2026-11-18 (owner, 19 November 2026); only APP_NAME kept",
+            "src/ai_client.py": "no timeout to the 2026-11-18 kit's gemini_generate, which rejects one",
+        },
         "protected": ["src/qc_prompts.py", "config/*.yaml"],
     },
 }

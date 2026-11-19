@@ -401,7 +401,7 @@ class GeminiClient:
         A GPT reply comes back already translated into the Gemini shape.
         """
         common = dict(filename=self.filename, input_unit=self.input_unit, count=self.count,
-                      task_id=self.task_id, timeout=self.timeout)
+                      task_id=self.task_id)
         if is_gpt_model(model):
             resp = pw_access.gpt_generate(self.google_token, model=model,
                                           request=_gemini_body_to_openai(body), **common)

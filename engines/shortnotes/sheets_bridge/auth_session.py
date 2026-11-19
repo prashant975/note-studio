@@ -126,7 +126,8 @@ class AutomationAuth:
         try:
             import pw_access
 
-            pw_access.reset_session()
+            with pw_access._sessions_lock:  # pw-app-kit 2026-11-18: one cached pass per Google token
+                pw_access._sessions.clear()
         except Exception:  # noqa: BLE001 - the kit may be absent in tests
             pass
 

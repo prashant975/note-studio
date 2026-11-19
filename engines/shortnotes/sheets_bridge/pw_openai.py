@@ -343,8 +343,7 @@ def gpt_generate(token_provider, *, model: str, request: dict, filename: str = "
     shipped = getattr(pw_access, "gpt_generate", None) or getattr(pw_access, "openai_generate", None)
     if callable(shipped) and route() == DEFAULT_ROUTE:
         return shipped(token_provider, model=model, request=request, filename=filename,
-                       input_unit=input_unit, count=count, task_id=task_id, app=app,
-                       timeout=timeout)
+                       input_unit=input_unit, count=count, task_id=task_id, app=app)
 
     payload = {
         "app": app,
