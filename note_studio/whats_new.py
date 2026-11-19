@@ -26,6 +26,12 @@ BOOT = uuid.uuid4().hex              # this start: a tour is shown once per star
 OMITTED = (["UPSC notes, Mains practice and DPP"] if "noupsc" in EDITION else []) + (
     ["PW Books"] if "nopwbooks" in EDITION else [])
 TOURS = [
+    dict(id="2026-11-04-nursing-pw-logo", title="PW logo on Nursing notes", steps=[
+        dict(title="PW logo and watermark", href="/new", icon="file-text",
+             text="Nursing notes in the B.Sc. template now have the PW logo in the top-right corner of every page and the faded PW logo watermark behind the text, as NEET/JEE notes do. Wording, tables and images are unchanged."),
+        dict(title="Choose per category", href="/settings/categories", icon="shield",
+             text="Settings → Categories: add or remove the PW logo for any category that makes B.Sc.-style notes. Categories you add get it; the built-in B.Sc. Wallah notes keep their own look."),
+    ]),
     dict(id="2026-10-30-word-reference", title="Full Word references in the B.Sc. template", steps=[
         dict(title="Keep the complete reference", href="/new", icon="file-text",
              text="B.Sc. style now accepts .docx references, including Nursing notes. AI chooses formatting while every source paragraph, table and embedded image stays locked. No shortening or invented content."),

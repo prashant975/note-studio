@@ -110,6 +110,14 @@
               <button class="btn ghost sm" type="submit">{{ 'Switch off' if p.enabled else 'Switch on' }}</button></form>
           </div>
           <div id="check-{{ p.id }}"></div>
+          {% if p.typeset %}
+          <form method="post" action="/settings/categories/{{ p.id }}/pw_logo" class="btn-row">
+            <input type="hidden" name="on" value="{{ '0' if p.pw_logo else '1' }}">
+            <span class="small">PW logo and watermark on B.Sc.-style notes:
+              {% if p.pw_logo %}<span class="chip ok xs"><span class="dot"></span> On</span>{% else %}<span class="chip xs">Off</span>{% endif %}</span>
+            <button class="btn ghost sm" type="submit">{{ 'Remove the PW logo' if p.pw_logo else 'Add the PW logo' }}</button>
+          </form>
+          {% endif %}
 
           <h3 class="sub-h">Rules</h3>
           {% for r in p.rules %}

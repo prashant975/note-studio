@@ -65,7 +65,9 @@ def _packs() -> list[dict]:
     for pack in categories.all_packs():
         rows.append({**pack, "types": categories.offered_types(pack), "rules": category_admin.rule_files(pack),
                      "targets": category_admin.rule_targets(pack),
-                     "subject_choices": categories.subject_choices(pack)})
+                     "subject_choices": categories.subject_choices(pack),
+                     "typeset": "typeset_notes" in (pack.get("note_types") or []),
+                     "pw_logo": categories.pw_logo(pack)})
     return rows
 
 
@@ -179,6 +181,18 @@ def register(app, render, go):
             return go("/settings/categories", str(problem), "warn")
         return go(f"/settings/categories#cat-{category_id}", "Switched on." if on else
                   "Switched off: it is no longer offered on New notes.", "ok")
+
+    @app.post("/settings/categories/{category_id}/pw_logo")
+    async def switch_pw_logo(request: Request, category_id: str):
+        form = await request.form()
+        on = form.get("on") == "1"
+        try:
+            category_admin.set_pw_logo(category_id, on)
+        except category_admin.CategoryError as problem:
+            return go("/settings/categories", str(problem), "warn")
+        return go(f"/settings/categories?open={category_id}#cat-{category_id}",
+                  "The next B.Sc.-style notes have the PW logo in the corner and the PW watermark." if on else
+                  "The next B.Sc.-style notes have no PW logo or watermark.", "ok")
 
     @app.get("/settings/categories/{category_id}/check")
     def check(request: Request, category_id: str):

@@ -189,6 +189,17 @@ def get(category_id: str) -> dict | None:
     return _load(folder) if folder.is_dir() else None
 
 
+def pw_logo(pack: dict | None) -> bool:
+    """Whether the category's typeset (B.Sc.-style) notes carry the PW logo in the
+    corner and as the watermark, as the NEET-JEE notes do. The pack's own
+    branding.pw_logo (Settings -> Categories) wins. Otherwise a category added
+    from Settings (Nursing...) has it and a built-in one keeps its samples' look."""
+    if not pack:
+        return False
+    value = (pack.get("branding") or {}).get("pw_logo")
+    return value if isinstance(value, bool) else pack.get("builtin") is not True
+
+
 def offered_types(pack: dict) -> list[dict]:
     """The pack's note types that exist in the registry, in the pack's order."""
     found = [note_types.get(t) for t in pack.get("note_types") or []]

@@ -68,6 +68,8 @@ class Result:
 def run_settings(options: dict, pack: dict, subject: str, language: str, instructions: str,
                  models: dict) -> Settings:
     """Settings from a run's saved options and its category pack (its branding is data)."""
+    from .. import categories
+
     branding = dict((pack or {}).get("branding") or {})
     label = str((pack or {}).get("label") or "B.Sc.")
     brand = str(branding.get("header_left") or label)
@@ -83,7 +85,8 @@ def run_settings(options: dict, pack: dict, subject: str, language: str, instruc
                     brand=brand, audience=str(branding.get("audience") or label), models=models,
                     branding={"header_left": brand, "header_right": str(branding.get("header_right") or f"{label} Notes"),
                               "footer_left": str(branding.get("footer_left") or brand),
-                              "footer_right": str(branding.get("footer_right") or "Concept • Understand • Apply")})
+                              "footer_right": str(branding.get("footer_right") or "Concept • Understand • Apply"),
+                              "pw_logo": categories.pw_logo(pack)})
 
 
 def output_name(source_name: str) -> str:
