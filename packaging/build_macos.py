@@ -1,9 +1,9 @@
 """Build an unsigned, self-contained macOS app using a relocatable uv CPython runtime.
 
-Run with the project's .venv/bin/python. Windows keeps its existing installer.
-Only Git source files under the runtime allowlist are bundled; local data and
-credentials are excluded. Rebuild after pulling source updates.
+Run with the project's .venv/bin/python. Use --dmg to also build an installer disk image.
+The runtime allowlist excludes local data and credentials.
 """
+import argparse
 from pathlib import Path
 import os
 import plistlib
@@ -13,13 +13,48 @@ import sys
 import sysconfig
 import tempfile
 
+import make_icon
+
 ROOT = Path(__file__).resolve().parents[1]
 NAME = "NoteCraft"
+ICON = NAME + ".icns"
 ENTRY = "run_studio.py"
 SOURCE_ROOTS = ["note_studio","engines","run_studio.py"]
 
 
+def build_app_icon(target: Path) -> None:
+    from PIL import Image
+
+    artwork = make_icon.draw()
+    with tempfile.TemporaryDirectory(prefix="notecraft-icon-") as folder:
+        iconset = Path(folder) / (NAME + ".iconset")
+        iconset.mkdir()
+        for size in (16, 32, 128, 256, 512):
+            artwork.resize((size, size), Image.Resampling.LANCZOS).save(iconset / f"icon_{size}x{size}.png")
+            artwork.resize((size * 2, size * 2), Image.Resampling.LANCZOS).save(iconset / f"icon_{size}x{size}@2x.png")
+        subprocess.run(["iconutil", "--convert", "icns", "--output", target, iconset], check=True)
+
+
+def build_disk_image(app: Path, destination: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="notecraft-dmg-", dir=destination.parent) as folder:
+        staging = Path(folder) / "payload"
+        staging.mkdir()
+        subprocess.run(["ditto", app, staging / app.name], check=True)
+        (staging / "Applications").symlink_to("/Applications", target_is_directory=True)
+
+        disk_image = Path(folder) / destination.name
+        subprocess.run(["hdiutil", "create", "-srcfolder", staging, "-volname", NAME,
+                        "-format", "UDZO", "-quiet", disk_image], check=True)
+        subprocess.run(["xcrun", "swift", "-e", SET_INSTALLER_ICON, disk_image,
+                        app / "Contents/Resources" / ICON], check=True)
+        disk_image.rename(destination)
+    print(f"Built installer: {destination}")
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dmg", action="store_true", help="Also build dist/NoteCraft.dmg for drag-to-Applications installation.")
+    args = parser.parse_args()
     if sys.platform != "darwin":
         raise SystemExit("Build macOS apps on macOS; use the existing Windows builder on Windows.")
     runtime = Path(sys.base_prefix)
@@ -28,10 +63,14 @@ def main():
     app = ROOT / "dist" / (NAME + ".app")
     if app.exists():
         raise SystemExit(f"{app} already exists. Move that generated app aside before rebuilding.")
+    disk_image = app.with_suffix(".dmg")
+    if args.dmg and disk_image.exists():
+        raise SystemExit(f"{disk_image} already exists. Move it aside before rebuilding.")
     resources = app / "Contents/Resources"
     macos = app / "Contents/MacOS"
     resources.mkdir(parents=True)
     macos.mkdir(parents=True)
+    build_app_icon(resources / ICON)
     shutil.copytree(runtime, resources / "runtime", symlinks=True,
                     ignore=shutil.ignore_patterns("__pycache__"))
     libraries = Path(sysconfig.get_paths()["purelib"])
@@ -80,6 +119,7 @@ def main():
     with (app / "Contents/Info.plist").open("wb") as stream:
         plistlib.dump({"CFBundleName": NAME, "CFBundleDisplayName": NAME,
                       "CFBundleIdentifier": "live.pw.NoteCraft", "CFBundleExecutable": "DesktopLauncher",
+                      "CFBundleIconFile": ICON,
                       "CFBundleVersion": "1", "CFBundlePackageType": "APPL"}, stream)
     with tempfile.TemporaryDirectory(prefix="mac-package-check-") as folder:
         env = dict(os.environ, STUDIO_ROOT=folder, NOTE_STUDIO_HOME=folder,
@@ -87,7 +127,19 @@ def main():
                    PW_AUTH_STATE_DIR=str(Path(folder)/"auth"), QBG_PORTAL_AUTH_PATH=str(Path(folder)/"portal.json"))
         subprocess.run([str(launcher), "--check-package"], check=True, env=env)
     print(f"Built and import-checked: {app}")
+    if args.dmg:
+        build_disk_image(app, disk_image)
     print("Unsigned local app. Launch from Terminal or Finder; distribute only after signing/notarizing.")
+
+
+SET_INSTALLER_ICON = '''import AppKit
+
+guard let icon = NSImage(contentsOfFile: CommandLine.arguments[2]),
+      NSWorkspace.shared.setIcon(icon, forFile: CommandLine.arguments[1], options: []) else {
+    FileHandle.standardError.write(Data("Could not set the installer icon.\\n".utf8))
+    exit(1)
+}
+'''
 
 
 BOOTSTRAP = r'''from pathlib import Path
