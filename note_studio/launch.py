@@ -70,7 +70,7 @@ def _open_when_ready(url: str, port: int, limit: float = 60) -> None:
         if answering_instance(port) == paths.instance_id():
             print("NOTESTUDIO_READY|" + url, flush=True)
             if os.environ.get("NOTE_STUDIO_NO_BROWSER") != "1":
-                webbrowser.open(url)
+                webbrowser.open(url + "/signin")
             return
         time.sleep(0.5)
 
@@ -86,7 +86,7 @@ def main() -> int:
     if found == "mine":
         print(f"{name} is already running at {url} - opening it.")
         if os.environ.get("NOTE_STUDIO_NO_BROWSER") != "1":
-            webbrowser.open(url)
+            webbrowser.open(url + "/signin")
         return 0
     if port != FIRST_PORT:
         print(f"\n  NOTE: {name} is on {url} this time (port {FIRST_PORT} was busy).\n")

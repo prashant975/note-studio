@@ -146,7 +146,9 @@ SHIPPED_BEFORE = {
 
 
 def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    # Git may check the same shipped JSON out as CRLF on Windows. Newline
+    # conversion is not an operator edit; all other bytes must still match.
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
 def _upgrade_builtin(root: Path) -> list[str]:
@@ -185,6 +187,17 @@ def get(category_id: str) -> dict | None:
     if not category_id or folder.name.startswith(("_", ".")) or folder.parent != packs_dir():
         return None
     return _load(folder) if folder.is_dir() else None
+
+
+def pw_logo(pack: dict | None) -> bool:
+    """Whether the category's typeset (B.Sc.-style) notes carry the PW logo in the
+    corner and as the watermark, as the NEET-JEE notes do. The pack's own
+    branding.pw_logo (Settings -> Categories) wins. Otherwise a category added
+    from Settings (Nursing...) has it and a built-in one keeps its samples' look."""
+    if not pack:
+        return False
+    value = (pack.get("branding") or {}).get("pw_logo")
+    return value if isinstance(value, bool) else pack.get("builtin") is not True
 
 
 def offered_types(pack: dict) -> list[dict]:

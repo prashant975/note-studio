@@ -76,6 +76,20 @@ def set_enabled(category_id: str, on: bool) -> None:
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def set_pw_logo(category_id: str, on: bool) -> None:
+    """The PW logo and watermark on this category's typeset notes (a backup first)."""
+    pack = categories.get(category_id)
+    if not pack:
+        raise CategoryError("That category no longer exists.")
+    meta_path = Path(pack["folder"]) / "category.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    shutil.copy2(meta_path, meta_path.with_name("category.json.bak"))
+    branding = meta.get("branding") if isinstance(meta.get("branding"), dict) else {}
+    branding["pw_logo"] = bool(on)
+    meta["branding"] = branding
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def check(category_id: str) -> list[dict]:
     """What is right and wrong with one category, in plain words."""
     found: list[dict] = []

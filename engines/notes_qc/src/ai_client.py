@@ -385,7 +385,6 @@ class GeminiClient:
                     input_unit=self.input_unit,
                     count=self.count,
                     task_id=self.task_id,
-                    timeout=self.timeout,
                 )
             except pw_access.PWAccessError as e:
                 # A spent budget arrives as 429, the same code a busy model

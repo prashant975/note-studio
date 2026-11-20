@@ -217,6 +217,8 @@ def third_party_imports(files, local):
     google): a namespace is shared by many packages."""
     names = set()
     for path in files:
+        if Path(path).name == 'macos_credentials.py' and os.name == 'nt':
+            continue
         tree = ast.parse(Path(path).read_text(encoding='utf-8-sig'), str(path))
         guarded = set()
         for node in ast.walk(tree):
@@ -425,7 +427,9 @@ def copy_distribution(dist, target):
 def copy_engine_libraries(engine, target, source=None):
     """The original app's own environment, exactly as it runs the original."""
     original = paths.original(engine)
-    site = Path(source) if source else (original / '.venv' / 'Lib' / 'site-packages' if original else None)
+    local = paths.ENGINES_DIR / engine / '.venv' / 'Lib' / 'site-packages'
+    site = (Path(source) if source else local if local.is_dir()
+            else original / '.venv' / 'Lib' / 'site-packages' if original else None)
     if not site or not site.is_dir():
         raise SystemExit(f'{engine}: the original app\'s environment is missing ({site}). The build copies '
                          'each engine\'s libraries from its original\'s .venv.')
@@ -677,7 +681,7 @@ def mock_runs(package, work, env):
     run([sys.executable, '-c', 'import sys; from pathlib import Path; from scripts.make_sequence_smoke_fixtures '
          'import build_fixtures; build_fixtures(Path(sys.argv[1]))', lecture],
         cwd=str(ROOT / 'engines' / 'shortnotes'), env={**os.environ, 'PYTHONDONTWRITEBYTECODE': '1'}, timeout=120)
-    sample = ROOT / 'engines' / 'notes_qc' / 'testdata' / 'probity_governance_english.pdf'
+    sample = lecture / 'text-order.pdf'
     proc = subprocess.run([str(package / '_internal' / 'python' / 'python.exe'), str(PACKAGING / 'smoke_engines.py'),
                            str(package / '_internal' / 'app'), str(work / 'mock runs'), str(lecture / 'text-order.pdf'),
                            str(sample)], cwd=str(work), env=env, capture_output=True, text=True, encoding='utf-8',
@@ -944,6 +948,9 @@ def main():
         if not args.resume_work:
             copy_engine_libraries(engine, libs / engine, library_sources.get(engine))
         origin = library_sources.get(engine) or paths.original(engine)
+        local_site = paths.ENGINES_DIR / engine / '.venv' / 'Lib' / 'site-packages'
+        if engine not in library_sources and local_site.is_dir():
+            origin = local_site
         say(f'  {engine}: {"reused staged libraries" if args.resume_work else "copied from " + str(origin)}')
         filled[engine] = fill_declared_requirements(engine, libs / engine)
     verify_runtime_imports(package, work, engines)

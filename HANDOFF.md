@@ -1,5 +1,249 @@
 # Note Studio — Handoff (newest first)
 
+## All 14 Nursing Google Docs made, shared with PW, last-page fixes — night of 16–17 November 2026
+
+**Where things stand**
+- All 14 rows of "Notes Testing" (rows 2–15) have their Doc in column P "Google Doc (B.Sc. style)". Totals: 115 tabs, 994 pages.
+- Every tab's exported PDF shows the PW watermark and the header logo on every page.
+- The quality check passed 103 of 115 tabs. The other 12 were checked by hand:
+  - Source issues, kept exactly because content is locked:
+    - UNIT-1 "produce", "human bod";
+    - UNIT-2 "Respiratory bronchioles" has no bullet in the source, and the heading "Mechanism of Airflow…" is joined into a bullet in the source;
+    - UNIT-3 "Sublingual papill";
+    - UNIT-4 "Reply NEXT for .";
+    - Unit 9: a missing ")";
+    - Unit 10: a bullet ends with ",".
+  - Reviewer misreads (the PDF text and the source have the space):
+    - "ofthe";
+    - "Attachmentfor";
+    - "Wallthickness";
+    - "Coat(".
+
+**Sharing**
+- The user asked that anyone at Physics Wallah can edit.
+- `_build/nursing_share_20261116.py` adds a Drive domain permission: pw.live, writer, not discoverable.
+- The batch's `finish` now does this after writing the sheet link.
+- Report: `output/gdoc/sharing_20261116.json`.
+
+**Edit guard**
+- Uses Drive revisions (`make.edited_since`), not modifiedTime. Sharing bumps modifiedTime, which made the first fix run skip every note.
+
+**Fixes after the batch** (formatting only; each was tested on throwaway Drive copies first)
+- **Carbohydrates "CₙH₂ₙOₙ".** Lato has no ₙ or ₘ. `glyph_styles` sets characters missing from Lato in Noto Sans.
+- **Blank last page** (UNIT-4 tab 10, UNIT-5 tab 1, Unit 9 tab 1).
+  - Cause: the page was full to the footer, so Google's required last empty paragraph started a page of its own, even at 1 pt.
+  - Text ending: `end_requests` now joins that paragraph to the last text paragraph. Google keeps the text paragraph's style, bullet and spacing.
+  - Table ending: `full_page_requests` removes the first of a doubled spacer above the last table (Google refuses to delete the spacer touching the table), or shrinks a single spacer to 1 pt.
+- **Last page holding only a table's last row or a box's last line** (UNIT-1 tab 9, UNIT-2 tab 13, UNIT-3 tab 10, Unit-6 tab 5).
+  - `last_table_break_requests` sets pageBreakBefore on the heading above that table, or on the spacer above a box.
+  - `make.fix_last_page` keeps the break only if no page is added, the last page is no longer a sliver (`last_page_nearly_empty`, under 5% of the page) and the page it left stays at least half full (`page_fill`). Otherwise it undoes the break.
+- **Both last-page fixes now run automatically** in `make.quality_all` (`result["blank_last_page"]`).
+  - `_build/nursing_pages_20261117.py` applies them to Docs already made.
+  - Logs: `_build/nursing_fix_20261116.log`, `_build/nursing_pages_20261117*.log`.
+- **Re-check script.**
+  - It removes `tab_reviewed.pdf` once used. A stale one from before UNIT-1's logo rebuild made all 12 UNIT-1 tabs be reviewed again (₹11.83).
+  - It now re-checks tabs whose earlier check did not finish (UNIT-1 tab 7 lost the network).
+
+**Cost**
+- Notes as made: ₹261.92.
+- Tonight's fixes and re-checks: ₹21.38 (₹13.30 + ₹5.09 + ₹2.99).
+
+**Gates, tests and what is not done**
+- Gates: `data_guard` snapshot `_build/after_nursing_batch_20261117.json` against `before_nursing_gdoc_20261116.json`. Nothing lost; no original touched. Note Studio's own database and sheet token changed. Drift is clean.
+- Tests: `test_typeset_gdoc.py` has 32; the full suite has 404 passed, 19 skipped.
+- Not done, waiting for the user's go: the note type and Automation page in the app, a `whats_new` tour, and a commit.
+
+## PW watermark on every Nursing Google Doc (template) — 16 November 2026 (evening)
+
+The user asked for the NEET/JEE PW watermark in every note, as the default for all future runs.
+
+- **Google limits.** The Docs API cannot add a watermark or copy a tab (live description, revision 20261109:
+  only add, delete and rename tabs). A Word file with the faded PW logo in its header converts into a native
+  Docs watermark, but only on that one tab. A tab added through the API has none, and re-importing a Word
+  file replaces the whole Doc.
+- **What survives (scratch Docs):** the watermark stays through B.Sc. page setup, our header bar written
+  into that tab's header, the footer, content, renaming, copying the Doc and deleting other tabs.
+- **Design: every note is a copy of a template whose tabs all carry the watermark.**
+  - `gdoc_writer.make_template` uses the engine's own `notes_doc.faded_logo` at the
+    `pdf_branding.watermark_opacity()` strength, 124 mm, centred.
+  - The person duplicates the template's first tab once in Google Docs (tab menu > Duplicate).
+  - `create_from_template` copies the template, deletes unused tabs and renames the rest. A note that needs
+    more tabs than the template has stops before writing and says how many to add.
+  - `header_footer` now empties and reuses an existing header and footer, never deleting them, because
+    the watermark goes with the header.
+  - `has_watermark` checks every exported page; the quality step records it per tab (`result["watermark"]`).
+- **Template:** "NoteCraft – Nursing notes template (PW watermark)",
+  https://docs.google.com/document/d/1VOEMzskaheh-nPBz7e7oRFIboLkdSb3q20zJQbvgVek/edit
+  (`output/gdoc/template.json`). It has 1 tab, checked to carry the watermark.
+- **Waiting for the user:** duplicate the template's tab up to 30 tabs. Then run
+  `make.py --check-template` and `make.py --new-doc` (formatting is cached; the quality check about ₹15),
+  run `sheet_link.py`, which replaces P2 with the new Doc's link, and bin the old UNIT-1 Doc, which has no
+  watermark.
+- Tests: `test_typeset_gdoc.py` has 25.
+- **Update, same evening.** The user duplicated that template to 34 tabs, but rebuilding UNIT-1 from it lost
+  the watermark twice. Scratch copies showed two Google behaviours:
+  1. A footer created while the header is empty drops the tab's watermark; the header must be written first.
+  2. Any picture inserted into the header through the API drops the watermark.
+
+  The user wants both the corner logo and the watermark. A converted Word header keeps both, so
+  **template v2** builds the header bar (labels, navy rule, PW logo), the footer (labels and a live PAGE
+  number) and the watermark into the Word file (`watermark_word_file(branding)`). Notes from a branded
+  template never touch the header or footer (`template.json` `"branded": true`).
+  - Template v2: https://docs.google.com/document/d/1rzEPDvwy1hiDU77yvalRZ6K6nKPczesnmcTMk9bkTKk/edit
+  - Checked on scratch copies: watermark, logo and page number survive page setup, content, copy and tab deletion.
+  - v1 (34 tabs, no logo) is kept as `output/gdoc/template_v1_no_logo.json` until v2 is duplicated.
+  - Writer guards for unbranded templates: header written before the footer; no header picture when watermarked.
+  - The title clears the bottom border that Word's "Title" style brings.
+  - `has_header_logo` checks the logo on every page.
+- **Superseded later that night: no second duplication needed.** The user objected to duplicating again,
+  saying NEET/JEE/Foundation get the logo and watermark automatically. More scratch tests found that the
+  user's existing 34-tab template (v1) can carry both, written by the writer, if:
+  1. the logo goes into the header bar's right cell in its own step, after the bar exists;
+  2. the header is written before the footer is created;
+  3. the template header's paragraphs are never deleted. Duplicated tabs' headers hold two empty
+     paragraphs; deleting the first drops the watermark.
+
+  `_segment` now removes only an earlier bar table. Template v2 (one tab) was binned; template.json is v1
+  again (`branded: false`). Reads now retry on 429 too (`_get`), and `_execute` waits up to about 10 minutes.
+- **Batch (user: "create all tonight"):** `_build/nursing_batch_20261116.py`.
+  - `preflight` is free. All 14 sheet rows passed: up to 20 tabs; nothing that cannot be copied.
+  - `run` makes notes 3 at a time with the make script (`--source-id/--out-name`) and writes column P only
+    after the read-back, watermark and header-logo checks pass on every page.
+  - Summary: `output/gdoc/batch_20261116.json`; logs: `_build/batch_20261116_*.log`.
+  - The Lipids canary showed the paragraph-deletion problem; that Doc and the logo-less UNIT-1 Doc were binned.
+- Tests: 27 in `test_typeset_gdoc.py`; full suite 399 passed, 19 skipped.
+
+## Nursing Google Doc: closer to the B.Sc. reference, content strictly the source's — 16 November 2026 (later)
+
+The user shared `Lec-14.pdf` (B.Sc. Wallah reference) and `UNIT - 2 Notes.pdf` and asked for more format
+improvement, then for a rewrite of the UNIT-1 output. They added: "content must be similar to the reference
+doc, only formatting should be implemented".
+
+- **`gdoc_writer.plan()`** decides the presentation; words are never changed.
+  - Title and kicker: the tab's first heading becomes the centred navy title; a short line before it
+    (the course line) becomes a small grey kicker.
+  - Labelled boxes: a source label ("Definition:"), or a short subheading leading straight into a box,
+    moves into the box's title bar. This also fixes a heading left alone at the bottom of a page,
+    because Google never keeps a paragraph with a table that follows it.
+  - Key sections: "Important Points", "Key Points" and "Definition" sections become boxes with real
+    bullets.
+  - **No template labels.** A box without a source label has no bar. "Note" and "Key Concept" were
+    briefly added and then removed at the user's request.
+  - Key terms: bold inside a sentence is navy; a bold lead label stays black; headings lose the source
+    underline.
+  - Formulas: simple `$...$` notation shows with real superscripts and subscripts ($Ca^{2+}$ → Ca²⁺).
+    Prices like `$5` are left alone.
+  - Tables: booktabs; short columns centred; the header row repeats on each page.
+  - Header and footer: split 1×2 bars, with the PW logo on the right of the header.
+- **Box layout:** one cell. The bar is the first paragraph, shaded, with side borders in the bar colour
+  (Google shades only between indents), and set to keep with the next paragraph.
+  - Scratch Docs showed a two-row box leaving its title alone at the bottom of a page; the one-cell box never did.
+  - Tables and boxes go into a fresh, unindented paragraph, because Google indents a new table like its
+    host paragraph (a following list item pushed a box inwards).
+  - The empty paragraph after a tab's last table is made 1 pt, because it caused a blank last page.
+- **verify is strict:** besides the word-for-word source check, it rejects anything added except a list
+  item's own number or bullet.
+- **UNIT-1, same Doc and link** (rewritten in place; Drive modifiedTime checked first):
+  - all 12 tabs pass the read-back check;
+  - quality: 9 tabs passed. Tabs 4 and 7 have only "ofthe" misreads (the source and the PDF text have
+    "of the"); tab 11 has the source typo "human bod".
+  - `_build/nursing_unit1_20261116_recheck.py` re-reviews only tabs whose pages changed, compared pixel
+    for pixel with the reviewed PDF (`tab_reviewed.pdf`).
+- **Cost for UNIT-1 including all improvement passes: ₹66.11.**
+  - Formatting: ₹14.43, once; it is cached.
+  - Quality: ₹14.09 + ₹15.07 + ₹1.54 + ₹15.08 + ₹5.90.
+  - A fresh unit should be about ₹29: one formatting pass and one quality pass.
+- **Tests:** `test_typeset_gdoc.py` has 23 tests. Full suite: 395 passed, 19 skipped.
+- **Gates:** compare with the session baseline: nothing lost, no original touched.
+  - Changed: the Google token (refresh), and `note_studio.db`, through the running installed app's own
+    `update_checked` at 16:27:08. No script of this session ran then; integrity OK.
+  - Drift against HEAD: 0 changes. Nothing committed or built.
+
+## Nursing notes as editable Google Docs with tabs (B.Sc. style): first unit made — 16 November 2026
+
+The user asked for Nursing notes as editable Google Docs, one tab per topic, in the B.Sc. look, made from the
+sheet. They approved one paid note (UNIT-1) using Gemini 3.7 only (3.6 does not work), with no AI spend limit.
+Docs must belong to their own account (prashant.kumar15@pw.live, which is NoteCraft's sign-in on this Mac).
+
+- **Why a new writer:** uploading a .docx with conversion (`engines/shortnotes/sheets_bridge/notes_doc.py`)
+  makes a single-tab Doc, so tabs need the Google Docs API. The user enabled the Docs API in the sign-in's
+  Cloud project 195954488363. The existing Drive scope covers it, so nobody signs in again.
+- **`note_studio/typeset/gdoc_source.py`:** reads a tabbed Google Doc literally, one locked source per tab,
+  in word_source's shape. It keeps every paragraph, list item (level, numbering), table (merges), 1×1 table
+  (as a box) and picture (inline and wrapped). The source's bold/italic/underline/links are kept as spans.
+  Layout tables holding pictures are laid out in reading order. An equation, a drawing, a footnote or a
+  date chip fails before any AI call.
+- **`note_studio/typeset/gdoc_writer.py`:** writes one tab per topic.
+  - Each tab is built by inserting its blocks in reverse at index 1, so every range is exact.
+  - B.Sc. look from `render.py`: A4, the B.Sc. margins and faint-blue page, Lato, TITLE/HEADING_1/HEADING_2,
+    native lists, booktabs-like tables, boxes as one-cell tables (frame colour, tint, 3 pt left rule),
+    centred pictures, and a per-tab header ("Nursing | Nursing Notes", navy rule, PW logo) and footer.
+  - A numbered list split by other content gets its source numbers as text, because Google would restart
+    the numbers of each part.
+  - Local pictures (the PW logo) reach Google through a temporary converted Doc's own picture links, so
+    nothing is shared publicly. The temporary Doc is binned afterwards.
+  - `read_back` and `verify` prove every tab word for word against the source.
+  - Retries on 429/5xx; `clear_tab` allows an in-place rewrite.
+- **Google facts learnt:**
+  - Setting a paragraph's named style resets its runs' text style, so paragraph style must come first.
+  - `/document/d/<id>/export?tab=t.0` gives 400; `/document/export?id=<id>&tab=<tab>` exports exactly that tab.
+  - A plain request to a picture's contentUri never connects from this Mac; the signed-in request takes 1–2 s.
+  - Per-account limits apply to PDF exports (429).
+- **AI:** `word_source.style` unchanged (appearance only, words locked), 4 tabs at a time;
+  `source_quality.review` runs on each tab's PDF export, 4 at a time.
+- **Made:** source "UNIT -1 A&P" (Doc 1U-3hlO2rnFC6HfB9MNAdOR5V5SAckV3yzkVfBQAR7CQ; 12 tabs, 144 pictures).
+  - Output: "UNIT -1 A&P – Nursing Notes (B.Sc. style)",
+    https://docs.google.com/document/d/16tlGMyIzKDxAIS_fLTHtz0JvNrTA9SbCChfKdhrdtkM/edit
+  - Read-back: all 12 tabs OK.
+  - Cost: ₹14.43 formatting (12 calls) + ₹14.09 final quality (12 calls, 138 pages) = **₹28.52**.
+  - Quality: 6 tabs passed. The real findings are all in the source and were kept: raw `$HCl$`, `$T_3, T_4$`,
+    `$Ca^{2+}$`, "human bod", "The pronator teres produce", an "Elbow bending" label in a source picture.
+    The 9 "missing space" findings are reviewer misreads (spaces checked in the source, the Doc and the PDF text).
+- **Sheet:** "Notes Testing" (1g8hTDHf868PNOWe8A3V3L85PDwla_38sOkg-Cub3GLU), Sheet1.
+  - New column P "Google Doc (B.Sc. style)"; P2 holds the link. The row was found by its Docs smart chip
+    (the sheet links each unit by chip, not hyperlink).
+  - The copied automation's `Layout.from_header` reads the tab identically after the change.
+- **Scripts (gitignored `_build/`):** `nursing_unit1_20261116_make.py`, with `--feature-test` (free scratch
+  Doc, binned) and `--rewrite`, and saving each paid step per tab under `output/gdoc/nursing-unit1/`.
+  Also `nursing_unit1_20261116_sheet_link.py`. Do not rerun the make script just to check: read `result.json`.
+- **Tests:** `tests/test_typeset_gdoc.py` adds 13, including a Docs index simulator for the reverse insertion
+  and spans. Full suite: 384 passed, 19 skipped, 1 failed. The failure,
+  `test_practice::test_a_paid_step_without_sign_in_holds_the_queue`, passes alone (timing).
+- **Gates:** compare `_build/{before,after}_nursing_gdoc_20261116.json`: nothing lost, no original touched;
+  the only data change is the refreshed Google token in `~/.note_studio/sheets/tokens/`. Drift against HEAD:
+  0 changes in all four engine copies.
+- **Not done (waits for the user's go):**
+  - a note type plus a sheet runner that reads chip links, makes rows 2–3 at a time and writes the link back;
+  - Automation page wiring, `whats_new` tour and guide;
+  - rendering the source's raw `$…$` formulas as sub/superscripts.
+
+  Nothing committed or built.
+
+## PW logo and watermark on Nursing (B.Sc.-style) notes; Mac app rebuilt and installed — 4 November 2026
+
+User asked: Nursing notes (B.Sc. template) get the PW logo in the corner and the
+watermark, as NEET/JEE PDFs; then build and install.
+
+- `typeset/render.py`: `Branding.pw_logo`. When on, every page gets the PW logo
+  11 mm in the top-right corner (5 mm in) and the 124 mm faded logo watermark in
+  the centre, under the text. Both are made by the shortnotes engine's own
+  `sheets_bridge/pdf_branding.py` helpers from `engines/shortnotes/assets/watermarks/center-logo.png`,
+  with the same watermark strength (`SHEETS_BRIDGE_WATERMARK_OPACITY`, default 0.10).
+  The header's right label and rule end 6 pt before the logo. Words are
+  unchanged and renders stay byte-identical, so quality receipts can still be reused.
+- Category data decides: `categories.pw_logo(pack)`. `branding.pw_logo` wins; otherwise a
+  category added from Settings (Nursing) has it and a built-in pack (B.Sc. Wallah) does not.
+  Settings → Categories shows "Add/Remove the PW logo" for packs that make
+  `typeset_notes` (POST `/settings/categories/{id}/pw_logo`, `.bak` first).
+- What's-new tour `2026-11-04-nursing-pw-logo`; New notes and Settings guides updated.
+- Tests: new `tests/test_typeset_pw_logo.py` (12); full suite **372 passed, 19 skipped,
+  0 failed** (61 s). Drift gate: engine copies match except the earlier allowed changes.
+- Mac: previous build moved to `dist/NoteCraft-before-20261104.app`; new
+  `dist/NoteCraft.app` built (PACKAGE_OK) and copied to `/Applications/NoteCraft.app`
+  (PACKAGE_OK again from there). The bundled runtime rendered a Nursing PDF with both images.
+  Version label is still the repo's `2026.10.26.1` (only the Windows builder bumps it).
+  Not committed. No Windows installer built.
+
 ## Nursing UNIT-2 completed; NoteCraft 2026.10.30.4 installed — 30 October 2026
 
 Latest explicit user instructions: use the B.Sc. template for Nursing, keep all

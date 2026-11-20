@@ -86,6 +86,41 @@ class Branding:
     header_right: str = "B.Sc. Notes"
     footer_left: str = "B.Sc. Wallah"
     footer_right: str = "Concept • Understand • Apply"
+    pw_logo: bool = False           # the PW logo in the top-right corner and as the page watermark, as NEET-JEE notes
+
+
+# The PW logo, as the NEET-JEE notes draw it (engines/shortnotes sheets_bridge/pdf_branding.py):
+# 11 mm in the top-right corner, 5 mm in from the edges, and a 124 mm faded copy in the
+# page's centre under the text. The header's right label and rule end before the logo.
+MM = 72 / 25.4
+LOGO, LOGO_MARGIN, WATERMARK = 11.0 * MM, 5.0 * MM, 124.0 * MM
+LOGO_X = PAGE_W - LOGO_MARGIN - LOGO
+LOGO_GAP = 6.0                      # between the header rule's end and the logo
+
+
+def pw_logo_path() -> Path:
+    from .. import engine_catalog
+
+    return engine_catalog.engine_dir("shortnotes") / "assets" / "watermarks" / "center-logo.png"
+
+
+def pw_logos() -> tuple[bytes | None, bytes | None]:
+    """The corner logo and the faded watermark, made by the hand-drawn engine's own
+    branding code (and watermark strength setting) from its own logo file, so both
+    match the NEET-JEE notes."""
+    from .. import engine_catalog
+
+    engine_catalog.put_shortnotes_on_path()
+    from sheets_bridge import pdf_branding
+
+    return _pw_logos(str(pw_logo_path()), pdf_branding.watermark_opacity())
+
+
+@lru_cache(maxsize=4)
+def _pw_logos(path: str, opacity: float) -> tuple[bytes | None, bytes | None]:
+    from sheets_bridge import pdf_branding
+
+    return pdf_branding._corner_png(path), pdf_branding._faded_png(path, opacity)
 
 
 # ------------------------------------------------------------ text pieces
@@ -232,6 +267,9 @@ class Canvas:
         self.pdf.set_title(title)
         self.pdf.set_author(branding.header_left)
         self.pdf.set_creator("NoteCraft typeset notes")
+        self.logos = pw_logos() if branding.pw_logo else (None, None)
+        if branding.pw_logo and not all(self.logos):
+            self.issues.append("The PW logo file could not be read, so the pages have no PW logo.")
 
     # ---- fonts
     def _face(self, family: str, style: str) -> tuple[str, str]:
@@ -414,11 +452,19 @@ class Canvas:
         pdf, b = self.pdf, self.branding
         pdf.set_fill_color(*BG)
         pdf.rect(0, 0, PAGE_W, PAGE_H, style="F")
+        corner, faded = self.logos
+        rule_end = RIGHT
+        if faded:                                   # under everything the page draws next
+            pdf.image(io.BytesIO(faded), x=(PAGE_W - WATERMARK) / 2, y=(PAGE_H - WATERMARK) / 2,
+                      w=WATERMARK, h=WATERMARK, keep_aspect_ratio=True)
+        if corner:
+            pdf.image(io.BytesIO(corner), x=LOGO_X, y=LOGO_MARGIN, w=LOGO, h=LOGO, keep_aspect_ratio=True)
+            rule_end = LOGO_X - LOGO_GAP
         self._label(b.header_left, LEFT, 18.3, "B", NAVY)
-        self._label(b.header_right, HEAD_RIGHT, 18.3, "I", GREY, right=True)
+        self._label(b.header_right, rule_end - (RIGHT - HEAD_RIGHT), 18.3, "I", GREY, right=True)
         pdf.set_draw_color(*BLACK)
         pdf.set_line_width(0.5)
-        pdf.line(LEFT, 22.1, RIGHT, 22.1)
+        pdf.line(LEFT, 22.1, rule_end, 22.1)
 
     def _page_bottom(self) -> None:
         b = self.branding

@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 
 from .errors import BridgeError
@@ -32,13 +33,22 @@ def token_path_for(email: str, base: Path | None = None) -> Path:
     return root / f"{digest[:32]}.json"
 
 
+def client_config(client_secret_path: Path) -> dict:
+    info = json.loads(Path(client_secret_path).read_text(encoding="utf-8-sig"))
+    if info.get("enc") == "keychain-aesgcm-v1":
+        from .macos_credentials import unprotect
+        info = json.loads(unprotect(info))
+    elif info.get("enc") == "dpapi":
+        from .windows_credentials import transform
+        info = json.loads(transform(info["value"], decrypt=True))
+    return info
+
+
 def client_id_of(client_secret_path: Path) -> str:
     """The OAuth client this install is configured to use, or ""."""
-    import json
-
     try:
-        info = json.loads(Path(client_secret_path).read_text(encoding="utf-8-sig"))
-    except (OSError, ValueError):
+        info = client_config(client_secret_path)
+    except Exception:
         return ""
     block = info.get("installed") or info.get("web") or {}
     return str(block.get("client_id", "") or "")
@@ -47,11 +57,27 @@ def client_id_of(client_secret_path: Path) -> str:
 def _load_cached(token_path: Path, client_id: str = ""):
     from google.oauth2.credentials import Credentials
 
+    # A sidecar preserves older standalone apps' shared files. New credentials
+    # are never written in plaintext; those apps keep their independent login.
+    secure = token_path.with_suffix(".protected.json")
+    if os.name == "nt" and not token_path.name.endswith(".protected.json") and secure.is_file():
+        token_path = secure
+
     if not token_path.is_file():
         return None
     try:
         info = json.loads(token_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        if not isinstance(info, dict):
+            return None
+        if sys.platform == "darwin":
+            from .macos_credentials import unprotect
+            info = json.loads(unprotect(info))
+        elif os.name == "nt" and info.get("enc") == "dpapi":
+            from .windows_credentials import transform
+            info = json.loads(transform(info["value"], decrypt=True))
+        elif isinstance(info, dict) and info.get("enc") == "keychain-aesgcm-v1":
+            return None
+    except Exception:
         return None
     if not isinstance(info, dict):
         return None
@@ -75,9 +101,18 @@ def _load_cached(token_path: Path, client_id: str = ""):
 
 
 def _save(creds, token_path: Path) -> None:
+    if os.name == "nt" and not token_path.name.endswith(".protected.json"):
+        token_path = token_path.with_suffix(".protected.json")
     token_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = token_path.with_suffix(token_path.suffix + ".tmp")
-    tmp.write_text(creds.to_json(), encoding="utf-8")
+    value = creds.to_json()
+    if sys.platform == "darwin":
+        from .macos_credentials import protect
+        value = json.dumps(protect(value))
+    elif os.name == "nt":
+        from .windows_credentials import transform
+        value = json.dumps({"enc": "dpapi", "value": transform(value)})
+    tmp.write_text(value, encoding="utf-8")
     try:
         os.chmod(tmp, 0o600)
     except OSError:
@@ -120,7 +155,7 @@ def load_credentials(client_secret_path: Path, token_path: Path, *, interactive:
 
     from google_auth_oauthlib.flow import InstalledAppFlow
 
-    flow = InstalledAppFlow.from_client_secrets_file(str(client_secret_path), list(SCOPES))
+    flow = InstalledAppFlow.from_client_config(client_config(client_secret_path), list(SCOPES))
     creds = flow.run_local_server(port=0, open_browser=True, prompt="consent")
     _save(creds, token_path)
     return creds
@@ -185,6 +220,7 @@ def interactive_sign_in(
     base: Path | None = None,
     open_browser: bool = True,
     verify=None,
+    on_url=None,
 ):
     """Run the browser sign-in and file the token under the account's own path.
 
@@ -211,24 +247,38 @@ def interactive_sign_in(
             "(or set SHEETS_BRIDGE_CLIENT_SECRET).",
         )
 
-    from google_auth_oauthlib.flow import InstalledAppFlow
+    config = client_config(client_secret_path)
+    if "web" in config:
+        from .web_oauth import authorize
+        creds = authorize(config, SCOPES, on_url=on_url, open_browser=open_browser,
+                          timeout=SIGN_IN_TIMEOUT_SECONDS, domain=ALLOWED_DOMAIN)
+    else:
+        from google_auth_oauthlib.flow import InstalledAppFlow
 
-    flow = InstalledAppFlow.from_client_secrets_file(str(client_secret_path), list(SCOPES))
-    try:
-        creds = flow.run_local_server(
-            port=0,
-            open_browser=open_browser,
-            prompt="consent",
-            timeout_seconds=SIGN_IN_TIMEOUT_SECONDS,
-            hd=ALLOWED_DOMAIN,          # ask Google to offer only @pw.live accounts
-        )
-    except Exception as exc:  # noqa: BLE001 - the library's timeout class name varies by version
-        if "timeout" in type(exc).__name__.lower():
-            raise BridgeError(
-                "sign_in_timed_out",
-                "no Google sign-in was completed in time; press Continue with Google again",
-            ) from exc
-        raise
+        flow = InstalledAppFlow.from_client_config(client_config(client_secret_path), list(SCOPES))
+        if on_url is not None:
+            original_authorization_url = flow.authorization_url
+            def authorization_url(**kwargs):
+                url, state = original_authorization_url(**kwargs)
+                on_url(url)
+                return url, state
+            flow.authorization_url = authorization_url
+        try:
+            creds = flow.run_local_server(
+                port=0,
+                open_browser=open_browser,
+                prompt="consent",
+                authorization_prompt_message="" if on_url is not None else "Please visit this URL to authorize this application: {url}",
+                timeout_seconds=SIGN_IN_TIMEOUT_SECONDS,
+                hd=ALLOWED_DOMAIN,          # ask Google to offer only @pw.live accounts
+            )
+        except Exception as exc:  # noqa: BLE001 - the library's timeout class name varies by version
+            if "timeout" in type(exc).__name__.lower():
+                raise BridgeError(
+                    "sign_in_timed_out",
+                    "no Google sign-in was completed in time; press Continue with Google again",
+                ) from exc
+            raise
     email = user_email(creds)
     if not email:
         raise BridgeError("sign_in_failed", "signed in, but Google did not return an email address")

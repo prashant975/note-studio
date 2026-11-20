@@ -614,7 +614,6 @@ class GeminiClient:
                         model=current,
                         request=body,
                         task_id=self.task_id,
-                        timeout=_REQUEST_SETTINGS.timeout,
                     )
             except Exception as e:
                 status = _status_from_error(e)

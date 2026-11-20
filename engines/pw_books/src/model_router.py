@@ -376,7 +376,7 @@ def make_probe(google_token, *, timeout: float = 20.0) -> Probe:
 
         start = time.monotonic()
         # Any successful return (even empty/MAX_TOKENS) => the model is serving.
-        pw_access.gemini_generate(google_token, model=model, request=body, timeout=timeout)
+        pw_access.gemini_generate(google_token, model=model, request=body)
         return time.monotonic() - start
     return probe
 

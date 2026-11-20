@@ -49,7 +49,7 @@ def made_class(client, monkeypatch, lecture_pdf):
     run = db.query("SELECT * FROM runs WHERE engine='upsc' AND source='upload'")[0]
     assert run["state"] in ("complete", "needs_attention"), run["error"]
     monkeypatch.setattr(practice_service, "TEST_REQUEST", {"test_stub_pdf": True})
-    return run, next((Path(run["run_dir"]) / "engine_runs").glob("run_*"))
+    return run, next(path for path in (Path(run["run_dir"]) / "engine_runs").glob("run_*") if path.is_dir())
 
 
 def _start(client, practice: str, kind: str, ident: str) -> int:

@@ -1,3 +1,9 @@
+# macOS and Windows setup
+
+Use [the cross-platform setup and handoff guide](docs/CROSS_PLATFORM.md) for fresh clones, startup, authentication, data locations, tests, packaging and moving development between computers. Use Python 3.13 and an independent environment per project. Existing Windows features and installers remain supported. Platform verification is recorded in [the compatibility report](docs/COMPATIBILITY_REPORT.md).
+
+The older installation history below describes its original Windows computer; saved sign-ins and external configuration are not included in a fresh clone.
+
 # NoteCraft (the Note Studio project)
 
 One desktop app for every kind of notes the team makes. It runs copies of the

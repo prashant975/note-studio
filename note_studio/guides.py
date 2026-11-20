@@ -22,7 +22,8 @@ GUIDES = {
             "Hand-drawn, PW Books or B.Sc. typeset notes: add one or more lecture PDFs (PW Books also takes "
             "PowerPoints); each is made in turn. B.Sc. style also accepts Word references for Nursing and other categories. "
             "AI reads and checks PDF pages by default; Word content stays locked while AI chooses formatting. "
-            "All content and its order are retained in the fixed B.Sc. template. NEET/JEE quality checks review every final PDF page; inspect any issues in its quality report. Uses PW AI credit.",
+            "All content and its order are retained in the fixed B.Sc. template. Nursing notes carry the PW logo in the page corner and the PW watermark, as NEET/JEE notes do. "
+            "NEET/JEE quality checks review every final PDF page; inspect any issues in its quality report. Uses PW AI credit.",
             "UPSC notes: paste the class recording link and, if there is one, add the slides. "
             "If Drive's transcript cannot be read, paste its full text under More options to skip audio extraction.",
             "Press Make notes. It waits in the Smart Queue and uses PW AI credit. Hand-drawn notes use automation quality checks by default. Gujarati checks include source chapter order, repetitions and terminology; inspect the PDF and quality report in its finished run.",
@@ -84,7 +85,8 @@ GUIDES = {
         "steps": [
             f"Sign-in: choose once whether {APP} uses the old Short Notes app's sheets and sign-in, then sign in.",
             "AI models: the first model makes the notes. A gateway budget failure stops hand-drawn notes; ask the administrator to renew it.",
-            "Categories: add a new exam, write its rules in plain sentences, check it, or switch it off.",
+            "Categories: add a new exam, write its rules in plain sentences, check it, or switch it off. "
+            "For B.Sc.-style notes, add or remove the PW logo and watermark per category.",
             "Values: the numbers the notes engine starts with. System: engines, Check setup and where your work is kept.",
             f"System → Updates: your version, Check for updates and the team's release folder. A newer {APP} shows "
             "the download progress beside Smart Queue. After it finishes and is checked, a pop-up offers Install update.",

@@ -12,6 +12,7 @@ import os
 import platform
 
 from fastapi import Request
+from fastapi.responses import JSONResponse
 
 from . import (brand, categories, category_admin, db, models, note_types, old_app, paths, practice_service,
                requirements, settings_store, setup_check, signin, updater)
@@ -64,7 +65,9 @@ def _packs() -> list[dict]:
     for pack in categories.all_packs():
         rows.append({**pack, "types": categories.offered_types(pack), "rules": category_admin.rule_files(pack),
                      "targets": category_admin.rule_targets(pack),
-                     "subject_choices": categories.subject_choices(pack)})
+                     "subject_choices": categories.subject_choices(pack),
+                     "typeset": "typeset_notes" in (pack.get("note_types") or []),
+                     "pw_logo": categories.pw_logo(pack)})
     return rows
 
 
@@ -92,9 +95,20 @@ def register(app, render, go):
                    else f"{APP} keeps its own sheets and sign-in.")
         return go("/settings#old-app", message, "ok")
 
+    @app.get("/signin")
+    def signin_landing(request: Request):
+        return render(request, "signin.html", signin=signin.snapshot())
+
     @app.get("/settings/signin-card")
     def signin_card(request: Request):
         return render(request, "_signin_card.html", signin=signin.snapshot())
+
+    @app.post("/settings/signin/start")
+    def signin_popup():
+        try:
+            return {"url": signin.start_popup()}
+        except Exception:
+            return JSONResponse({"detail":"Google sign-in could not start. Check the registration and close any earlier sign-in."}, status_code=400)
 
     @app.post("/settings/signin")
     def sign_in():
@@ -104,8 +118,8 @@ def register(app, render, go):
             return go("/settings#signin", str(problem), "warn")
         except Exception:
             return go("/settings#signin", "Google sign-in could not be opened: its registration file "
-                      "(client_secret.json) is missing. Reinstall " + APP + ", or on a project-folder copy keep "
-                      "the shortnotes-core folder.", "danger")
+                      "is missing or could not be read. Ask your administrator for the Google Desktop registration JSON, "
+                      "save it as ~/.note_studio/google-client.json, and restart NoteCraft.", "danger")
         return go("/settings#signin", "Google sign-in opened in your browser. Finish it there.", "info")
 
     @app.post("/settings/signout")
@@ -167,6 +181,18 @@ def register(app, render, go):
             return go("/settings/categories", str(problem), "warn")
         return go(f"/settings/categories#cat-{category_id}", "Switched on." if on else
                   "Switched off: it is no longer offered on New notes.", "ok")
+
+    @app.post("/settings/categories/{category_id}/pw_logo")
+    async def switch_pw_logo(request: Request, category_id: str):
+        form = await request.form()
+        on = form.get("on") == "1"
+        try:
+            category_admin.set_pw_logo(category_id, on)
+        except category_admin.CategoryError as problem:
+            return go("/settings/categories", str(problem), "warn")
+        return go(f"/settings/categories?open={category_id}#cat-{category_id}",
+                  "The next B.Sc.-style notes have the PW logo in the corner and the PW watermark." if on else
+                  "The next B.Sc.-style notes have no PW logo or watermark.", "ok")
 
     @app.get("/settings/categories/{category_id}/check")
     def check(request: Request, category_id: str):

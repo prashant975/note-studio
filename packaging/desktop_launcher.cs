@@ -67,6 +67,10 @@ internal static class DesktopLauncher
     {
         if (Environment.GetEnvironmentVariable("NOTE_STUDIO_NO_BROWSER") == "1") return;
         if (!url.StartsWith("http://127.0.0.1:", StringComparison.Ordinal)) return;
+        Uri entry;
+        if (Uri.TryCreate(url, UriKind.Absolute, out entry) && entry.AbsolutePath == "/"
+                && String.IsNullOrEmpty(entry.Query) && String.IsNullOrEmpty(entry.Fragment))
+            url = url.TrimEnd('/') + "/signin";
         try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
         catch (Exception error) { MessageBox.Show("Open this address in your browser: " + url + "\n\n" + error.Message, AppName); }
     }

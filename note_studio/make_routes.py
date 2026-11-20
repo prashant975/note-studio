@@ -30,7 +30,7 @@ def _form_context(category: str = "", note_type: str = "", values: dict | None =
             "values": {**defaults, **values}, "preview": preview, "signin": signin.snapshot(),
             "basic_options": [(name, spec) for name, spec in options if not spec.get("advanced")],
             "advanced_options": advanced, "advanced_open": any(values.get(name) for name, _spec in advanced),
-            "no_pdf_maker": bool(chosen and "pdf" in (chosen.get("outputs") or []) and chosen.get("engine") == "upsc"
+            "no_pdf_maker": bool(chosen and "pdf" in (chosen.get("outputs") or []) and chosen.get("engine") == "pw_books"
                                  and not setup_check.office())}
 
 
