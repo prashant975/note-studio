@@ -140,7 +140,16 @@
                         "hint": "The B.Sc. template stays fixed and source content is retained."}},
      "models": {"notes": ["gemini-3.7-flash", "gemini-3.6-flash"], "qc": ["gemini-3.7-flash", "gemini-3.6-flash"],
                 "figures": ["gemini-3.1-flash-image", "gemini-2.5-flash-image"]},
-     "revision": "typeset-reference-ai-v3"}
+     "revision": "typeset-reference-ai-v3"},
+    {"id": "typeset_gdoc", "label": "Google Doc with tabs (B.Sc. style)", "engine": "typeset", "status": "ready",
+     "summary": "Final notes in a Google Doc become an editable Google Doc in the B.Sc. template: one tab per source tab, PW logo and watermark. Every word stays the source's; only the design is new, and every tab is checked word for word.",
+     "you_get": "An editable Google Doc in your Google Drive (open it from Runs), and a quality report",
+     "inputs": ["gdoc_link"], "outputs": ["gdoc"], "languages": ["english", "hindi", "hinglish"],
+     "options": {
+       "share_domain": {"type": "bool", "label": "Anyone at PW can edit it (with the link)", "default": true,
+                        "hint": "The Doc is not searchable for the whole company; only people with the link can open it."}},
+     "models": {"notes": ["gemini-3.7-flash"], "qc": ["gemini-3.7-flash"]},
+     "revision": "typeset-gdoc-v1"}
   ],
   "tools": [
     {"id": "notes_qc", "label": "Check notes", "engine": "notes_qc", "status": "ready",

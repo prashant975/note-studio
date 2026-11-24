@@ -43,16 +43,21 @@ def _run(run_id: int) -> dict:
                              "ORDER BY id", (run_id,))
     run["files"] = db.query("SELECT * FROM run_items WHERE run_id=? ORDER BY position", (run_id,))
     for item in run["files"]:
-        item["kind_words"] = FILE_WORDS.get(Path(item["output_path"] or "").suffix.lower(), "File")
-    run["sheet"] = run["source"] == "sheet"
+        item["link"] = str(item["output_path"] or "").startswith("https://docs.google.com/")
+        item["kind_words"] = "Google Doc" if item["link"] else \
+            FILE_WORDS.get(Path(item["output_path"] or "").suffix.lower(), "File")
+    run["gdoc_sheet"] = run["source"] == "gdoc_sheet"
+    run["sheet"] = run["source"] in ("sheet", "gdoc_sheet")
     run["stoppable"] = run["state"] == "running" and engine_host.running(run_id)
     run["checkable"] = check_service.checkable_file(run) is not None
     run["log"] = []
     if run["sheet"]:
         from .automation_service import OUTCOME_WORDS
 
+        words = dict(OUTCOME_WORDS, planned=("Waiting", ""), running=("Making", "info")) if run["gdoc_sheet"] \
+            else OUTCOME_WORDS
         for item in run["files"]:
-            item["words"], item["cls"] = OUTCOME_WORDS.get(item["state"], (item["state"], ""))
+            item["words"], item["cls"] = words.get(item["state"], (item["state"], ""))
         logs = db.query("SELECT data_json FROM run_events WHERE run_id=? AND kind='log' ORDER BY id DESC LIMIT 1",
                         (run_id,))
         run["log"] = json.loads(logs[0]["data_json"]).get("lines", []) if logs else []
@@ -118,6 +123,8 @@ def register(app, render, go):
         rows = db.query("SELECT * FROM run_items WHERE id=? AND run_id=?", (item_id, run_id))
         if not rows or not rows[0]["output_path"]:
             raise HTTPException(404)
+        if rows[0]["output_path"].startswith("https://docs.google.com/document/d/"):
+            return RedirectResponse(rows[0]["output_path"], 303)     # a Google Doc made by the run
         path = Path(rows[0]["output_path"])
         root = make_service.runs_root().resolve()
         if not path.is_file() or root not in path.resolve().parents:
@@ -126,6 +133,14 @@ def register(app, render, go):
 
     @app.post("/runs/{run_id}/stop")
     def stop(run_id: int):
+        rows = db.query("SELECT source FROM runs WHERE id=?", (run_id,))
+        if rows and rows[0]["source"] == "gdoc_sheet":
+            from . import gdoc_service
+
+            if not gdoc_service.stop_sheet(run_id):
+                return go(f"/runs/{run_id}", "This sheet run is not running right now.", "info")
+            return go(f"/runs/{run_id}", "Stopping after the rows being made now. Rows not reached stay ready "
+                                         "for the next run.", "ok")
         if not make_service.stop(run_id):
             return go(f"/runs/{run_id}", "This run is not being made right now.", "info")
         return go(f"/runs/{run_id}", "Stopped. The Smart Queue holds until you press Continue.", "ok")
@@ -137,6 +152,9 @@ def register(app, render, go):
             if check_service.again(run_id) is None:
                 return go(f"/runs/{run_id}", "This check cannot be run again (its file is missing).", "warn")
             return go("/queue", "Added the check to the Smart Queue again.", "ok")
+        if rows and rows[0]["source"] == "gdoc_sheet":
+            return go("/automation#gdocs", "Start the sheet again from Sheet automation: rows that already have "
+                                           "a Google Doc are skipped.", "info")
         entry_id = make_service.retry(run_id)
         if entry_id is None:
             return go(f"/runs/{run_id}", "This run cannot be made again (its lecture file is missing).", "warn")

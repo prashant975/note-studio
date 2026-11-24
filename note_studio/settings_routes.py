@@ -67,6 +67,7 @@ def _packs() -> list[dict]:
                      "targets": category_admin.rule_targets(pack),
                      "subject_choices": categories.subject_choices(pack),
                      "typeset": "typeset_notes" in (pack.get("note_types") or []),
+                     "gdoc": category_admin.GDOC_TYPE in (pack.get("note_types") or []),
                      "pw_logo": categories.pw_logo(pack)})
     return rows
 
@@ -193,6 +194,18 @@ def register(app, render, go):
         return go(f"/settings/categories?open={category_id}#cat-{category_id}",
                   "The next B.Sc.-style notes have the PW logo in the corner and the PW watermark." if on else
                   "The next B.Sc.-style notes have no PW logo or watermark.", "ok")
+
+    @app.post("/settings/categories/{category_id}/gdoc")
+    async def switch_gdoc(request: Request, category_id: str):
+        form = await request.form()
+        on = form.get("on") == "1"
+        try:
+            category_admin.set_gdoc(category_id, on)
+        except category_admin.CategoryError as problem:
+            return go(f"/settings/categories?open={category_id}#cat-{category_id}", str(problem), "warn")
+        return go(f"/settings/categories?open={category_id}#cat-{category_id}",
+                  "Google Docs (B.Sc. style) are now offered on New notes and Sheet automation." if on else
+                  "Google Docs (B.Sc. style) are no longer offered in this category.", "ok")
 
     @app.get("/settings/categories/{category_id}/check")
     def check(request: Request, category_id: str):

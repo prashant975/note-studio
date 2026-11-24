@@ -219,9 +219,10 @@ def launch(entry: dict) -> tuple[str, str, int | None]:
         engine = (note_types.get(payload["note_type"]) or {}).get("engine", "notesbot")
         resolved = requirements.resolve(payload["category"], payload["note_type"], payload["subject"],
                                         payload["language"], extra=payload["options"].get("instructions", ""))
+        linked = bool(payload["options"].get("source_id")) and not name      # a Google Doc link (typeset_gdoc)
         run_id = db.create_run(engine, title=entry["title"], note_type=payload["note_type"],
                                category=payload["category"], subject=payload["subject"], language=payload["language"],
-                               source="upload", options={**payload["options"], "file": name,
+                               source="gdoc" if linked else "upload", options={**payload["options"], "file": name,
                                                          "requirements": resolved.to_dict(), "queue_id": entry["id"]})
         folder = run_dir(run_id)
         (folder / "input").mkdir(parents=True, exist_ok=True)
@@ -275,6 +276,11 @@ def execute(run: dict) -> None:
     """Make one run's notes with its engine."""
     if run["engine"] in CHILD_ENGINES:
         execute_child(run)
+        return
+    if run["note_type"] == "typeset_gdoc":
+        from . import gdoc_service
+
+        gdoc_service.execute(run)
         return
     if run["engine"] == typeset_engine.ENGINE:
         execute_typeset(run)
@@ -417,10 +423,19 @@ def stop(run_id: int) -> bool:
 def retry(run_id: int) -> int | None:
     """The same lecture with the same choices, added to the Smart Queue again."""
     rows = db.query("SELECT * FROM runs WHERE id=?", (run_id,))
-    if not rows or rows[0]["state"] in ("waiting", "running") or rows[0]["source"] != "upload":
+    if not rows or rows[0]["state"] in ("waiting", "running") or rows[0]["source"] not in ("upload", "gdoc"):
         return None
     run = rows[0]
     options = json.loads(run["options_json"] or "{}")
+    if run["source"] == "gdoc":
+        # A Google Doc link: the same link and choices, made again (a new Doc).
+        if not options.get("source_id"):
+            return None
+        kept = {k: v for k, v in options.items() if k not in ("file", "requirements", "queue_id", "sign_in_problem")}
+        payload = {"category": run["category"], "note_type": run["note_type"], "subject": run["subject"],
+                   "language": run["language"], "options": kept, "file": "", "again_from": run_id}
+        entry_id, _ = job_queue.submit("new_notes", run["title"], payload, key=f"again-{run_id}")
+        return entry_id
     name = str(options.get("file") or "")
     source = Path(run["run_dir"]) / "input" / name if name else None
     if (source is not None and not source.is_file()) or (source is None and run["engine"] != upsc_engine.ENGINE):

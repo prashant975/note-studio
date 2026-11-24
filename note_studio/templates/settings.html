@@ -117,6 +117,12 @@
               {% if p.pw_logo %}<span class="chip ok xs"><span class="dot"></span> On</span>{% else %}<span class="chip xs">Off</span>{% endif %}</span>
             <button class="btn ghost sm" type="submit">{{ 'Remove the PW logo' if p.pw_logo else 'Add the PW logo' }}</button>
           </form>
+          <form method="post" action="/settings/categories/{{ p.id }}/gdoc" class="btn-row">
+            <input type="hidden" name="on" value="{{ '0' if p.gdoc else '1' }}">
+            <span class="small">Google Docs with tabs (B.Sc. style), from final notes in a Google Doc:
+              {% if p.gdoc %}<span class="chip ok xs"><span class="dot"></span> Offered</span>{% else %}<span class="chip xs">Not offered</span>{% endif %}</span>
+            <button class="btn ghost sm" type="submit">{{ 'Stop offering Google Docs' if p.gdoc else 'Offer Google Docs' }}</button>
+          </form>
           {% endif %}
 
           <h3 class="sub-h">Rules</h3>

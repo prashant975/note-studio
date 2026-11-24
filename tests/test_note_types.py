@@ -11,7 +11,7 @@ def test_ids_are_unique_and_the_ready_types_are_the_connected_engines():
     assert len(ids) == len(set(ids))
     assert [t["id"] for t in note_types.all_types() if t["status"] == "ready"] == [
         "concise_handdrawn", "upsc_dcn", "upsc_simple", "upsc_mains", "upsc_prelims", "upsc_mains_practice",
-        "dpp_from_notes", "pw_books_handwritten", "typeset_notes"]
+        "dpp_from_notes", "pw_books_handwritten", "typeset_notes", "typeset_gdoc"]
 
 
 def test_the_upsc_types_use_the_engines_own_formats_and_defaults():

@@ -2,7 +2,7 @@
 {% import "_icons.html" as ico with context %}
 {% block title %}{{ run.title or 'Notes' }} - {{ brand.APP_NAME }}{% endblock %}
 {% block crumb %}<a href="/runs">{{ ico.i('arrow-left', 13) }} Runs</a>{% endblock %}
-{% block topacts %}<a class="btn sm" href="{{ '/automation' if run.source == 'sheet' else '/new?category=' ~ run.category }}">{{ ico.i('plus', 13) }} Start another</a>{% endblock %}
+{% block topacts %}<a class="btn sm" href="{{ '/automation' if run.source == 'sheet' else '/automation#gdocs' if run.source == 'gdoc_sheet' else '/new?category=' ~ run.category ~ '&type=' ~ run.note_type }}">{{ ico.i('plus', 13) }} Start another</a>{% endblock %}
 
 {% block body %}
 <div class="page-head">
@@ -16,6 +16,8 @@
       {% if run.options.teacher_name %}<span class="chip">{{ ico.i('pen', 12) }} by {{ run.options.teacher_name }}</span>{% endif %}
       {% if run.options.dcn_no %}<span class="chip">DCN {{ run.options.dcn_no }}</span>{% endif %}
       {% if run.options.video_url %}<a class="chip" href="{{ run.options.video_url if run.options.video_url.startswith('http') else 'https://youtu.be/' ~ run.options.video_url }}" target="_blank" rel="noopener noreferrer">{{ ico.i('video', 12) }} Class recording</a>{% endif %}
+      {% if run.options.source_url %}<a class="chip" href="{{ run.options.source_url }}" target="_blank" rel="noopener noreferrer">{{ ico.i('file-text', 12) }} Source Google Doc</a>{% endif %}
+      {% if run.source == 'gdoc_sheet' and run.options.spreadsheet_id %}<a class="chip" href="https://docs.google.com/spreadsheets/d/{{ run.options.spreadsheet_id }}/edit#gid={{ run.options.gid }}" target="_blank" rel="noopener noreferrer">{{ ico.i('sheet', 12) }} {{ run.options.tab }}</a>{% endif %}
       {% if run.options.file and run.engine == 'upsc' %}<span class="chip">{{ ico.i('file-text', 12) }} {{ run.options.file }}</span>{% endif %}
       <span class="small muted" data-time="{{ run.created_at }}"></span>
     </div>

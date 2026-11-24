@@ -56,8 +56,19 @@ def register(app, render, go):
         for name, spec in (entry.get("options") or {}).items():
             options[name] = form.get(name) == "on" if spec.get("type") == "bool" else str(form.get(name, "")).strip()
         values = {"subject": str(form.get("subject", "auto")), "language": str(form.get("language", "auto")),
-                  "video_url": str(form.get("video_url", "")).strip(), **options}
+                  "video_url": str(form.get("video_url", "")).strip(),
+                  "doc_links": str(form.get("doc_links", "")).strip()[:20000], **options}
         try:
+            if "gdoc_link" in (entry.get("inputs") or []):
+                from . import gdoc_service
+
+                added = gdoc_service.submit_links(category, note_type, values["subject"], values["language"], options,
+                                                  values["doc_links"])
+                new = sum(1 for _id, created in added if created)
+                if not new:
+                    return go("/queue", "Already in the Smart Queue: it was not added twice.", "info")
+                words = "1 Google Doc" if new == 1 else f"{new} Google Docs"
+                return go("/queue", f"Added {words} to the Smart Queue; each is made in turn.", "ok")
             if "video_link" in (entry.get("inputs") or []):
                 slides = form.get("slides")
                 upload = (slides.filename, await slides.read()) if hasattr(slides, "read") and slides.filename else None

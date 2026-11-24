@@ -24,6 +24,10 @@ GUIDES = {
             "AI reads and checks PDF pages by default; Word content stays locked while AI chooses formatting. "
             "All content and its order are retained in the fixed B.Sc. template. Nursing notes carry the PW logo in the page corner and the PW watermark, as NEET/JEE notes do. "
             "NEET/JEE quality checks review every final PDF page; inspect any issues in its quality report. Uses PW AI credit.",
+            "Google Doc with tabs (B.Sc. style): paste the links of final-notes Google Docs, one per line. Each becomes an "
+            "editable Google Doc in your Drive, one tab per source tab, with the PW logo and watermark; every word stays "
+            "the source's and every tab is checked word for word. Open it from its run. "
+            "A category offers it once Settings → Categories → Offer Google Docs is on.",
             "UPSC notes: paste the class recording link and, if there is one, add the slides. "
             "If Drive's transcript cannot be read, paste its full text under More options to skip audio extraction.",
             "Press Make notes. It waits in the Smart Queue and uses PW AI credit. Hand-drawn notes use automation quality checks by default. Gujarati checks include source chapter order, repetitions and terminology; inspect the PDF and quality report in its finished run.",
@@ -38,6 +42,9 @@ GUIDES = {
             "Run now adds the run to the Smart Queue. It starts when the Sheets lane is free, makes notes row by "
             "row and files them in Drive. Gujarati checks source chapter order, repetitions and terminology; inspect any issues in the run's quality report.",
             "Stop after this row stops cleanly and holds the queue; the rows not reached stay ready for next time.",
+            "Google Docs from a sheet (B.Sc. style): paste the link of a tab whose rows link final-notes Google Docs, "
+            "press Check rows (free), then Make Google Docs. Three rows are made at a time; each Doc's link goes into "
+            "the row's \"Google Doc (B.Sc. style)\" column only after its checks pass. Rows that already have one are skipped.",
             "Sheets are shared with the old Short Notes app. Every change keeps a backup of the list.",
         ],
     },
@@ -86,7 +93,8 @@ GUIDES = {
             f"Sign-in: choose once whether {APP} uses the old Short Notes app's sheets and sign-in, then sign in.",
             "AI models: the first model makes the notes. A gateway budget failure stops hand-drawn notes; ask the administrator to renew it.",
             "Categories: add a new exam, write its rules in plain sentences, check it, or switch it off. "
-            "For B.Sc.-style notes, add or remove the PW logo and watermark per category.",
+            "For B.Sc.-style notes, add or remove the PW logo and watermark per category, and offer Google Docs "
+            "with tabs (made from final notes in a Google Doc).",
             "Values: the numbers the notes engine starts with. System: engines, Check setup and where your work is kept.",
             f"System → Updates: your version, Check for updates and the team's release folder. A newer {APP} shows "
             "the download progress beside Smart Queue. After it finishes and is checked, a pop-up offers Install update.",

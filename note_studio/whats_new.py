@@ -26,6 +26,14 @@ BOOT = uuid.uuid4().hex              # this start: a tour is shown once per star
 OMITTED = (["UPSC notes, Mains practice and DPP"] if "noupsc" in EDITION else []) + (
     ["PW Books"] if "nopwbooks" in EDITION else [])
 TOURS = [
+    dict(id="2026-11-24-gdoc-bsc", title="B.Sc.-style Google Docs, from the app", steps=[
+        dict(title="Offer it in a category", href="/settings/categories", icon="shield",
+             text="Settings → Categories: press Offer Google Docs on Nursing (or another B.Sc.-style category). New notes and Sheet automation then offer Google Doc with tabs (B.Sc. style)."),
+        dict(title="From Google Doc links", href="/new", icon="file-text",
+             text="New notes: choose Google Doc with tabs and paste the final notes' Google Doc links. Each becomes an editable Google Doc in your Drive with the PW logo and watermark. Every word stays the source's; every tab is checked word for word. Uses PW AI credit."),
+        dict(title="From a sheet", href="/automation#gdocs", icon="sheet",
+             text="Sheet automation → Google Docs from a sheet: paste the sheet tab's link, press Check rows (free), then Make Google Docs. Each made Doc's link is written into its row's \"Google Doc (B.Sc. style)\" column; rows that already have one are skipped."),
+    ]),
     dict(id="2026-11-04-nursing-pw-logo", title="PW logo on Nursing notes", steps=[
         dict(title="PW logo and watermark", href="/new", icon="file-text",
              text="Nursing notes in the B.Sc. template now have the PW logo in the top-right corner of every page and the faded PW logo watermark behind the text, as NEET/JEE notes do. Wording, tables and images are unchanged."),

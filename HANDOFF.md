@@ -1,5 +1,82 @@
 # Note Studio — Handoff (newest first)
 
+## B.Sc.-style Google Docs from the app (New notes + Sheet automation); 5 "Bsc Nursing Notes" rows made — 24 November 2026
+
+The user reported that B.Sc.-style notes "were not made directly from the app", and that Sheet automation had no
+option for them either. Both were true: the 14 Nursing Docs of 16–17 Nov were made by `_build/` scripts.
+They then gave the sheet ("Notes Testing") and asked for 5 notes first, then the app. Their words: "the doc file
+content doesn't miss, that was already a final notes, I have to just design it like you did for B.Sc. Nursing".
+
+**The 5 notes** (paid, Gemini 3.7, no spend cap; ₹13.73 in all)
+- The sheet has a new tab, **"Bsc Nursing Notes"** (gid 689523849, rows 2–879).
+  - Its links are plain hyperlinks; Sheet1 used smart chips.
+  - Every source Doc there has **one tab**.
+- Free preflight of rows 2–30 (`_build/nursing_bscn_batch_20261124.py preflight`):
+  - rows 9, 12, 14 and 15 have exactly the content of Docs already made from Sheet1;
+  - rows 2–8, 10, 11 and 13 are the Sheet1 units merged into one long tab (row 3: ~2,200 paragraphs, ~120 pages);
+  - rows 16, 17, 18, 20 and 21 are the first topics never made, so those were made.
+- Results:
+
+  | Row | Topic | Pages | Quality | ₹ |
+  |---|---|---|---|---|
+  | 16 | Clinical Enzymology | 13 | passed | 3.57 |
+  | 17 | Introduction to Nutrition | 24 | reviewer misread "ofthe" (the PDF text and source have "of the") | 4.60 |
+  | 18 | Carbohydrates & Energy | 9 | passed | 1.97 |
+  | 20 | Proteins | 8 | passed | 1.79 |
+  | 21 | Fats | 8 | passed | 1.80 |
+
+  - All rows: word-for-word check OK, watermark and logo on every page, link in column P, editable by anyone at pw.live.
+  - Summary file: `output/gdoc/bscn_batch_20261124.json`.
+- **Lesson:** the batch shared one Google client across threads. httplib2 is not thread-safe, and sharing rows 20–21
+  failed with an SSL record-layer error; they were finished one at a time.
+  - The app's maker now gives every thread its own clients (`gdoc_make.Google`).
+
+**In the app now** (new note type `typeset_gdoc`, "Google Doc with tabs (B.Sc. style)", Gemini 3.7 only)
+- `note_studio/typeset/gdoc_make.py`: the make script's steps as a library.
+  - Steps: read the source, AI formatting per tab, copy the template, write, verify, last-page fixes, watermark/logo
+    check, quality, optional domain sharing.
+  - The template record is `~/.note_studio/gdoc/template.json`, seeded with the 34-tab template.
+  - Plain-words `GdocError`; a Doc left half-written by an error is put in the bin.
+- `note_studio/gdoc_sheet.py`: reads a tab's rows (hyperlink, chip, linked text or plain link) and writes a link.
+  - It never writes over a filled cell or into a row whose link changed.
+  - A missing "Google Doc (B.Sc. style)" column is added only if `sheets_bridge.columns.Layout` reads the tab the same.
+- `note_studio/gdoc_service.py`:
+  - New notes: paste Google Doc links (one Notes-lane run each, source `gdoc`; Try again works).
+  - Sheet runs: queue kind `gdoc_sheet` in the Sheets lane; 3 rows at a time; one run with a row table;
+    Stop after these rows.
+- Pages:
+  - New notes asks for "Google Doc links" for this type.
+  - Runs shows "Open the Google Doc".
+  - Sheet automation has a "Google Docs from a sheet (B.Sc. style)" card: Check rows (free), Make Google Docs.
+  - Settings → Categories has "Offer Google Docs" for B.Sc.-style categories (`.bak` first).
+  - Tour `2026-11-24-gdoc-bsc`; guides for New notes, Sheet automation and Settings.
+- Free real check, read-only: the app code read the real tab (column P; rows 16–21 done) and read the Vitamins source.
+
+**Tests and gates**
+- Tests: 421 passed, 19 skipped (404 + `tests/test_gdoc_app.py` 17). `test_note_types` lists the new ready type.
+- `data_guard` compare (`_build/before_nursing_5_20261124.json` → `after_…`): nothing lost, no original touched.
+  The only change is the Google token refresh.
+- `drift` says STOP on this Mac only because the originals (`~/Downloads/shortnotes-core` …) are not here.
+  `git diff HEAD -- engines/` is empty.
+
+**Open**
+- Rows 2–8, 10, 11 and 13: remake them from the merged one-tab sources, and if so, split them into one tab per topic?
+  It is the user's call. One ~120-page tab is a large single formatting/quality call.
+- Nursing is not a category on this Mac yet. Settings → Categories → Add category (tick both B.Sc. types), or press
+  Offer Google Docs on it.
+- Other people's installs must be able to open the template Doc (share it with pw.live as viewer) to copy it.
+- Not installed: the open `/Applications/NoteCraft.app` is still the 19–20 Nov build. Installing is the user's call.
+
+**Mac build** (the user asked "build the app")
+- The previous build was kept as `dist/NoteCraft-before-20261124.{app,dmg}`.
+- `packaging/build_macos.py --dmg` gave `dist/NoteCraft.app` (PACKAGE_OK) and `dist/NoteCraft.dmg`:
+  1,353,318,287 bytes, SHA-256 `0156c5ae6b857c289fa3fda9eb3123f9ff7419aed280910073cbdca93e4499e3`.
+  Log: `_build/build_macos_20261124.log`.
+- The bundled runtime, run on a scratch data folder, showed the new New notes page, Sheet automation card and
+  Settings switch (PACKAGED_PAGES_OK).
+- The version label is unchanged; only the Windows builder bumps it.
+- Committed and pushed to `codex/macos-windows-compatibility` so the user can build the Windows installer.
+
 ## All 14 Nursing Google Docs made, shared with PW, last-page fixes — night of 16–17 November 2026
 
 **Where things stand**

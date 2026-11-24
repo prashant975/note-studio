@@ -14,7 +14,12 @@
 {% if problem %}
 <div class="note warn" role="alert">{{ ico.state('warn', 16, 'nico') }}<div class="ntext"><div class="hd">{{ problem }}</div></div></div>
 {% endif %}
-{% if chosen and chosen.engine == 'typeset' %}
+{% if chosen and 'gdoc_link' in (chosen.inputs or []) %}
+<div class="note info">{{ ico.i('file-text', 16, 'nico') }}<div class="ntext">
+  <div class="hd">Final notes in a Google Doc, designed in the B.Sc. template</div>
+  <div class="bd">Paste the links of Google Docs that hold final notes. Each becomes a new, editable Google Doc in your Drive with one tab per source tab, the PW logo and the PW watermark. Every word, table and picture stays exactly as in the source; only the design is new. Every tab is checked word for word, and the NEET/JEE quality checks review every page. Uses PW AI credit.</div>
+</div></div>
+{% elif chosen and chosen.engine == 'typeset' %}
 <div class="note info">{{ ico.i('file-text', 16, 'nico') }}<div class="ntext">
   <div class="hd">AI notes in the B.Sc. template</div>
   <div class="bd">Upload lecture PDFs or Word references. The B.Sc. template stays fixed. AI reads and checks PDF pages; Word text, tables and images stay locked while AI chooses formatting. All content and its order are retained. NEET/JEE quality checks review every final page. Uses PW AI credit.</div>
@@ -99,10 +104,17 @@
   </div>
 
   {% set is_class = 'video_link' in (chosen.inputs or []) %}
+  {% set is_gdoc = 'gdoc_link' in (chosen.inputs or []) %}
   <div class="make-step">
     <div class="step-n">4</div>
     <div class="step-body">
-      {% if is_class %}
+      {% if is_gdoc %}
+      <h2>Google Doc links</h2>
+      <label class="field"><span>Links of the final-notes Google Docs, one per line</span>
+        <textarea name="doc_links" rows="5" required maxlength="20000" autocomplete="off"
+                  placeholder="https://docs.google.com/document/d/…">{{ values.get('doc_links', '') }}</textarea>
+        <span class="hint">Your Google account must be able to open each Doc. Each link is made into its own Google Doc. For many notes listed in a sheet, use <a href="/automation#gdocs">Sheet automation</a>.</span></label>
+      {% elif is_class %}
       <h2>The class</h2>
       {% if no_pdf_maker %}<div class="note warn">{{ ico.state('warn', 16, 'nico') }}<div class="ntext">
         <div class="hd">Set up PDF export</div>
@@ -172,7 +184,7 @@
 
   <div class="form-end">
     <button class="btn primary lg" type="submit" data-busy>{{ ico.i('sparkles', 16) }} Make notes</button>
-    <span class="hint">This uses PW AI credit {{ 'for the class' if is_class else 'for each lecture' }}.</span>
+    <span class="hint">This uses PW AI credit {{ 'for the class' if is_class else 'for each Google Doc' if is_gdoc else 'for each lecture' }}.</span>
   </div>
   {% endif %}
 </form>

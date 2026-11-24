@@ -90,6 +90,31 @@ def set_pw_logo(category_id: str, on: bool) -> None:
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+GDOC_TYPE = "typeset_gdoc"
+
+
+def set_gdoc(category_id: str, on: bool) -> None:
+    """Offer (or stop offering) Google Docs with tabs (B.Sc. style) in this category (a backup first).
+    Only a category that makes B.Sc.-style notes may offer it: it uses the same header and footer words."""
+    pack = categories.get(category_id)
+    if not pack:
+        raise CategoryError("That category no longer exists.")
+    meta_path = Path(pack["folder"]) / "category.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    offered = [t for t in meta.get("note_types") or [] if t != GDOC_TYPE]
+    if on:
+        if "typeset_notes" not in offered:
+            raise CategoryError("Only a category that makes B.Sc.-style notes can offer Google Docs.")
+        offered.insert(offered.index("typeset_notes") + 1, GDOC_TYPE)
+    elif not offered:
+        raise CategoryError("A category needs at least one note type.")
+    shutil.copy2(meta_path, meta_path.with_name("category.json.bak"))
+    meta["note_types"] = offered
+    if meta.get("default_note_type") not in offered:
+        meta["default_note_type"] = offered[0]
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def check(category_id: str) -> list[dict]:
     """What is right and wrong with one category, in plain words."""
     found: list[dict] = []
