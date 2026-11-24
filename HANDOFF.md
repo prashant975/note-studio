@@ -64,8 +64,18 @@ content doesn't miss, that was already a final notes, I have to just design it l
   It is the user's call. One ~120-page tab is a large single formatting/quality call.
 - Nursing is not a category on this Mac yet. Settings → Categories → Add category (tick both B.Sc. types), or press
   Offer Google Docs on it.
-- Other people's installs must be able to open the template Doc (share it with pw.live as viewer) to copy it.
-- Not installed: the open `/Applications/NoteCraft.app` is still the 19–20 Nov build. Installing is the user's call.
+- Template Doc: shared with PW as viewer on 24 Nov, so other installs can copy it.
+- **Installed on the Mac (same evening, the user said "yes install it and share the template with pw.live"):**
+  - The user quit the old app; it was idle.
+  - Backups in `~/NoteStudio_backups/`: `note_studio-before-install-20261124-210308.db` (integrity ok, 4 runs),
+    `categories-before-install-…`, and the old app `NoteCraft-installed-before-20261124.app`.
+  - `ditto` of `dist/NoteCraft.app` → `/Applications/NoteCraft.app`; `diff -rq` shows it identical; PACKAGE_OK.
+  - Opened; port 3100 serves the new card, switch and guide; still 4 runs.
+  - `data_guard` compare: nothing lost. Changed: `note_studio.db` (app start) and the token; new: `gdoc/template.json`.
+- **Template shared:** the domain is now a viewer (link only, not discoverable). Google lists it under PW's primary
+  domain `physicswallah.org`, which covers pw.live accounts.
+  - So `share_with_domain`'s "already editable" check, which compares with "pw.live", never matches: it re-creates
+    the permission, which is harmless.
 
 **Mac build** (the user asked "build the app")
 - The previous build was kept as `dist/NoteCraft-before-20261124.{app,dmg}`.
