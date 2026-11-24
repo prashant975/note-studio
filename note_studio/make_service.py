@@ -70,7 +70,7 @@ def check(category: str, note_type: str, subject: str, language: str, options: d
     if not pack or pack.get("enabled") is not True:
         raise FormError("Choose a category.")
     entry = note_types.get(note_type)
-    if not entry or note_type not in (pack.get("note_types") or []):
+    if not entry or note_type not in categories.type_ids(pack):
         raise FormError("Choose a note type this category offers.")
     if not note_types.available(note_type):
         raise FormError(f"{entry['label']} is not in this installation.")

@@ -94,8 +94,7 @@ def _page_context(problem: str = "") -> dict:
             "outcome_words": auto.OUTCOME_WORDS, "recent": auto.recent_runs(), "run_id": auto.current_run_id(),
             "sheet_file": sheet_file,
             # Google Docs (B.Sc. style) from a sheet's rows (gdoc_service)
-            "gdoc_categories": [p for p in categories.all_packs(include_disabled=False)
-                                if gdoc_service.TYPE in (p.get("note_types") or [])],
+            "gdoc_categories": [p for p in categories.all_packs(include_disabled=False) if categories.gdoc_offered(p)],
             "gdoc_recent": db.query("SELECT * FROM runs WHERE source='gdoc_sheet' ORDER BY id DESC LIMIT 5")}
 
 

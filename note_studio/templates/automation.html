@@ -8,6 +8,7 @@
     <h1>Sheet automation</h1>
     <p class="sub">Notes for every new row of your Google Sheets, filed in Drive with the links written back: the same run as the Short Notes app.</p>
   </div>
+  <div class="acts"><a class="btn" href="#gdocs">{{ ico.i('file-text', 15) }} Google Docs from a sheet (B.Sc. style)</a></div>
 </div>
 
 {% include "_queue_strip.html" %}
@@ -81,7 +82,7 @@
   <div class="hd"><div class="grow"><h2>Google Docs from a sheet (B.Sc. style)</h2>
     <p class="d">For a sheet whose rows link final-notes Google Docs. Each row's Doc becomes an editable Google Doc in the B.Sc. template, with the PW logo and watermark. Every word stays as in the source; only the design is new. Its link is written into the row's "{{ 'Google Doc (B.Sc. style)' }}" column.</p></div></div>
   {% if not gdoc_categories %}
-  <div class="bd"><p class="quiet-line">{{ ico.i('folder', 15) }} No category makes Google Docs yet. In <a href="/settings/categories">Settings → Categories</a>, press "Offer Google Docs" on Nursing (or another B.Sc.-style category).</p></div>
+  <div class="bd"><p class="quiet-line">{{ ico.i('folder', 15) }} No category makes Google Docs yet. In <a href="/settings/categories">Settings → Categories</a>, add Nursing (or another category) with B.Sc.-style notes: it offers Google Docs by itself. For B.Sc. Wallah, press "Offer Google Docs" there.</p></div>
   {% else %}
   <form class="bd" method="post" action="/automation/docs/run" id="gdoc-form"
         data-confirm="Make a Google Doc for every chosen row that does not have one yet? This uses PW AI credit for each row.">

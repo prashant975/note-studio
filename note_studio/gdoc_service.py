@@ -205,7 +205,7 @@ def sheet_rows(link: str, rows_spec: str = "") -> dict:
 def enqueue_sheet(category: str, link: str, rows_spec: str, share: bool = True) -> tuple[int, bool, int]:
     """One Sheets-lane item for the chosen rows still without a Doc: (item id, newly added, rows)."""
     pack = categories.get(category)
-    if not pack or pack.get("enabled") is not True or TYPE not in (pack.get("note_types") or []):
+    if not pack or pack.get("enabled") is not True or not categories.gdoc_offered(pack):
         raise gdoc_sheet.SheetError("Choose a category that makes Google Docs (B.Sc. style).")
     found = sheet_rows(link, rows_spec)
     if not found["ready"]:

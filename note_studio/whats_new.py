@@ -27,8 +27,8 @@ OMITTED = (["UPSC notes, Mains practice and DPP"] if "noupsc" in EDITION else []
     ["PW Books"] if "nopwbooks" in EDITION else [])
 TOURS = [
     dict(id="2026-11-24-gdoc-bsc", title="B.Sc.-style Google Docs, from the app", steps=[
-        dict(title="Offer it in a category", href="/settings/categories", icon="shield",
-             text="Settings → Categories: press Offer Google Docs on Nursing (or another B.Sc.-style category). New notes and Sheet automation then offer Google Doc with tabs (B.Sc. style)."),
+        dict(title="Ready in Nursing", href="/settings/categories", icon="shield",
+             text="Nursing, and any category with the PW logo on its B.Sc.-style notes, offers Google Doc with tabs (B.Sc. style) by itself. Settings → Categories can switch it off, or on for B.Sc. Wallah."),
         dict(title="From Google Doc links", href="/new", icon="file-text",
              text="New notes: choose Google Doc with tabs and paste the final notes' Google Doc links. Each becomes an editable Google Doc in your Drive with the PW logo and watermark. Every word stays the source's; every tab is checked word for word. Uses PW AI credit."),
         dict(title="From a sheet", href="/automation#gdocs", icon="sheet",

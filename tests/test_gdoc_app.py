@@ -145,26 +145,42 @@ def test_the_note_type_is_ready_gemini_37_only_and_made_from_a_doc_link():
     assert note_types.option_defaults("typeset_gdoc") == {"share_domain": True}
 
 
-def test_a_bsc_style_category_offers_google_docs_from_settings(client):
+def test_a_category_with_the_pw_logo_offers_google_docs_without_a_settings_step(client):
+    """Nursing (added from Settings, so it has the PW logo) offers Google Docs straight away, on New notes and
+    Sheet automation; Settings can switch it off. The built-in B.Sc. Wallah pack keeps its own look until
+    switched on there."""
     cid = nursing(client)
     assert categories.get(cid)["note_types"] == ["typeset_notes"]
+    assert categories.gdoc_offered(categories.get(cid)) and not categories.gdoc_offered(categories.get("bsc"))
+    assert [t["id"] for t in categories.offered_types(categories.get(cid))] == ["typeset_notes", "typeset_gdoc"]
+    assert "Google Doc with tabs (B.Sc. style)" in client.get(f"/new?category={cid}").text
+    auto = client.get("/automation").text
+    assert 'href="#gdocs"' in auto and f'<option value="{cid}">Nursing</option>' in auto
+    assert "No category makes Google Docs yet" not in auto
     page = client.get("/settings/categories").text
-    assert f'action="/settings/categories/{cid}/gdoc"' in page and "Offer Google Docs" in page
+    assert f'action="/settings/categories/{cid}/gdoc"' in page and "Stop offering Google Docs" in page
     assert 'action="/settings/categories/neet_jee/gdoc"' not in page        # not a B.Sc.-style category
-    on = client.post(f"/settings/categories/{cid}/gdoc", data={"on": "1"}, follow_redirects=False)
-    assert "kind=ok" in on.headers["location"]
+
+    off = client.post(f"/settings/categories/{cid}/gdoc", data={"on": "0"}, follow_redirects=False)
+    assert "kind=ok" in off.headers["location"]
     folder = Path(categories.get(cid)["folder"])
-    assert categories.get(cid)["note_types"] == ["typeset_notes", "typeset_gdoc"]
-    assert json.loads((folder / "category.json.bak").read_text("utf-8"))["note_types"] == ["typeset_notes"]
-    assert not [c for c in category_admin.check(cid) if c["kind"] == "bad"]
-    assert "Stop offering Google Docs" in client.get("/settings/categories").text
+    meta = json.loads((folder / "category.json").read_text("utf-8"))
+    assert meta["note_types"] == ["typeset_notes"] and meta["offer_gdoc"] is False
+    assert "offer_gdoc" not in json.loads((folder / "category.json.bak").read_text("utf-8"))
+    assert not categories.gdoc_offered(categories.get(cid))
+    assert 'value="typeset_gdoc"' not in client.get(f"/new?category={cid}").text
+    client.post(f"/settings/categories/{cid}/gdoc", data={"on": "1"})
+    meta = json.loads((folder / "category.json").read_text("utf-8"))
+    assert meta["note_types"] == ["typeset_notes", "typeset_gdoc"] and "offer_gdoc" not in meta
     client.post(f"/settings/categories/{cid}/gdoc", data={"on": "1"})                 # twice: still once
     assert categories.get(cid)["note_types"] == ["typeset_notes", "typeset_gdoc"]
-    client.post(f"/settings/categories/{cid}/gdoc", data={"on": "0"})
-    assert categories.get(cid)["note_types"] == ["typeset_notes"]
+    assert not [c for c in category_admin.check(cid) if c["kind"] == "bad"]
+
+    client.post("/settings/categories/bsc/gdoc", data={"on": "1"})                    # B.Sc. Wallah: on request
+    assert categories.gdoc_offered(categories.get("bsc"))
     refused = client.post("/settings/categories/neet_jee/gdoc", data={"on": "1"}, follow_redirects=False)
     assert "kind=warn" in refused.headers["location"]
-    assert "typeset_gdoc" not in categories.get("neet_jee")["note_types"]
+    assert not categories.gdoc_offered(categories.get("neet_jee"))
 
 
 # ------------------------------------------------------------------ links and rows
@@ -275,7 +291,6 @@ def test_quality_runs_only_on_a_verified_doc_and_only_a_good_doc_is_shared(monke
 # ------------------------------------------------------------------ New notes
 def test_new_notes_takes_google_doc_links_and_each_becomes_a_doc(client, signed_in, maker):
     cid = nursing(client)
-    client.post(f"/settings/categories/{cid}/gdoc", data={"on": "1"})
     page = client.get(f"/new?category={cid}&type=typeset_gdoc").text
     assert 'name="doc_links"' in page and "Google Doc links" in page and 'name="files"' not in page
     assert "Anyone at PW can edit it (with the link)" in page and "for each Google Doc" in page
@@ -321,7 +336,6 @@ def test_new_notes_takes_google_doc_links_and_each_becomes_a_doc(client, signed_
 
 def test_a_doc_that_fails_its_checks_is_not_handed_over(client, signed_in, maker):
     cid = nursing(client)
-    client.post(f"/settings/categories/{cid}/gdoc", data={"on": "1"})
     maker.outcomes[DOC_A] = {"ok": False}
     maker.outcomes[DOC_B] = {"verdict": "needs_attention"}
     client.post("/new", data={"category": cid, "note_type": "typeset_gdoc", "subject": "auto", "language": "english",
@@ -338,7 +352,6 @@ def test_a_missing_sign_in_holds_the_queue(client, monkeypatch, maker):
     from note_studio import signin
 
     cid = nursing(client)
-    client.post(f"/settings/categories/{cid}/gdoc", data={"on": "1"})
     monkeypatch.setattr(gdoc_service, "google_creds", lambda: (_ for _ in ()).throw(
         signin.SignInNeeded("Sign in with Google in Settings, then press Try again.")))
     client.post("/new", data={"category": cid, "note_type": "typeset_gdoc", "subject": "auto", "language": "english",
@@ -353,7 +366,6 @@ def test_a_missing_sign_in_holds_the_queue(client, monkeypatch, maker):
 # ------------------------------------------------------------------ Sheet automation
 def test_a_sheet_run_makes_the_rows_without_a_doc_and_writes_their_links(client, signed_in, maker, monkeypatch):
     cid = nursing(client)
-    client.post(f"/settings/categories/{cid}/gdoc", data={"on": "1"})
     sheets = FakeSheets(HEADER + [gdoc_sheet.HEADER], [
         row("Clinical Enzymology", hyperlink(DOC_A)),
         row("Introduction to Nutrition", hyperlink(DOC_B), extra=[{}] * 5 + [{"formattedValue": "https://x/done"}]),

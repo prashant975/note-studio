@@ -200,9 +200,33 @@ def pw_logo(pack: dict | None) -> bool:
     return value if isinstance(value, bool) else pack.get("builtin") is not True
 
 
+GDOC_TYPE = "typeset_gdoc"
+
+
+def gdoc_offered(pack: dict | None) -> bool:
+    """Whether the category offers Google Docs with tabs (B.Sc. style). Listed in the pack, it does. Otherwise
+    a category whose B.Sc.-style notes carry the PW logo (Nursing, any category added from Settings) offers
+    it by itself, since the Google Doc template carries the PW watermark, unless Settings switched it off
+    ("offer_gdoc": false). The built-in B.Sc. Wallah pack keeps its own look until switched on."""
+    if not pack:
+        return False
+    listed = pack.get("note_types") or []
+    if GDOC_TYPE in listed:
+        return True
+    return "typeset_notes" in listed and pack.get("offer_gdoc") is not False and pw_logo(pack)
+
+
+def type_ids(pack: dict) -> list[str]:
+    """The pack's note type ids, with Google Docs right after the B.Sc.-style notes when it is offered."""
+    ids = list(pack.get("note_types") or [])
+    if GDOC_TYPE not in ids and gdoc_offered(pack):
+        ids.insert(ids.index("typeset_notes") + 1, GDOC_TYPE)
+    return ids
+
+
 def offered_types(pack: dict) -> list[dict]:
     """The pack's note types that exist in the registry, in the pack's order."""
-    found = [note_types.get(t) for t in pack.get("note_types") or []]
+    found = [note_types.get(t) for t in type_ids(pack)]
     return [t for t in found if t and note_types.available(t["id"])]
 
 

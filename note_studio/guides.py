@@ -27,7 +27,7 @@ GUIDES = {
             "Google Doc with tabs (B.Sc. style): paste the links of final-notes Google Docs, one per line. Each becomes an "
             "editable Google Doc in your Drive, one tab per source tab, with the PW logo and watermark; every word stays "
             "the source's and every tab is checked word for word. Open it from its run. "
-            "A category offers it once Settings → Categories → Offer Google Docs is on.",
+            "Nursing and other categories with the PW logo offer it by themselves; B.Sc. Wallah once switched on in Settings.",
             "UPSC notes: paste the class recording link and, if there is one, add the slides. "
             "If Drive's transcript cannot be read, paste its full text under More options to skip audio extraction.",
             "Press Make notes. It waits in the Smart Queue and uses PW AI credit. Hand-drawn notes use automation quality checks by default. Gujarati checks include source chapter order, repetitions and terminology; inspect the PDF and quality report in its finished run.",

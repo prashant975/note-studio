@@ -62,8 +62,16 @@ content doesn't miss, that was already a final notes, I have to just design it l
 **Open**
 - Rows 2–8, 10, 11 and 13: remake them from the merged one-tab sources, and if so, split them into one tab per topic?
   It is the user's call. One ~120-page tab is a large single formatting/quality call.
-- Nursing is not a category on this Mac yet. Settings → Categories → Add category (tick both B.Sc. types), or press
-  Offer Google Docs on it.
+- **No Settings step any more** (after the install, the user asked "why it was not directly on sheet automation page").
+  - The card said "No category makes Google Docs yet": this Mac had no Nursing category, and a category had to switch
+    Google Docs on in Settings first.
+  - Nursing was added to this Mac's data the way the Settings form does (`category_admin.add`): 30 subjects from the
+    "Bsc Nursing Notes" tab, English/Hindi/Hinglish, both B.Sc. types. The running app showed the card at once.
+  - Code: `categories.gdoc_offered()` / `type_ids()`. A category whose B.Sc.-style notes carry the PW logo (Nursing,
+    any category added from Settings) offers Google Docs by itself; Settings can switch it off (`"offer_gdoc": false`).
+  - The built-in B.Sc. Wallah keeps its unbranded look until switched on, since the Doc template carries the PW watermark.
+  - Sheet automation has a "Google Docs from a sheet (B.Sc. style)" button at the top. Tests: 421 passed, 19 skipped.
+  - Pushed for the Windows build. The Mac app has the Nursing data but not this code (needs a rebuild).
 - Template Doc: shared with PW as viewer on 24 Nov, so other installs can copy it.
 - **Installed on the Mac (same evening, the user said "yes install it and share the template with pw.live"):**
   - The user quit the old app; it was idle.

@@ -67,7 +67,7 @@ def _packs() -> list[dict]:
                      "targets": category_admin.rule_targets(pack),
                      "subject_choices": categories.subject_choices(pack),
                      "typeset": "typeset_notes" in (pack.get("note_types") or []),
-                     "gdoc": category_admin.GDOC_TYPE in (pack.get("note_types") or []),
+                     "gdoc": categories.gdoc_offered(pack),
                      "pw_logo": categories.pw_logo(pack)})
     return rows
 
