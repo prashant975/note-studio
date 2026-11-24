@@ -71,7 +71,17 @@ content doesn't miss, that was already a final notes, I have to just design it l
     any category added from Settings) offers Google Docs by itself; Settings can switch it off (`"offer_gdoc": false`).
   - The built-in B.Sc. Wallah keeps its unbranded look until switched on, since the Doc template carries the PW watermark.
   - Sheet automation has a "Google Docs from a sheet (B.Sc. style)" button at the top. Tests: 421 passed, 19 skipped.
-  - Pushed for the Windows build. The Mac app has the Nursing data but not this code (needs a rebuild).
+  - Pushed for the Windows build (`c6a9efb`).
+  - Rebuilt and reinstalled on the Mac at the user's request ("yes rebuild and reinstall it"):
+    - The earlier build was kept as `dist/NoteCraft-20261124a.{app,dmg}`.
+    - New `dist/NoteCraft.dmg`: 1,350,575,867 bytes, SHA-256 `aabac36627138434b3c32ecf1a1ba3fdf3963d9a66e9a12d6cd59b75a4911340`.
+      Log: `_build/build_macos_20261124b.log`.
+    - Claude quit the idle NoteCraft it had opened itself (PID 75023).
+    - Backups: `note_studio-before-install-20261124-214648.db` (ok, 4 runs), its categories, and the replaced app
+      `NoteCraft-installed-20261124a.app` in `~/NoteStudio_backups/`.
+    - The installed app is identical to the build; PACKAGE_OK; reopened. The live pages show the top button,
+      Nursing in the card, and the Google Doc type on New notes.
+    - `data_guard` compare: nothing lost. New: the Nursing pack and `gdoc/template.json`; changed: the database and token.
 - Template Doc: shared with PW as viewer on 24 Nov, so other installs can copy it.
 - **Installed on the Mac (same evening, the user said "yes install it and share the template with pw.live"):**
   - The user quit the old app; it was idle.
