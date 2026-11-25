@@ -63,6 +63,8 @@ GUIDES = {
             "Every set of notes made here is listed, newest first. Open one to download its files.",
             "Use the buttons above the list to see what is waiting, done, or did not finish.",
             "A run that did not finish says why in plain words; Try again makes it with the same choices.",
+            "A Google Docs sheet run lists each row with its Doc. Try the unfinished rows again makes only the rows "
+            "that did not finish, reusing the formatting and any checked Doc they already have.",
             "From older apps lists the UPSC Notes app's own runs, read where they are.",
         ],
     },

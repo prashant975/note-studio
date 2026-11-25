@@ -153,8 +153,14 @@ def register(app, render, go):
                 return go(f"/runs/{run_id}", "This check cannot be run again (its file is missing).", "warn")
             return go("/queue", "Added the check to the Smart Queue again.", "ok")
         if rows and rows[0]["source"] == "gdoc_sheet":
-            return go("/automation#gdocs", "Start the sheet again from Sheet automation: rows that already have "
-                                           "a Google Doc are skipped.", "info")
+            from . import gdoc_service
+
+            again = gdoc_service.retry_sheet(run_id)
+            if again is None:
+                return go(f"/runs/{run_id}", "Every row of this run has its Google Doc: nothing to make again.", "info")
+            left = "1 row" if again[1] == 1 else f"{again[1]} rows"
+            return go("/queue", f"Added the {left} that did not finish to the Smart Queue. Work they saved is reused.",
+                      "ok")
         entry_id = make_service.retry(run_id)
         if entry_id is None:
             return go(f"/runs/{run_id}", "This run cannot be made again (its lecture file is missing).", "warn")

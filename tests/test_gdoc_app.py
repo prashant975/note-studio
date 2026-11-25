@@ -414,5 +414,119 @@ def test_the_guides_and_the_tour_name_it():
 
     assert any("Google Doc with tabs" in s for s in guides.for_path("/new")["steps"])
     assert any("Google Docs from a sheet" in s for s in guides.GUIDES["/automation"]["steps"])
-    assert whats_new.TOURS[0]["id"] == "2026-11-24-gdoc-bsc"
-    assert {s["href"] for s in whats_new.TOURS[0]["steps"]} == {"/settings/categories", "/new", "/automation#gdocs"}
+    assert any("Try the unfinished rows again" in s for s in guides.GUIDES["/runs"]["steps"])
+    tours = {tour["id"]: tour for tour in whats_new.TOURS}
+    assert whats_new.TOURS[0]["id"] == "2026-11-25-gdoc-again"
+    assert {s["href"] for s in tours["2026-11-25-gdoc-again"]["steps"]} == {"/runs", "/automation#gdocs"}
+    assert {s["href"] for s in tours["2026-11-24-gdoc-bsc"]["steps"]} == {"/settings/categories", "/new", "/automation#gdocs"}
+
+
+# ------------------------------------------------------------------ retries reuse what was saved
+def test_a_cut_short_pdf_export_is_not_accepted():
+    import fitz
+
+    made = fitz.open()
+    made.new_page().insert_text((72, 72), "Tab 1")
+    whole = made.tobytes()
+    assert gdoc_make.complete_pdf(whole)
+    assert not gdoc_make.complete_pdf(whole[: len(whole) // 2])          # Google's cut-short export
+    assert not gdoc_make.complete_pdf(b"<html>quota</html>")
+
+
+def test_a_retry_carries_on_with_the_checked_doc_instead_of_making_another(monkeypatch, tmp_path):
+    import sys
+    import types
+
+    from note_studio.typeset import render
+
+    monkeypatch.setitem(sys.modules, "pw_access", types.SimpleNamespace(new_task_id=lambda prefix: prefix + "-1"))
+    tabs = [{"n": 1, "title": "Tab 1", "folder": tmp_path}]
+    written, verified_docs = [], []
+    monkeypatch.setattr(gdoc_make, "read_source", lambda g, sid, folder, say: (
+        {"title": "Unit 1", "revisionId": "rev-7"}, [dict(t) for t in tabs]))
+    monkeypatch.setattr(gdoc_make, "style_all", lambda *a, **k: [{"tab": 1, "cost_inr": 0.0}])
+    def write_doc(google, source_id, document, tabs, *rest):
+        written.append(1)
+        tabs[0]["new_tab_id"] = "t.9"                                   # as the real writer records each tab
+        return {"document_id": "1FRESH", "url": gdoc_make.doc_url("1FRESH"), "title": "t", "tab_ids": ["t.9"],
+                "written_at": 2.0}
+    monkeypatch.setattr(gdoc_make, "write_doc", write_doc)
+    monkeypatch.setattr(gdoc_make, "verify_doc", lambda g, r, t: verified_docs.append((r["document_id"], t[0]["new_tab_id"]))
+                        or {"Tab 1": {"problems": []}})
+    monkeypatch.setattr(gdoc_make, "pages_and_marks", lambda g, r, t, logo, say: r.update(
+        watermark={"1": True}, header_logo={"1": True}, pages=120) or {1: b"%PDF"})
+    monkeypatch.setattr(gdoc_make, "quality_all", lambda *a, **k: [{"tab": 1, "verdict": "passed", "cost_inr": 9.0}])
+    alive = {"1EARLIER": True}
+    monkeypatch.setattr(gdoc_make, "in_drive", lambda g, doc: alive.get(doc, False))
+    folder = tmp_path / "r0003"
+    folder.mkdir()
+    earlier = {"document_id": "1EARLIER", "url": gdoc_make.doc_url("1EARLIER"), "title": "Unit 1 – Nursing Notes",
+               "tab_ids": ["t.0"], "source_id": DOC_A, "source_revision": "rev-7",
+               "verification": {"Tab 1": {"problems": []}}}
+    (folder / "result.json").write_text(json.dumps(earlier), "utf-8")
+    look = render.Branding(header_left="Nursing", header_right="Nursing Notes", pw_logo=True)
+    kwargs = dict(creds=object(), token_provider=lambda: "t", branding=look, style_models=["gemini-3.7-flash"],
+                  quality_models=["gemini-3.7-flash"])
+
+    result = gdoc_make.make(DOC_A, folder, **kwargs)
+    assert not written and result["resumed"] and result["document_id"] == "1EARLIER" and result["ok"]
+    assert verified_docs == [("1EARLIER", "t.0")]                        # checked again word for word
+
+    for change in ({"source_revision": "rev-6"}, {"verification": {"Tab 1": {"problems": ["x"]}}}, {"document_id": "1BINNED"}):
+        (folder / "result.json").write_text(json.dumps({**earlier, **change}), "utf-8")
+        assert gdoc_make.make(DOC_A, folder, **kwargs)["document_id"] == "1FRESH"
+    assert len(written) == 3
+
+
+def test_try_again_on_a_sheet_run_remakes_only_the_unfinished_rows_with_their_saved_work(client, signed_in, maker,
+                                                                                         monkeypatch):
+    cid = nursing(client)
+    sheets = FakeSheets(HEADER + [gdoc_sheet.HEADER], [row("A", hyperlink(DOC_A)), row("B", hyperlink(DOC_B))])
+    monkeypatch.setattr(gdoc_service, "sheets_client", lambda: sheets)
+    monkeypatch.setattr(gdoc_make.Google, "sheets", property(lambda self: sheets))
+    maker.outcomes[DOC_B] = {"ok": False}
+    link = f"https://docs.google.com/spreadsheets/d/{SHEET}/edit#gid={sheets.gid}"
+    client.post("/automation/docs/run", data={"sheet_link": link, "category": cid, "share": "on"})
+    assert job_queue.wait_idle(60)
+    first = db.query("SELECT * FROM runs WHERE source='gdoc_sheet'")[0]
+    saved = Path(first["run_dir"]) / "rows" / "r0003" / "tabs" / "01-tab-1"
+    saved.mkdir(parents=True)
+    (saved / "word_styles.json").write_text("{}", "utf-8")             # formatting the first attempt paid for
+    assert "Try the unfinished rows again" in client.get(f"/runs/{first['id']}").text
+
+    maker.outcomes.pop(DOC_B)
+    again = client.post(f"/runs/{first['id']}/again", follow_redirects=False)
+    assert "1 row" in unquote(again.headers["location"])
+    assert job_queue.wait_idle(60)
+    second = db.query("SELECT * FROM runs WHERE source='gdoc_sheet' ORDER BY id DESC")[0]
+    assert json.loads(second["options_json"])["again_from"] == first["id"] and second["state"] == "complete"
+    call = maker.calls[-1]
+    assert call["source_id"] == DOC_B and (call["folder"] / "tabs" / "01-tab-1" / "word_styles.json").is_file()
+    assert [c["source_id"] for c in maker.calls].count(DOC_A) == 1        # row 2 had its Doc: not made again
+    assert ("'Bsc Nursing Notes'!P3", gdoc_make.doc_url("1NEW" + DOC_B[4:])) in sheets.writes
+    nothing = client.post(f"/runs/{second['id']}/again", follow_redirects=False)
+    assert "nothing to make again" in unquote(nothing.headers["location"])
+
+
+def test_an_unexpected_failure_says_why_and_keeps_what_was_paid(client, signed_in, monkeypatch):
+    class HttpError(Exception):
+        resp = type("Resp", (), {"status": 400})()
+
+        def _get_reason(self):
+            return "Invalid requests[12].insertTable: The table must have at least one row."
+    cid = nursing(client)
+
+    def make(source_id, folder, **kwargs):
+        Path(folder).mkdir(parents=True, exist_ok=True)
+        (Path(folder) / "spent.json").write_text(json.dumps({"formatting_cost_inr": 1.25}), "utf-8")
+        raise HttpError()
+    monkeypatch.setattr(gdoc_service, "make_doc", make)
+    client.post("/new", data={"category": cid, "note_type": "typeset_gdoc", "subject": "auto", "language": "english",
+                              "doc_links": DOC_A})
+    assert job_queue.wait_idle(60)
+    run = db.query("SELECT * FROM runs WHERE note_type='typeset_gdoc'")[0]
+    assert run["state"] == "failed" and run["cost_inr"] == 1.25
+    assert run["error"] == ("Something went wrong while making the Google Doc. (Google answered 400: Invalid "
+                            "requests[12].insertTable: The table must have at least one row.)")
+    logged = (db.paths.logs_dir() / "gdoc.log").read_text("utf-8")
+    assert f"run {run['id']}" in logged and "HttpError" in logged

@@ -26,6 +26,14 @@ BOOT = uuid.uuid4().hex              # this start: a tour is shown once per star
 OMITTED = (["UPSC notes, Mains practice and DPP"] if "noupsc" in EDITION else []) + (
     ["PW Books"] if "nopwbooks" in EDITION else [])
 TOURS = [
+    dict(id="2026-11-25-gdoc-again", title="Google Docs from a sheet: Try again", steps=[
+        dict(title="Try the unfinished rows again", href="/runs", icon="arrow-right",
+             text="A Google Docs sheet run with rows that did not finish has Try the unfinished rows again on its page. Only those rows are made; the formatting they already paid for and any Doc that passed its checks are reused, so nothing is made twice."),
+        dict(title="Why a row did not finish", href="/runs", icon="info",
+             text="Each row that did not finish says why in plain words, and how much PW AI credit it had already used."),
+        dict(title="Long notes finish", href="/automation#gdocs", icon="file-text",
+             text="Very long notes (a tab of a thousand paragraphs or more) are formatted in parts, and a PDF that Google sends back cut short is asked for again, so these rows finish instead of stopping part way."),
+    ]),
     dict(id="2026-11-24-gdoc-bsc", title="B.Sc.-style Google Docs, from the app", steps=[
         dict(title="Ready in Nursing", href="/settings/categories", icon="shield",
              text="Nursing, and any category with the PW logo on its B.Sc.-style notes, offers Google Doc with tabs (B.Sc. style) by itself. Settings → Categories can switch it off, or on for B.Sc. Wallah."),

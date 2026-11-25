@@ -25,6 +25,10 @@
         <form method="post" action="/automation/stop" data-confirm="Stop after the row being made now? Rows not reached stay ready for the next run.">
           <button class="btn danger sm" type="submit">{{ ico.i('stop', 13) }} Stop after this row</button></form>
       {% elif run.sheet and not run.active %}
+        {% if run.gdoc_sheet and run.files | rejectattr('state', 'in', ['done', 'skipped']) | list %}
+        <form method="post" action="/runs/{{ run.id }}/again" data-confirm="Make the rows that did not finish again? What they saved (formatting, a checked Doc) is reused; the rest uses PW AI credit.">
+          <button class="btn sm primary" type="submit">{{ ico.i('arrow-right', 13) }} Try the unfinished rows again</button></form>
+        {% endif %}
         <a class="btn sm" href="/automation{{ '#gdocs' if run.gdoc_sheet }}">{{ ico.i('sheet', 13) }} Sheet automation</a>
       {% elif run.stoppable %}
         <form method="post" action="/runs/{{ run.id }}/stop" data-confirm="Stop making these notes now? What was paid for so far is not refunded, and the Smart Queue holds until you press Continue.">

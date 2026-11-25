@@ -1,5 +1,96 @@
 # Note Studio — Handoff (newest first)
 
+## Mac build gets its own version (2026.11.25.1); the 24 Nov fixes installed — 25 November 2026
+
+The user sent a screenshot of the installed Mac app's account menu: "Version 2026.11.19.1 · Development copy". They
+asked: "after new build also update the version name on frontend just like you are doing on qbg one and note craft".
+- Cause: only the Windows builder (`build_installer.py`) gave each build a new `YYYY.M.D.N`.
+  - `build_macos.py` copied the project's `release.json` as it was.
+  - `version.CHANNEL` knew only the Windows install layout, so the Mac app called itself a development copy.
+- `packaging/build_macos.py`:
+  - `mac_release()` gives the next version after the project's `note_studio/static/release.json`: the same day is
+    N + 1, a new day is .1. It keeps the release folder id.
+  - The version goes into the app's `release.json` and `Info.plist` (`CFBundleShortVersionString`/`CFBundleVersion`).
+  - It goes into the project's `release.json` only after the package check passes, so the next Mac or Windows build
+    counts on from it.
+- `note_studio/version.py`: `mac_app()` recognises the app's own runtime
+  (`NoteCraft.app/Contents/Resources/runtime`), and `CHANNEL` becomes "Mac app".
+  - `INSTALLED` stays False on the Mac. The updater's own check (`installed_root`, NoteCraft.exe) is unchanged.
+- What's new tour `2026-11-25-gdoc-again`:
+  - Try the unfinished rows again;
+  - why a row did not finish;
+  - long notes finish.
+- The Runs page guide has a step for Try the unfinished rows again.
+- Tests: +2 in `tests/test_installed.py`; `test_gdoc_app` updated for the new tour. **430 passed, 19 skipped.**
+- Build (user's go: "after new build"):
+  - The previous build was kept as `dist/NoteCraft-20261124b.{app,dmg}`.
+  - New `dist/NoteCraft.dmg`: 1,357,573,476 bytes, SHA-256
+    `225426a38403eaaf5dba2402ca148d2b9a9c0c4ce01129f52df79fcb5dd26fbc`.
+  - PACKAGE_OK. Log: `_build/build_macos_20261125.log`.
+- Install:
+  - Backups: the database (`~/NoteStudio_backups/note_studio-before-install-20261125-105442.db`, integrity ok) and the
+    categories.
+  - Nothing was waiting or running. Claude quit the copy it had opened itself on 24 Nov at 22:07.
+  - The old app is kept as `~/NoteStudio_backups/NoteCraft-installed-20261124b.app`.
+  - `ditto` → `/Applications/NoteCraft.app`; `diff -rq` shows it identical to the build.
+  - Reopened. The sign-in came back by itself, and the menu shows "Version 2026.11.25.1 · Mac app".
+- Gate:
+  - Compare: nothing lost, no original touched. Changed: the database and the sign-in token (app start).
+  - Engines: no diff against HEAD. Drift still says STOP on this Mac only because the originals are not here.
+- This build has every fix from the section below: parts, the complete-PDF check, resume, Try again, failure reasons.
+
+## 100 more "Bsc Nursing Notes" rows (2–107 all done); long tabs, cut-short exports, Try again — 24 November 2026 (night)
+
+The user asked: "make the next 100 rows from the sheet", then "and from the starting". So the run covered the first
+100 rows without a Doc from row 2: rows 2–15 and 22–107. Paid PW AI, Gemini 3.7, no spend cap.
+
+**Free size check first:** 15 rows are a whole unit in one tab of 900–3,743 paragraphs: 2–5, 7, 8, 11, 13, 73–76, 78–80.
+- The formatting call caps its answer at 12,000 tokens (about 600 choices), so those rows needed a fix.
+
+**Runs** (all show in the app's Runs page)
+
+| Run | What | Made | Time | ₹ (recorded) |
+|---|---|---|---|---|
+| 5 | 85 normal rows, from the installed app (3 at a time) | 84 + 1 failed (row 86) | 43 min | 180.89 |
+| 6 | 15 long rows, project code (`_build/bscn_long_rows_20261124.py`, 2 at a time) | 12 + 3 failed (rows 2, 3, 7) | 69 min | 249.22 |
+| 7 | Try again for rows 2, 3, 7 (`_build/bscn_retry_20261124.py`) | 3; the Docs of run 6 reused, no new formatting | 3 min | 24.15 |
+| 8 | Try again for row 86 | 1 | 1 min | 1.28 |
+
+- Not recorded in run 6 (old code): rows 2/3/7 formatting, ₹30.16. Not recorded in run 5: row 86's first formatting
+  (small).
+- **Total ≈ ₹487** for 100 notes.
+- Sheet check: rows 2–107 all have a distinct Google Doc link in P (105, with the 5 from earlier). Next: row 108.
+- Sign-in: after the reinstall, the app's one-time silent restore failed and a sign-in press timed out. Claude restarted
+  its own idle copy of the app and the restore worked.
+  - Suggestion: retry the silent restore later instead of only once.
+
+**Fixes in the project code** (NOT yet in the installed app, not committed)
+- `word_source.style`: a reference over 500 paragraphs (`STYLE_PART`) is formatted in parts.
+  - Each part is saved as `word_styles_part-NN.json`, so a retry pays only for missing parts.
+  - Each part may only choose for its own paragraphs; a reference of 500 or fewer still makes the one call it always did.
+- `gdoc_make.export_tab`: accepts only a complete PDF (`complete_pdf`: `%%EOF` and pypdf opens it).
+  - Google's export of three ~100-page tabs came back cut short, and the quality step failed on "EOF marker not found".
+- `gdoc_make.reusable`: a retry in a folder whose earlier attempt wrote and checked the Doc carries on with that Doc
+  (same source revision, still in Drive); it is checked word for word again. No duplicate Docs.
+- `gdoc_service`:
+  - A sheet run's "Try the unfinished rows again" (`retry_sheet`; payload `again_from` copies each row's saved folder).
+  - A failed row reports its paid formatting (`spent.json`) and a short reason, e.g. "Google answered 400: …".
+  - Full errors go to `~/.note_studio/logs/gdoc.log`.
+- Tests: 428 passed, 19 skipped (+3 in `test_typeset_word.py`, +4 in `test_gdoc_app.py`).
+
+**Quality flags, checked by hand.** Content is fine everywhere; the word-for-word check passed on every Doc.
+- Checker misreads (the source and the Doc have the spaces): rows 8, 54, 57, 60, 86, 103 and 104, plus row 2's
+  "diamond-shaped" (a normal line-end hyphen).
+- Source issues, kept: row 2 "opposites.directional" and "human bod"; row 3 heading joined into a bullet and a
+  "460 × 300" string; row 11 a bullet ending in ","; row 23 "Microminererals".
+- Layout points worth a look:
+  - row 31: a small diagram;
+  - row 38: a heading left at a page bottom, above its table;
+  - row 39: ion signs breaking in narrow table cells, and one bullet alone on the last page;
+  - row 57: a flowchart split across pages.
+- Gates: compare `_build/before_bscn_100_20261124.json` → `after_…`: nothing lost. 1,709 new files (runs 5–8);
+  changed: the database and the token.
+
 ## B.Sc.-style Google Docs from the app (New notes + Sheet automation); 5 "Bsc Nursing Notes" rows made — 24 November 2026
 
 The user reported that B.Sc.-style notes "were not made directly from the app", and that Sheet automation had no

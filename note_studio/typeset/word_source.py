@@ -183,6 +183,40 @@ def style_identity(data: bytes) -> dict:
             "prompt_sha256": hashlib.sha256(SYSTEM.encode()).hexdigest()}
 
 
+# A long reference (a whole Nursing unit in one Google Doc tab: up to ~3,700 paragraphs) is formatted in
+# parts. One answer is capped at 12,000 tokens, about 600 choices when the model lists every paragraph,
+# so a single call for a long tab would be cut off. Each part sees its own paragraphs in order and is
+# saved as it arrives, so a retry pays only for the parts still missing. A reference of up to STYLE_PART
+# paragraphs is formatted in one call, exactly as before.
+STYLE_PART = 500
+
+
+def _style_in_parts(entries: list[dict], identity: dict, folder: Path, session, models, schema, say) -> list[dict]:
+    parts = [entries[i:i + STYLE_PART] for i in range(0, len(entries), STYLE_PART)]
+    styles: list[dict] = []
+    for n, part in enumerate(parts, start=1):
+        ids = {e["id"] for e in part}
+        key = {**identity, "part": n, "parts": len(parts),
+               "entries_sha256": hashlib.sha256(json.dumps(part, ensure_ascii=False, sort_keys=True).encode()).hexdigest()}
+        saved_file = folder / f"word_styles_part-{n:02d}.json"
+        found = None
+        if saved_file.is_file():
+            saved = json.loads(saved_file.read_text("utf-8"))
+            if saved.get("identity") == key:
+                found = saved["response"]
+        if found is None:
+            say(f"Choosing B.Sc. formatting, part {n} of {len(parts)}", 30)
+            found = session.json(f"Word reference formatting {n}/{len(parts)}", models, SYSTEM,
+                                 [{"text": json.dumps(part, ensure_ascii=False)}], schema, max_tokens=12000)
+            saved_file.write_text(json.dumps({"identity": key, "response": found}, ensure_ascii=False, indent=2),
+                                  encoding="utf-8")
+        for selection in found.get("styles", []):
+            if selection.get("id") not in ids:
+                raise ai.AIError("AI returned an invalid Word formatting choice; source content was kept.")
+            styles.append(selection)
+    return styles
+
+
 def style(doc, manifest, folder, session, models, say):
     """Sparse appearance choices leave every source ID and string unchanged."""
     identity = {"source_sha256": manifest["source_sha256"], "revision": REVISION,
@@ -202,8 +236,11 @@ def style(doc, manifest, folder, session, models, say):
             "required": ["id", "role", "style"]}}}, "required": ["styles"]}
         entries = [{"id": b["source_id"], "role": b["role"], "text": b["text"]}
                    for b in doc["blocks"] if b["kind"] == "source_text" and b["role"] != "title"]
-        found = session.json("Word reference formatting", models, SYSTEM,
-                             [{"text": json.dumps(entries, ensure_ascii=False)}], schema, max_tokens=12000)
+        if len(entries) <= STYLE_PART:
+            found = session.json("Word reference formatting", models, SYSTEM,
+                                 [{"text": json.dumps(entries, ensure_ascii=False)}], schema, max_tokens=12000)
+        else:
+            found = {"styles": _style_in_parts(entries, identity, folder, session, models, schema, say)}
         cache.write_text(json.dumps({"identity": identity, "response": found}, ensure_ascii=False, indent=2), encoding="utf-8")
     by_id = {b["source_id"]: b for b in doc["blocks"]}
     seen = set()

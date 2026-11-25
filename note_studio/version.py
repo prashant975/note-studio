@@ -33,7 +33,16 @@ def setup_name(edition: str | None = None) -> str:
     return f"{brand.APP_NAME}_Setup" + suffixes[edition]
 
 
+def mac_app(executable: str | None = None) -> bool:
+    """The Mac build runs its own Python inside NoteCraft.app/Contents/Resources/runtime
+    (packaging/build_macos.py). It does not update itself, so INSTALLED stays False for it."""
+    here = Path(executable or sys.executable).resolve()
+    return any(folder.suffix == ".app" and here.is_relative_to(folder / "Contents" / "Resources" / "runtime")
+               for folder in here.parents)
+
+
 # An installed copy runs on its own Python beside the app (packaging/notecraft_setup.iss).
 INSTALLED = (Path(sys.executable).resolve().parent.name.lower() == "python"
              and Path(sys.executable).resolve().parent.parent.name.lower() == "_internal")
-CHANNEL = "team install" if INSTALLED else "development copy"
+MAC_APP = mac_app()
+CHANNEL = "team install" if INSTALLED else "Mac app" if MAC_APP else "development copy"

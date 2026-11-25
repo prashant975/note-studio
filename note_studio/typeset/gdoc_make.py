@@ -141,6 +141,21 @@ def downloader(google: Google, document: dict | None, say, workers: int = 8):
     return lambda uri: ready[uri] if uri in ready else download(uri)
 
 
+def complete_pdf(data: bytes) -> bool:
+    """A whole PDF: Google's export of a very long tab sometimes arrives cut short (no %%EOF), which the
+    quality check cannot open (24 Nov 2026, three ~100-page tabs)."""
+    if not data.startswith(b"%PDF") or b"%%EOF" not in data[-2048:]:
+        return False
+    try:
+        import io
+
+        from pypdf import PdfReader
+
+        return len(PdfReader(io.BytesIO(data), strict=True).pages) > 0
+    except Exception:  # noqa: BLE001 - any reading problem means "export again"
+        return False
+
+
 def export_tab(google: Google, document_id: str, tab_id: str, say) -> bytes:
     """One tab as a PDF (this form exports exactly that tab). Google limits exports per minute (429)."""
     import requests
@@ -150,9 +165,9 @@ def export_tab(google: Google, document_id: str, tab_id: str, say) -> bytes:
     for attempt in range(8):
         try:
             answer = google.authorized.get(url, timeout=(20, 300))
-            if answer.status_code == 200 and answer.content.startswith(b"%PDF"):
+            if answer.status_code == 200 and complete_pdf(answer.content):
                 return answer.content
-            problem = f"status {answer.status_code}"
+            problem = "an incomplete PDF" if answer.status_code == 200 else f"status {answer.status_code}"
         except requests.RequestException as exc:
             problem = type(exc).__name__
         say(f"Google is not ready to export a tab yet; waiting {20 * (attempt + 1)} s")
@@ -350,6 +365,36 @@ def quality_all(pdfs: dict[int, bytes], tabs: list[dict], token_provider, task_i
         return list(pool.map(one, tabs))
 
 
+def in_drive(google: Google, document_id: str) -> bool:
+    """The Doc still exists and is not in the bin."""
+    try:
+        found = google.drive.files().get(fileId=document_id, fields="trashed", supportsAllDrives=True).execute()
+    except Exception:  # noqa: BLE001 - gone, or no longer ours to open
+        return False
+    return not found.get("trashed")
+
+
+def reusable(google: Google, folder: Path, source_id: str, document: dict, tabs: list[dict]) -> dict | None:
+    """The Doc an earlier attempt in this folder made, when it can be carried on with: same source and
+    source revision, one tab per source tab, every tab passed the word-for-word check, and the Doc is still
+    in Drive. The caller checks it word for word again, so a Doc edited since is caught there."""
+    saved = folder / "result.json"
+    if not saved.is_file():
+        return None
+    try:
+        previous = json.loads(saved.read_text("utf-8"))
+    except (OSError, ValueError):
+        return None
+    checks = previous.get("verification") or {}
+    if (previous.get("source_id") != source_id or previous.get("source_revision") != document.get("revisionId")
+            or len(previous.get("tab_ids") or []) != len(tabs) or not checks
+            or any(v.get("problems") for v in checks.values()) or not previous.get("document_id")
+            or not in_drive(google, previous["document_id"])):
+        return None
+    keep = ("document_id", "url", "title", "tab_ids", "written_at")
+    return {k: previous[k] for k in keep if k in previous}
+
+
 # ------------------------------------------------------------------ one note
 def make(source_id: str, folder: Path, *, creds, token_provider, branding: render.Branding,
          style_models: list[str], quality_models: list[str], say: Callable = lambda *a: None,
@@ -377,8 +422,19 @@ def make(source_id: str, folder: Path, *, creds, token_provider, branding: rende
     say(f"AI is choosing the B.Sc. look for {len(tabs)} tab{'s' if len(tabs) != 1 else ''}; every word stays locked", 15)
     styled = style_all(tabs, token_provider, task_id, style_models, workers, say, label)
     spent = round(sum(s["cost_inr"] for s in styled), 4)
+    # Kept so a run that stops later still reports what this attempt paid for (see spent_before()).
+    (folder / "spent.json").write_text(json.dumps({"formatting_cost_inr": spent}), encoding="utf-8")
     title = f"{name} – {branding.header_right} (B.Sc. style)"
-    result = write_doc(google, source_id, document, tabs, branding, found_template, title, say)
+    result = reusable(google, folder, source_id, document, tabs)
+    if result is not None:
+        # An earlier attempt in this folder already wrote and checked this Doc (it stopped later, e.g. at a
+        # cut-short PDF export): carry on with it rather than make a second Doc. It is checked again below.
+        say("Carrying on with the Google Doc the earlier attempt made", 40)
+        for tab, new_tab in zip(tabs, result["tab_ids"]):
+            tab["new_tab_id"] = new_tab
+        result["resumed"] = True
+    else:
+        result = write_doc(google, source_id, document, tabs, branding, found_template, title, say)
     result.update(source_id=source_id, source_url=doc_url(source_id), source_title=name,
                   source_revision=document.get("revisionId"), models={"style": style_models, "quality": quality_models},
                   formatting_cost_inr=spent, template_id=found_template["template_id"])
@@ -400,6 +456,14 @@ def make(source_id: str, folder: Path, *, creds, token_provider, branding: rende
     result["seconds"] = round(time.time() - started)
     (folder / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     return result
+
+
+def spent_before(folder: Path) -> float:
+    """What an attempt that stopped with an error had already paid (its formatting), from spent.json."""
+    try:
+        return float(json.loads((Path(folder) / "spent.json").read_text("utf-8")).get("formatting_cost_inr") or 0.0)
+    except (OSError, ValueError, TypeError, AttributeError):
+        return 0.0
 
 
 def problems(result: dict) -> list[str]:

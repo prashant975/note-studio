@@ -104,3 +104,63 @@ def test_unreadable_word_structures_fail_before_a_token_or_charge(tmp_path):
     result = typeset.make_notes(buf.getvalue(), "Reference.docx", tmp_path, typeset.Settings(),
                                token_provider=lambda: pytest.fail("Unsupported input must fail before billing"))
     assert result.state == "failed" and "header or footer" in result.message and result.cost_inr == 0
+
+
+def _long_doc(paragraphs: int) -> tuple[dict, dict]:
+    blocks = [{"kind": "source_text", "source_id": "t0", "role": "title", "text": "Unit 1"}] + [
+        {"kind": "source_text", "source_id": f"p{i:04d}", "role": "paragraph", "text": f"Source paragraph {i}."}
+        for i in range(paragraphs)]
+    units = [{"id": b["source_id"], "texts": [b["text"]]} for b in blocks]
+    return {"title": "Unit 1", "preserve_source": True, "blocks": blocks}, {"source_sha256": "abc", "units": units}
+
+
+class PartSession:
+    """Answers each formatting call with a heading choice for the first paragraph it was sent."""
+
+    def __init__(self, fail_at: int = 0, stray: bool = False):
+        self.calls, self.fail_at, self.stray = [], fail_at, stray
+
+    def json(self, kind, models, system, parts, schema, **kwargs):
+        sent = json.loads(parts[0]["text"])
+        self.calls.append((kind, len(sent), kwargs.get("max_tokens")))
+        if self.fail_at and len(self.calls) == self.fail_at:
+            raise word_source.ai.AIError("PW AI's answer was cut off")
+        first = "p9999" if self.stray else sent[0]["id"]
+        return {"styles": [{"id": first, "role": "section", "style": "none"}]}
+
+
+def test_a_short_reference_is_still_formatted_in_one_call(tmp_path):
+    doc, manifest = _long_doc(word_source.STYLE_PART)
+    session = PartSession()
+    word_source.style(doc, manifest, tmp_path, session, [], lambda *a: None)
+    assert session.calls == [("Word reference formatting", word_source.STYLE_PART, 12000)]
+    assert not list(tmp_path.glob("word_styles_part-*.json"))
+
+
+def test_a_long_tab_is_formatted_in_parts_and_a_retry_pays_only_for_missing_parts(tmp_path):
+    doc, manifest = _long_doc(1203)                       # parts of 500, 500 and 203 paragraphs
+    first_try = PartSession(fail_at=2)
+    with pytest.raises(word_source.ai.AIError):
+        word_source.style(copy.deepcopy(doc), copy.deepcopy(manifest), tmp_path, first_try, [], lambda *a: None)
+    assert [c[1] for c in first_try.calls] == [500, 500]
+    assert (tmp_path / "word_styles_part-01.json").is_file() and not (tmp_path / "word_styles.json").exists()
+
+    retry = PartSession()
+    word_source.style(doc, manifest, tmp_path, retry, [], lambda *a: None)
+    assert retry.calls == [("Word reference formatting 2/3", 500, 12000), ("Word reference formatting 3/3", 203, 12000)]
+    roles = {b["source_id"]: b.get("role") for b in doc["blocks"]}
+    assert [sid for sid, role in roles.items() if role == "section"] == ["p0000", "p0500", "p1000"]
+    assert [b.get("text") for b in doc["blocks"]] == [u["texts"][0] for u in manifest["units"]]   # words unchanged
+    saved = json.loads((tmp_path / "word_styles.json").read_text("utf-8"))
+    assert len(saved["response"]["styles"]) == 3
+
+    cached = PartSession()                                # everything saved: no call at all
+    again, again_manifest = _long_doc(1203)
+    word_source.style(again, again_manifest, tmp_path, cached, [], lambda *a: None)
+    assert cached.calls == []
+
+
+def test_a_part_may_only_choose_for_its_own_paragraphs(tmp_path):
+    doc, manifest = _long_doc(800)
+    with pytest.raises(word_source.ai.AIError, match="invalid Word formatting choice"):
+        word_source.style(doc, manifest, tmp_path, PartSession(stray=True), [], lambda *a: None)

@@ -2,8 +2,13 @@
 
 Run with the project's .venv/bin/python. Use --dmg to also build an installer disk image.
 The runtime allowlist excludes local data and credentials.
+
+Each build gets the next version, YYYY.M.D.N, as the Windows builder does (build_version.py):
+it is written into the app (shown under the account menu) and its Info.plist, and into the
+project's note_studio/static/release.json once the build has passed its check.
 """
 import argparse
+import json
 from pathlib import Path
 import os
 import plistlib
@@ -13,6 +18,7 @@ import sys
 import sysconfig
 import tempfile
 
+import build_version
 import make_icon
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,6 +26,18 @@ NAME = "NoteCraft"
 ICON = NAME + ".icns"
 ENTRY = "run_studio.py"
 SOURCE_ROOTS = ["note_studio","engines","run_studio.py"]
+
+
+def mac_release(source: Path = build_version.RELEASE_FILE) -> dict:
+    """The next version after the project's (the same day: N + 1, else .1), keeping its release folder."""
+    release = build_version.next_release(source)
+    try:
+        previous = json.loads(Path(source).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        previous = {}
+    if isinstance(previous, dict) and previous.get("releases"):
+        release["releases"] = previous["releases"]
+    return release
 
 
 def build_app_icon(target: Path) -> None:
@@ -66,6 +84,8 @@ def main():
     disk_image = app.with_suffix(".dmg")
     if args.dmg and disk_image.exists():
         raise SystemExit(f"{disk_image} already exists. Move it aside before rebuilding.")
+    release = mac_release()
+    print(f"Building {NAME} {release['version']}")
     resources = app / "Contents/Resources"
     macos = app / "Contents/MacOS"
     resources.mkdir(parents=True)
@@ -95,6 +115,7 @@ def main():
         target = resources / "source" / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
+    build_version.write_release(resources / "source/note_studio/static/release.json", release)
     for engine in ("upsc", "pw_books", "notes_qc"):
         site = ROOT / "engines" / engine / ".venv/lib/python3.13/site-packages"
         if not site.is_dir():
@@ -119,16 +140,18 @@ def main():
     with (app / "Contents/Info.plist").open("wb") as stream:
         plistlib.dump({"CFBundleName": NAME, "CFBundleDisplayName": NAME,
                       "CFBundleIdentifier": "live.pw.NoteCraft", "CFBundleExecutable": "DesktopLauncher",
-                      "CFBundleIconFile": ICON,
-                      "CFBundleVersion": "1", "CFBundlePackageType": "APPL"}, stream)
+                      "CFBundleIconFile": ICON, "CFBundleShortVersionString": release["version"],
+                      "CFBundleVersion": release["version"], "CFBundlePackageType": "APPL"}, stream)
     with tempfile.TemporaryDirectory(prefix="mac-package-check-") as folder:
         env = dict(os.environ, STUDIO_ROOT=folder, NOTE_STUDIO_HOME=folder,
                    NOTE_STUDIO_OFFLINE="1", QBG_STUDIO_DB_PATH=str(Path(folder)/"qbg.db"),
                    PW_AUTH_STATE_DIR=str(Path(folder)/"auth"), QBG_PORTAL_AUTH_PATH=str(Path(folder)/"portal.json"))
         subprocess.run([str(launcher), "--check-package"], check=True, env=env)
-    print(f"Built and import-checked: {app}")
+    print(f"Built and import-checked: {app} ({NAME} {release['version']})")
     if args.dmg:
         build_disk_image(app, disk_image)
+    build_version.write_release(build_version.RELEASE_FILE, release)   # the next build counts on from this one
+    print(f"Version {release['version']} written to {build_version.RELEASE_FILE.relative_to(ROOT)}")
     print("Unsigned local app. Launch from Terminal or Finder; distribute only after signing/notarizing.")
 
 

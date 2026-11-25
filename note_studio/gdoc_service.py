@@ -17,6 +17,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
+import shutil
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -130,10 +132,41 @@ def _verdict(result: dict) -> tuple[str, str]:
     return "complete", f"Done: {words}."
 
 
+_PLAIN = (gdoc_make.GdocError, source.SourceError, ai.AIError, signin.SignInNeeded)
+
+
 def _failure_words(exc: BaseException) -> str:
-    if isinstance(exc, (gdoc_make.GdocError, source.SourceError, ai.AIError, signin.SignInNeeded)):
+    if isinstance(exc, _PLAIN):
         return str(exc)
     return "Something went wrong while making the Google Doc."
+
+
+def _detail(exc: BaseException) -> str:
+    """A short reason after an unexpected failure (e.g. Google's own answer), for whoever looks into it.
+    The whole error goes to ~/.note_studio/logs/gdoc.log."""
+    if isinstance(exc, _PLAIN):
+        return ""
+    status = getattr(getattr(exc, "resp", None), "status", None)
+    reason = ""
+    try:
+        reason = str(exc._get_reason()) if hasattr(exc, "_get_reason") else ""
+    except Exception:  # noqa: BLE001
+        reason = ""
+    words = f"Google answered {status}" if status else type(exc).__name__
+    return f" ({words}{': ' + reason[:140] if reason else ''})"
+
+
+def _log_failure(context: str, exc: BaseException) -> None:
+    import traceback
+
+    from . import paths
+
+    try:
+        with open(paths.logs_dir() / "gdoc.log", "a", encoding="utf-8") as handle:
+            handle.write(f"--- {time.strftime('%Y-%m-%d %H:%M:%S')} {context} ---\n")
+            handle.write("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
+    except OSError:
+        pass
 
 
 def execute(run: dict) -> None:
@@ -161,8 +194,10 @@ def execute(run: dict) -> None:
         return
     except Exception as exc:  # noqa: BLE001
         log.exception("gdoc run %s", run_id)
-        words = _failure_words(exc)
-        make_service.finish(run_id, "failed", words, error=words, detail=type(exc).__name__)
+        _log_failure(f"run {run_id}", exc)
+        words = _failure_words(exc) + _detail(exc)
+        make_service.finish(run_id, "failed", words, error=words, detail=type(exc).__name__,
+                            cost=gdoc_make.spent_before(folder))
         return
     if result.get("source_title"):
         db.execute("UPDATE runs SET title=? WHERE id=?", (result["source_title"][:200], run_id))
@@ -216,6 +251,27 @@ def enqueue_sheet(category: str, link: str, rows_spec: str, share: bool = True) 
     title = f"Google Docs from {found['tab']}: {count} row{'s' if count != 1 else ''}"
     entry_id, created = job_queue.submit(SHEET_KIND, title, payload, key="gdoc-" + json.dumps(payload, sort_keys=True))
     return entry_id, created, count
+
+
+def retry_sheet(run_id: int) -> tuple[int, int] | None:
+    """Try again for a finished sheet run: its rows that did not get a Doc, reusing what each one saved.
+    (item id, rows), or None when nothing is left to make."""
+    runs = db.query("SELECT * FROM runs WHERE id=? AND source='gdoc_sheet'", (run_id,))
+    if not runs or runs[0]["state"] in ("waiting", "running"):
+        return None
+    options = json.loads(runs[0]["options_json"] or "{}")
+    left = []
+    for found in db.query("SELECT label, state FROM run_items WHERE run_id=? ORDER BY position", (run_id,)):
+        number = re.match(r"Row (\d+) ·", found["label"] or "")
+        if number and found["state"] not in ("done", "skipped"):
+            left.append(int(number.group(1)))
+    if not left:
+        return None
+    payload = {k: options[k] for k in ("category", "spreadsheet_id", "gid", "tab", "share") if k in options}
+    payload.update(rows=left, again_from=int(run_id))
+    title = f"Google Docs from {options.get('tab', 'the sheet')}: {len(left)} row{'s' if len(left) != 1 else ''} again"
+    entry_id, _ = job_queue.submit(SHEET_KIND, title, payload, key=f"gdoc-again-{run_id}")
+    return entry_id, len(left)
 
 
 def stop_sheet(run_id: int) -> bool:
@@ -295,6 +351,11 @@ def _run_sheet(run_id: int, payload: dict, pack: dict, folder: Path) -> tuple[st
             return {"state": "skipped", "cost": 0.0}
         db.execute("UPDATE run_items SET state='running' WHERE id=?", (items[row["row"]],))
         row_folder = folder / "rows" / f"r{row['row']:04d}"
+        earlier = make_service.run_dir(int(payload["again_from"])) / "rows" / row_folder.name \
+            if payload.get("again_from") else None
+        if earlier is not None and earlier.is_dir() and not row_folder.exists():
+            # Try again: the earlier attempt's saved formatting, quality checks and checked Doc are reused.
+            shutil.copytree(earlier, row_folder, copy_function=shutil.copy2)
         try:
             result = make_doc(row["source_id"], row_folder, creds=creds, token_provider=token, branding=look,
                               style_models=style_models, quality_models=quality_models, share_domain=domain,
@@ -303,8 +364,10 @@ def _run_sheet(run_id: int, payload: dict, pack: dict, folder: Path) -> tuple[st
             raise
         except Exception as exc:  # noqa: BLE001
             log.exception("gdoc sheet run %s row %s", run_id, row["row"])
-            item(row, "failed", _failure_words(exc))
-            return {"state": "failed", "cost": 0.0}
+            _log_failure(f"sheet run {run_id} row {row['row']}", exc)
+            paid = gdoc_make.spent_before(row_folder)         # its formatting is saved for Try again
+            item(row, "failed", _failure_words(exc) + _detail(exc), "", paid)
+            return {"state": "failed", "cost": paid}
         state, message = _verdict(result)
         cost = float(result.get("total_cost_inr") or 0.0)
         if state == "failed":
