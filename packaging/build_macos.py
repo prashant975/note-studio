@@ -6,8 +6,17 @@ The runtime allowlist excludes local data and credentials.
 Each build gets the next version, YYYY.M.D.N, as the Windows builder does (build_version.py):
 it is written into the app (shown under the account menu) and its Info.plist, and into the
 project's note_studio/static/release.json once the build has passed its check.
+
+--without upsc (or pw_books) leaves that engine out, as the Windows builder does: the app then
+shows only what it carries, and updates only from its own edition's files.
+
+Updates (the app updates itself, updater.py): --zip writes dist/NoteCraft_Mac[_NoUPSC...]_<version>.zip,
+a zip of the whole app; --publish also puts it into the Mac release folder on Google Drive, read
+by every Mac install with its Google sign-in. The folder is saved in packaging/macos_release.json
+and built into each Mac app (release.json "releases"); --publish <folder link> changes it.
 """
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import os
@@ -20,12 +29,15 @@ import tempfile
 
 import build_version
 import make_icon
+from build_installer import CHILD_ENGINES, edition_release  # also puts the project on sys.path
+from note_studio.version import setup_name
 
 ROOT = Path(__file__).resolve().parents[1]
 NAME = "NoteCraft"
 ICON = NAME + ".icns"
 ENTRY = "run_studio.py"
 SOURCE_ROOTS = ["note_studio","engines","run_studio.py"]
+MAC_RELEASES = Path(__file__).resolve().parent / "macos_release.json"   # {"releases": <Drive folder id>}
 
 
 def mac_release(source: Path = build_version.RELEASE_FILE) -> dict:
@@ -38,6 +50,42 @@ def mac_release(source: Path = build_version.RELEASE_FILE) -> dict:
     if isinstance(previous, dict) and previous.get("releases"):
         release["releases"] = previous["releases"]
     return release
+
+
+def mac_folder(path: Path = MAC_RELEASES) -> str:
+    """The Mac release folder's Drive id, '' when none is saved yet."""
+    try:
+        return str(json.loads(Path(path).read_text(encoding="utf-8"))["releases"]).strip()
+    except (OSError, ValueError, KeyError, TypeError):
+        return ""
+
+
+def packaged(rel: str, engines) -> bool:
+    """Whether a project file goes into the app: the code, no tests, run data or sign-ins,
+    and only the engines this edition carries."""
+    if not rel or not any(rel == prefix or rel.startswith(prefix + "/") for prefix in SOURCE_ROOTS):
+        return False
+    path = Path(rel)
+    if rel.startswith("engines/") and len(path.parts) > 2 and path.parts[1] not in engines:
+        return False
+    if (set(path.parts) & {"tests", "__pycache__", "node_modules", ".venv", "runs", "output", "runtime"}
+            and not rel.startswith("data/examples/")):
+        return False
+    return not (path.name in {"token.json", "tokens.json", "credentials.json", "service_account.json",
+                              "client_secret.json"}
+                or path.name.startswith(".env") and path.name != ".env.example"
+                or path.suffix in {".log", ".db", ".sqlite3", ".pyc"})
+
+
+def publish(package: Path, version: str, folder: str, notes: str, edition: str) -> dict:
+    """The zip into the Mac release folder, as the person signed in to NoteCraft here."""
+    shortnotes = str(ROOT / "engines" / "shortnotes")          # the sign-in lives in its sheets_bridge
+    if shortnotes not in sys.path:
+        sys.path.insert(0, shortnotes)
+    from note_studio import updater
+
+    return updater.publish(package, version, folder, notes=notes, setup_prefix=setup_name(edition, mac=True),
+                           kind=".zip")
 
 
 def build_app_icon(target: Path) -> None:
@@ -72,6 +120,14 @@ def build_disk_image(app: Path, destination: Path) -> None:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dmg", action="store_true", help="Also build dist/NoteCraft.dmg for drag-to-Applications installation.")
+    parser.add_argument("--without", choices=("upsc", "pw_books"), action="append", default=[],
+                        help="Leave out this engine, as the Windows builder does; repeat for both.")
+    parser.add_argument("--zip", action="store_true",
+                        help="Also write the update: dist/NoteCraft_Mac[_edition]_<version>.zip (a zip of the app).")
+    parser.add_argument("--publish", nargs="?", const="saved", default="", metavar="FOLDER",
+                        help="Write the update and put it into the Mac release folder: the one saved in "
+                             "packaging/macos_release.json, or this Drive folder link (then saved).")
+    parser.add_argument("--notes", default="", help="What changed, shown in the update pop-up ('; ' between fixes).")
     args = parser.parse_args()
     if sys.platform != "darwin":
         raise SystemExit("Build macOS apps on macOS; use the existing Windows builder on Windows.")
@@ -84,8 +140,21 @@ def main():
     disk_image = app.with_suffix(".dmg")
     if args.dmg and disk_image.exists():
         raise SystemExit(f"{disk_image} already exists. Move it aside before rebuilding.")
+    release_folder = mac_folder()
+    if args.publish and args.publish != "saved":
+        from note_studio.updater import drive_folder_id
+
+        release_folder = drive_folder_id(args.publish)
+    if args.publish and not release_folder:
+        raise SystemExit("No Mac release folder is saved yet: pass --publish <Drive folder link>.")
     release = mac_release()
-    print(f"Building {NAME} {release['version']}")
+    bundle = edition_release(release, args.without)       # what this app carries and reads updates from
+    if release_folder:
+        bundle["releases"] = release_folder
+    package = ROOT / "dist" / f"{setup_name(bundle['edition'], mac=True)}_{release['version']}.zip"
+    if (args.zip or args.publish) and package.exists():
+        raise SystemExit(f"{package} already exists. Move it aside before rebuilding.")
+    print(f"Building {NAME} {release['version']} ({bundle['edition']}: {', '.join(bundle['engines'])})")
     resources = app / "Contents/Resources"
     macos = app / "Contents/MacOS"
     resources.mkdir(parents=True)
@@ -99,15 +168,7 @@ def main():
     files = subprocess.check_output(
         ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=ROOT).decode().split("\0")
     for rel in files:
-        if not rel or not any(rel == prefix or rel.startswith(prefix + "/") for prefix in SOURCE_ROOTS):
-            continue
-        path = Path(rel)
-        if (set(path.parts) & {"tests", "__pycache__", "node_modules", ".venv", "runs", "output", "runtime"}
-                and not rel.startswith("data/examples/")):
-            continue
-        if (path.name in {"token.json", "tokens.json", "credentials.json", "service_account.json", "client_secret.json"}
-                or path.name.startswith(".env") and path.name != ".env.example"
-                or path.suffix in {".log", ".db", ".sqlite3", ".pyc"}):
+        if not packaged(rel, bundle["engines"]):
             continue
         source = ROOT / rel
         if not source.is_file():
@@ -115,8 +176,10 @@ def main():
         target = resources / "source" / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
-    build_version.write_release(resources / "source/note_studio/static/release.json", release)
-    for engine in ("upsc", "pw_books", "notes_qc"):
+    build_version.write_release(resources / "source/note_studio/static/release.json", bundle)
+    for engine in CHILD_ENGINES:
+        if engine not in bundle["engines"]:
+            continue
         site = ROOT / "engines" / engine / ".venv/lib/python3.13/site-packages"
         if not site.is_dir():
             raise SystemExit(f"Missing environment: {site}. Run scripts/setup.py first.")
@@ -147,11 +210,25 @@ def main():
                    NOTE_STUDIO_OFFLINE="1", QBG_STUDIO_DB_PATH=str(Path(folder)/"qbg.db"),
                    PW_AUTH_STATE_DIR=str(Path(folder)/"auth"), QBG_PORTAL_AUTH_PATH=str(Path(folder)/"portal.json"))
         subprocess.run([str(launcher), "--check-package"], check=True, env=env)
-    print(f"Built and import-checked: {app} ({NAME} {release['version']})")
+    print(f"Built and import-checked: {app} ({NAME} {release['version']}, {bundle['edition']})")
     if args.dmg:
         build_disk_image(app, disk_image)
+    if args.zip or args.publish:
+        subprocess.run(["ditto", "-c", "-k", "--keepParent", app, package], check=True)
+        digest = hashlib.sha256()
+        with package.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        print(f"Update: {package} ({package.stat().st_size:,} bytes, SHA-256 {digest.hexdigest()})")
     build_version.write_release(build_version.RELEASE_FILE, release)   # the next build counts on from this one
     print(f"Version {release['version']} written to {build_version.RELEASE_FILE.relative_to(ROOT)}")
+    if args.publish:
+        published = publish(package, release["version"], release_folder, args.notes, bundle["edition"])
+        if published["sha256"] != digest.hexdigest():
+            raise SystemExit("The uploaded file does not match the update that was built.")
+        if release_folder != mac_folder():
+            MAC_RELEASES.write_text(json.dumps({"releases": release_folder}, indent=2) + "\n", encoding="utf-8")
+        print(f"Published: {published['link']}  Mac installs find it within five minutes.")
     print("Unsigned local app. Launch from Terminal or Finder; distribute only after signing/notarizing.")
 
 
@@ -174,7 +251,8 @@ resources = Path(__file__).resolve().parent
 source = resources / "source"
 os.environ["PATH"] = os.pathsep.join([str(Path.home()/".local/bin"), "/opt/homebrew/bin",
                                      "/usr/local/bin", os.environ.get("PATH", "")])
-for engine in ("upsc", "pw_books", "notes_qc"):
+engines = [e for e in ("upsc", "pw_books", "notes_qc") if (resources.parent/"MacOS"/e).is_file()]  # this edition's
+for engine in engines:
     os.environ["NOTE_STUDIO_"+engine.upper()+"_PYTHON"] = str(resources.parent/"MacOS"/engine)
 os.chdir(source)
 sys.path.insert(0, str(source))
@@ -182,7 +260,7 @@ if "--check-package" in sys.argv:
     from note_studio.app import app
     assert app
     import subprocess
-    for engine in ("upsc", "pw_books", "notes_qc"):
+    for engine in engines:
         subprocess.run([os.environ["NOTE_STUDIO_"+engine.upper()+"_PYTHON"], "-c", "import fitz,requests"], check=True)
     print("PACKAGE_OK")
 else:

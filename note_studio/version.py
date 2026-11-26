@@ -24,21 +24,29 @@ VERSION = str(_release().get("version") or "2026.10.4.1")
 EDITION = str(_release().get("edition") or "full")
 
 
-def setup_name(edition: str | None = None) -> str:
+def setup_name(edition: str | None = None, mac: bool = False) -> str:
+    """The release file's name before _<version>: NoteCraft_Setup[_NoUPSC...] (.exe, Windows)
+    or NoteCraft_Mac[_NoUPSC...] (.zip of NoteCraft.app). Each edition has its own."""
     edition = edition or EDITION
     suffixes = {"full": "", "noupsc": "_NoUPSC", "nopwbooks": "_NoPWBooks",
                 "noupsc-nopwbooks": "_NoUPSC_NoPWBooks"}
     if edition not in suffixes:
         raise ValueError(f"Unknown NoteCraft edition: {edition}")
-    return f"{brand.APP_NAME}_Setup" + suffixes[edition]
+    return f"{brand.APP_NAME}_{'Mac' if mac else 'Setup'}" + suffixes[edition]
+
+
+def mac_app_root(executable: str | None = None) -> Path | None:
+    """The NoteCraft.app this Python runs inside (Contents/Resources/runtime, packaging/build_macos.py),
+    or None. The Mac app updates itself from a .zip of the app (updater.py)."""
+    here = Path(executable or sys.executable).resolve()
+    for folder in here.parents:
+        if folder.suffix == ".app" and here.is_relative_to(folder / "Contents" / "Resources" / "runtime"):
+            return folder
+    return None
 
 
 def mac_app(executable: str | None = None) -> bool:
-    """The Mac build runs its own Python inside NoteCraft.app/Contents/Resources/runtime
-    (packaging/build_macos.py). It does not update itself, so INSTALLED stays False for it."""
-    here = Path(executable or sys.executable).resolve()
-    return any(folder.suffix == ".app" and here.is_relative_to(folder / "Contents" / "Resources" / "runtime")
-               for folder in here.parents)
+    return mac_app_root(executable) is not None
 
 
 # An installed copy runs on its own Python beside the app (packaging/notecraft_setup.iss).

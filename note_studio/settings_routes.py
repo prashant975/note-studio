@@ -68,7 +68,7 @@ def _packs() -> list[dict]:
                      "subject_choices": categories.subject_choices(pack),
                      "typeset": "typeset_notes" in (pack.get("note_types") or []),
                      "gdoc": categories.gdoc_offered(pack),
-                     "pw_logo": categories.pw_logo(pack)})
+                     "pw_logo": categories.pw_logo(pack), "from_pdf": categories.branding_from_pdf(pack)})
     return rows
 
 
@@ -195,6 +195,18 @@ def register(app, render, go):
                   "The next B.Sc.-style notes have the PW logo in the corner and the PW watermark." if on else
                   "The next B.Sc.-style notes have no PW logo or watermark.", "ok")
 
+    @app.post("/settings/categories/{category_id}/from_pdf")
+    async def switch_from_pdf(request: Request, category_id: str):
+        form = await request.form()
+        on = form.get("on") == "1"
+        try:
+            category_admin.set_from_pdf(category_id, on)
+        except category_admin.CategoryError as problem:
+            return go(f"/settings/categories?open={category_id}#cat-{category_id}", str(problem), "warn")
+        return go(f"/settings/categories?open={category_id}#cat-{category_id}",
+                  "The next B.Sc.-style notes take their header name and logo from the lecture PDF." if on else
+                  "The next B.Sc.-style notes use this category's own header words.", "ok")
+
     @app.post("/settings/categories/{category_id}/gdoc")
     async def switch_gdoc(request: Request, category_id: str):
         form = await request.form()
@@ -222,7 +234,7 @@ def register(app, render, go):
         form = await request.form()
         values = {"label": form.get("label"), "subjects": form.get("subjects"), "summary": form.get("summary"),
                   "rules": form.get("rules"), "languages": form.getlist("languages"),
-                  "note_types": form.getlist("note_types")}
+                  "note_types": form.getlist("note_types"), "from_pdf": form.get("from_pdf") == "1"}
         try:
             category_id = category_admin.add(values)
         except category_admin.CategoryError as problem:

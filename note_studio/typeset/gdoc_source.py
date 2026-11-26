@@ -60,9 +60,13 @@ def all_tabs(document: dict) -> list[dict]:
     return found
 
 
+CODE_BLOCK_MARK = ""   # Google Docs' hidden start/end of a code block: not text, and Docs refuses to insert it
+
+
 def _clean(text: str) -> str:
-    """Line breaks inside a paragraph become spaces; nothing else changes."""
-    return text.replace("\n", " ").replace("\x0b", " ").replace("\r", " ")
+    """Line breaks inside a paragraph become spaces, and a code block's hidden marker goes;
+    nothing else changes."""
+    return text.replace("\n", " ").replace("\x0b", " ").replace("\r", " ").replace(CODE_BLOCK_MARK, "")
 
 
 class _Reader:

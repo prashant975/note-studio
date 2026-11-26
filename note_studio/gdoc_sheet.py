@@ -7,6 +7,8 @@ link as plain text) names its source Google Doc. A made Doc's link goes into the
 - it is never written over a cell holding something else, nor into a row whose source link changed;
 - a missing column is added right after the last header in use, and only if the copied sheet automation
   (sheets_bridge.columns.Layout, read only) reads the tab exactly as before.
+
+The made Doc's PDF (gdoc_pdf.py) goes into the tab's own "Concise Notes Link" column, under the same rules.
 """
 from __future__ import annotations
 
@@ -112,7 +114,8 @@ def read(sheets, spreadsheet_id: str, tab: str) -> dict:
     if not data:
         raise SheetError("That tab is empty.")
     header = [(c.get("formattedValue") or "") for c in data[0].get("values") or []]
-    link_column = _layout(header).index("drive_link")
+    layout = _layout(header)
+    link_column, pdf_column = layout.index("drive_link"), layout.index("notes_link")
     if link_column is None:
         raise SheetError("That tab has no lecture link column (downloadable_link).")
     names = {name.strip().lower(): i for i, name in enumerate(header)}
@@ -129,9 +132,11 @@ def read(sheets, spreadsheet_id: str, tab: str) -> dict:
         if not source_id:
             continue
         done = (cells[column].get("formattedValue") or "").strip() if column is not None and column < len(cells) else ""
+        pdf = (cells[pdf_column].get("formattedValue") or "").strip() \
+            if pdf_column is not None and pdf_column < len(cells) else ""
         found.append({"row": n, "subject": text("subject"), "topic": text("lecture_topic"), "chapter": text("chapter"),
-                      "source_id": source_id, "link": done})
-    return {"header": header, "column": column, "link_column": link_column, "rows": found}
+                      "source_id": source_id, "link": done, "pdf": pdf})
+    return {"header": header, "column": column, "link_column": link_column, "pdf_column": pdf_column, "rows": found}
 
 
 def write_link(sheets, spreadsheet_id: str, tab: str, row_number: int, source_id: str, url: str) -> str:
@@ -158,4 +163,43 @@ def write_link(sheets, spreadsheet_id: str, tab: str, row_number: int, source_id
     data.append({"range": f"'{tab}'!{letter(column)}{row_number}", "values": [[url]]})
     sheets.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_id, body={
         "valueInputOption": "USER_ENTERED", "data": data}).execute()
+    return f"written to {letter(column)}{row_number}"
+
+
+def asked_again(call, tries: int, pause: float):
+    """call(), asked again after a dropped connection or a busy Google (408, 429, 5xx): `tries` in all,
+    `pause` times the attempt between them. A SheetError, or a refusal that asking again cannot change, is not."""
+    import time
+
+    for attempt in range(1, tries + 1):
+        try:
+            return call()
+        except SheetError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            status = getattr(getattr(exc, "resp", None), "status", None)
+            if attempt == tries or (status is not None and int(status) not in (408, 429, 500, 502, 503, 504)):
+                raise
+            time.sleep(pause * attempt)
+    raise AssertionError("unreachable")
+
+
+def write_pdf_link(sheets, spreadsheet_id: str, tab: str, row_number: int, made_id: str, url: str) -> str:
+    """A made Doc's PDF link into its row's "Concise Notes Link" cell: only while that row's column
+    "Google Doc (B.Sc. style)" still links the same Doc, only into an empty cell, and never by adding a
+    column (the sheet automation's own column must already be there)."""
+    current = read(sheets, spreadsheet_id, tab)
+    column = current["pdf_column"]
+    if column is None:
+        return "not written: the tab has no Concise Notes Link column"
+    row = next((r for r in current["rows"] if r["row"] == row_number), None)
+    if row is None or doc_id(row["link"]) != made_id:
+        return "not written: the row's Google Doc (B.Sc. style) link changed"
+    if row["pdf"] == url:
+        return "already there"
+    if row["pdf"]:
+        return f"not written: {letter(column)}{row_number} holds something else"
+    sheets.spreadsheets().values().batchUpdate(spreadsheetId=spreadsheet_id, body={
+        "valueInputOption": "USER_ENTERED",
+        "data": [{"range": f"'{tab}'!{letter(column)}{row_number}", "values": [[url]]}]}).execute()
     return f"written to {letter(column)}{row_number}"

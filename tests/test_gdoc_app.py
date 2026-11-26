@@ -416,7 +416,8 @@ def test_the_guides_and_the_tour_name_it():
     assert any("Google Docs from a sheet" in s for s in guides.GUIDES["/automation"]["steps"])
     assert any("Try the unfinished rows again" in s for s in guides.GUIDES["/runs"]["steps"])
     tours = {tour["id"]: tour for tour in whats_new.TOURS}
-    assert whats_new.TOURS[0]["id"] == "2026-11-25-gdoc-again"
+    ids = [tour["id"] for tour in whats_new.TOURS]
+    assert ids.index("2026-11-25-gdoc-again") == ids.index("2026-11-27-csir-net") + 1   # newest first
     assert {s["href"] for s in tours["2026-11-25-gdoc-again"]["steps"]} == {"/runs", "/automation#gdocs"}
     assert {s["href"] for s in tours["2026-11-24-gdoc-bsc"]["steps"]} == {"/settings/categories", "/new", "/automation#gdocs"}
 
@@ -530,3 +531,31 @@ def test_an_unexpected_failure_says_why_and_keeps_what_was_paid(client, signed_i
                             "requests[12].insertTable: The table must have at least one row.)")
     logged = (db.paths.logs_dir() / "gdoc.log").read_text("utf-8")
     assert f"run {run['id']}" in logged and "HttpError" in logged
+
+
+def test_a_dropped_connection_while_writing_a_link_is_asked_again_and_never_stops_the_run(client, signed_in, maker,
+                                                                                          monkeypatch):
+    # Run 11 (26 Nov) stopped at row 651: "Connection reset by peer" while re-reading the sheet to write a link.
+    cid = nursing(client)
+    sheets = FakeSheets(HEADER + [gdoc_sheet.HEADER], [row("Clinical Enzymology", hyperlink(DOC_A)),
+                                                       row("Introduction to Nutrition", hyperlink(DOC_B))])
+    monkeypatch.setattr(gdoc_service, "sheets_client", lambda: sheets)
+    monkeypatch.setattr(gdoc_make.Google, "sheets", property(lambda self: sheets))
+    monkeypatch.setattr(gdoc_service, "LINK_PAUSE", 0)
+    real, calls = gdoc_sheet.write_link, []
+
+    def flaky(service, spreadsheet_id, tab, number, source_id, url):
+        calls.append(number)
+        if number == 3 or calls.count(2) == 1:
+            raise ConnectionResetError(54, "Connection reset by peer")
+        return real(service, spreadsheet_id, tab, number, source_id, url)
+    monkeypatch.setattr(gdoc_sheet, "write_link", flaky)
+    link = f"https://docs.google.com/spreadsheets/d/{SHEET}/edit#gid={sheets.gid}"
+    client.post("/automation/docs/run", data={"sheet_link": link, "rows": "2-3", "category": cid, "share": "on"})
+    assert job_queue.wait_idle(60)
+    run = db.query("SELECT * FROM runs WHERE source='gdoc_sheet'")[0]
+    items = db.query("SELECT state, message, output_path FROM run_items WHERE run_id=? ORDER BY position", (run["id"],))
+    assert [i["state"] for i in items] == ["done", "failed"] and run["state"] == "needs_attention"
+    assert calls.count(2) == 2 and calls.count(3) == gdoc_service.LINK_TRIES
+    assert "Try again writes it" in items[1]["message"] and items[1]["output_path"].startswith("https://docs.google")
+    assert sheets.writes == [("'Bsc Nursing Notes'!P2", gdoc_make.doc_url("1NEW" + DOC_A[4:]))]

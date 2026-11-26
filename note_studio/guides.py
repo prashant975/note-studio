@@ -23,6 +23,7 @@ GUIDES = {
             "PowerPoints); each is made in turn. B.Sc. style also accepts Word references for Nursing and other categories. "
             "AI reads and checks PDF pages by default; Word content stays locked while AI chooses formatting. "
             "All content and its order are retained in the fixed B.Sc. template. Nursing notes carry the PW logo in the page corner and the PW watermark, as NEET/JEE notes do. "
+            "CSIR NET notes carry each lecture PDF's own header name and logo (e.g. CSIR NET - Life Sciences | Unit 1: Biochemistry). "
             "NEET/JEE quality checks review every final PDF page; inspect any issues in its quality report. Uses PW AI credit.",
             "Google Doc with tabs (B.Sc. style): paste the links of final-notes Google Docs, one per line. Each becomes an "
             "editable Google Doc in your Drive, one tab per source tab, with the PW logo and watermark; every word stays "
@@ -95,7 +96,8 @@ GUIDES = {
             f"Sign-in: choose once whether {APP} uses the old Short Notes app's sheets and sign-in, then sign in.",
             "AI models: the first model makes the notes. A gateway budget failure stops hand-drawn notes; ask the administrator to renew it.",
             "Categories: add a new exam, write its rules in plain sentences, check it, or switch it off. "
-            "For B.Sc.-style notes, add or remove the PW logo and watermark per category, and offer Google Docs "
+            "For B.Sc.-style notes, add or remove the PW logo and watermark per category, take the header name and "
+            "logo from each lecture PDF (as CSIR NET does) or use the category's own words, and offer Google Docs "
             "with tabs (made from final notes in a Google Doc).",
             "Values: the numbers the notes engine starts with. System: engines, Check setup and where your work is kept.",
             f"System → Updates: your version, Check for updates and the team's release folder. A newer {APP} shows "

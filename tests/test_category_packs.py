@@ -32,7 +32,7 @@ def _engine_json(code_or_script: list[str], packs: Path | None) -> dict:
 
 def test_seed_writes_the_built_in_packs_byte_for_byte():
     written = categories.seed()
-    assert set(written) == {"neet_jee", "foundation", "upsc", "bsc", "_template"}
+    assert set(written) == {"neet_jee", "foundation", "upsc", "bsc", "csir_net", "_template"}
     root = categories.packs_dir()
     for rule in (RULES / "foundation").glob("*.txt"):
         assert (root / "foundation" / "rules" / rule.name).read_bytes() == rule.read_bytes()

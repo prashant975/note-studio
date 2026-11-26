@@ -50,7 +50,7 @@ import time
 from pathlib import Path
 
 from . import brand, db, paths
-from .version import RELEASE_FILE, VERSION, setup_name
+from .version import EDITION, MAC_APP, RELEASE_FILE, VERSION, mac_app_root, setup_name
 
 log = logging.getLogger("note_studio.updater")
 FOLDER_SETTING = "update_folder"
@@ -58,7 +58,12 @@ CHECKED = "update_checked"
 STATE = "update_state"
 ERROR = "update_error"
 LAUNCHER = f"{brand.APP_NAME}.exe"
-SETUP = setup_name()                         # each edition has its own .exe and .txt names
+# The Mac app (NoteCraft.app) updates from NoteCraft_Mac[_edition]_<version>.zip, a zip of the
+# whole app; Windows from NoteCraft_Setup[_edition]_<version>.exe. Neither ever picks the other's.
+MAC = MAC_APP
+SETUP = setup_name(mac=MAC)                  # each edition has its own names
+KIND = ".zip" if MAC else ".exe"
+MAGIC = b"PK" if MAC else b"MZ"              # the first bytes of a zip / a Windows program
 MAX_BYTES = 2000 * 1024 * 1024               # the engines' libraries make NoteCraft larger than QBG
 FILES = "https://www.googleapis.com/drive/v3/files"
 UPLOAD = "https://www.googleapis.com/upload/drive/v3/files"
@@ -66,9 +71,14 @@ READ_SCOPE = "https://www.googleapis.com/auth/drive.readonly"
 FULL_SCOPE = "https://www.googleapis.com/auth/drive"       # publishing: an upload needs to see the folder
 TEAM = "the team's service account"
 PERSON = "your Google sign-in"
+NOT_SIGNED_IN = "Sign in with Google in Settings to check for updates."
 _VERSION = re.compile(r"^\d+(?:\.\d+){3}$")
-_NAME = re.compile(rf"^{re.escape(SETUP)}[_-](\d+(?:\.\d+){{3}})\.exe$", re.I)
-_NOTES = re.compile(rf"^{re.escape(SETUP)}[_-](\d+(?:\.\d+){{3}})\.txt$", re.I)
+def name_pattern(setup: str, suffix: str):
+    return re.compile(rf"^{re.escape(setup)}[_-](\d+(?:\.\d+){{3}}){re.escape(suffix)}$", re.I)
+
+
+_NAME = name_pattern(SETUP, KIND)
+_NOTES = name_pattern(SETUP, ".txt")
 NOTES_BYTES = 4000                           # a few lines of fixes; anything longer is cut
 _FOLDER = re.compile(r"(?:drive\.google\.com/drive/(?:u/\d+/)?folders/|^)([A-Za-z0-9_-]{10,})")
 _SECRET = re.compile(r"(?:ya29\.[0-9A-Za-z_\-.]+|1//0[0-9A-Za-z_\-]{20,}|AIza[0-9A-Za-z_\-]{30,}|GOCSPX-[0-9A-Za-z_\-]+"
@@ -89,6 +99,35 @@ $run = Start-Process -FilePath $Setup -ArgumentList '/VERYSILENT','/NORESTART','
 Set-Content -Path ($Log + '.result') -Value ('exit ' + $run.ExitCode)
 Start-Process -FilePath (Join-Path $Root '__LAUNCHER__') -WorkingDirectory $Root
 """.replace("__LAUNCHER__", LAUNCHER)
+
+# The Mac helper: the new app is already unpacked and checked (install). Waits for NoteCraft to
+# be gone, keeps the old app as the backup, moves the new one in and opens it. On any failure
+# the old app stays (or is put back) and is opened again. Arguments: APP NEW BACKUP LOG [OPEN].
+MAC_HELPER = r"""#!/bin/sh
+APP="$1"; NEW="$2"; BACKUP="$3"; LOG="$4"; OPEN="${5:-open}"
+exec >>"$LOG" 2>&1
+finish() {
+  echo "exit $1" > "$LOG.result"
+  echo "$(date '+%Y-%m-%d %H:%M:%S') exit $1"
+  $OPEN "$APP"
+  exit "$1"
+}
+ours() {   # processes whose program is inside this app (never one that only names it, like a Terminal command)
+  ps -axo pid=,comm= | awk -v app="$APP/Contents/" '{ pid = $1; $1 = ""; sub(/^ +/, ""); if (index($0, app) == 1) print pid }'
+}
+echo "$(date '+%Y-%m-%d %H:%M:%S') waiting for $APP to close"
+i=0
+while [ -n "$(ours)" ] && [ "$i" -lt 45 ]; do sleep 2; i=$((i + 1)); done
+left="$(ours)"
+if [ -n "$left" ]; then echo "still running after 90 s, closing: $left"; kill $left; sleep 2; fi
+[ -x "$NEW/Contents/MacOS/DesktopLauncher" ] || finish 3
+rm -rf "$BACKUP"
+mv "$APP" "$BACKUP" || finish 4
+if ! mv "$NEW" "$APP"; then mv "$BACKUP" "$APP"; finish 5; fi
+rmdir "$(dirname "$NEW")" 2>/dev/null
+xattr -dr com.apple.quarantine "$APP" 2>/dev/null
+finish 0
+"""
 
 
 def redact(text) -> str:
@@ -132,12 +171,13 @@ def require_edition(entry: dict) -> None:
 
 
 def installed_root(executable: str | None = None) -> Path | None:
-    """The folder holding NoteCraft.exe when this NoteCraft was installed; None from the project folder."""
+    """The folder holding NoteCraft.exe when this NoteCraft was installed, or the Mac's
+    NoteCraft.app; None from the project folder."""
     here = Path(executable or sys.executable).resolve()
     for folder in here.parents:
         if (folder / LAUNCHER).is_file():
             return folder
-    return None
+    return mac_app_root(str(here))
 
 
 # -------------------------------------------------------------------- source
@@ -256,7 +296,7 @@ def person_session():
     current = signin.auth()
     account = current.account() if current is not None else None
     if account is None:
-        raise PermissionError("Sign in with Google in Settings to check for updates.")
+        raise PermissionError(NOT_SIGNED_IN)
     return AuthorizedSession(account.creds)
 
 
@@ -313,8 +353,18 @@ def list_releases(drive=None) -> list[dict]:
                                            "supportsAllDrives": "true", "includeItemsFromAllDrives": "true",
                                            "pageSize": "100"}, timeout=30)
         if reply.status_code == 200:
+            files = reply.json().get("files") or []
+            # Drive answers an empty list, not an error, for a folder this account cannot see.
+            if not files and session.get(f"{FILES}/{src['folder_id']}", params={
+                    "fields": "id", "supportsAllDrives": "true"}, timeout=30).status_code != 200:
+                problems.append(
+                    f"The release folder is not shared with the team's service account ({team_account()}). "
+                    "Share it with that account as Viewer." if who == TEAM else
+                    f"The release folder is not shared with your Google account, so no update can be seen. "
+                    f"Ask whoever releases {brand.APP_NAME} to share it with you.")
+                continue
             _reader = session
-            return parse_files(reply.json().get("files") or [])
+            return parse_files(files)
         if who == TEAM:
             problems.append("The release folder could not be read with the team's service account (HTTP %d). Share "
                             "it with %s as Viewer, and check that the Drive API is on for its project."
@@ -434,6 +484,8 @@ def install(entry: dict, progress=None, drive=None, launcher=None) -> Path:
     problem = update_delivery.installation_problem()
     if problem:
         raise ValueError(problem)
+    if MAC:
+        return _install_mac(entry, root, setup, work, launcher)
     script = work / "update.ps1"
     script.write_text(HELPER, encoding="utf-8")
     log_path = work / f"install_{entry['version']}.log"
@@ -443,6 +495,60 @@ def install(entry: dict, progress=None, drive=None, launcher=None) -> Path:
     launcher = launcher or (lambda argv: subprocess.Popen(
         argv, cwd=str(work), close_fds=True,
         creationflags=getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)))
+    launcher(command)
+    return log_path
+
+
+def unpack_mac(entry: dict, package: Path) -> Path:
+    """The downloaded zip unpacked beside it, and checked: it must be NoteCraft.app of the
+    version and edition offered. Returns the new app; the zip is removed once it is unpacked."""
+    import shutil
+
+    stage = Path(package).parent / f"stage-{entry['version']}"
+    shutil.rmtree(stage, ignore_errors=True)
+    stage.mkdir(parents=True)
+    app = stage / f"{brand.APP_NAME}.app"
+    try:
+        unpacked = subprocess.run(["ditto", "-x", "-k", str(package), str(stage)], capture_output=True, text=True)
+        if unpacked.returncode != 0:
+            raise ValueError("The update could not be unpacked: " + (unpacked.stderr or "").strip()[:200])
+        try:
+            release = json.loads((app / "Contents/Resources/source/note_studio/static/release.json")
+                                 .read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            release = {}
+        if release.get("version") != entry["version"] or release.get("edition", "full") != EDITION:
+            raise ValueError(f"The download is not {brand.APP_NAME} {entry['version']} for this Mac; not installed.")
+        if not os.access(app / "Contents/MacOS/DesktopLauncher", os.X_OK) or \
+                not (app / "Contents/Resources/runtime/bin/python3.13").exists():
+            raise ValueError(f"The download is not a complete {brand.APP_NAME}.app; not installed.")
+    except Exception:
+        shutil.rmtree(stage, ignore_errors=True)
+        raise
+    Path(package).unlink(missing_ok=True)
+    return app
+
+
+def _install_mac(entry: dict, root: Path, package: Path, work: Path, launcher=None) -> Path:
+    """Unpack and check the new app, keep one backup place ready, start the helper (not our child)."""
+    import shutil
+
+    new_app = unpack_mac(entry, package)
+    backups = paths.home() / "update_backups"
+    backups.mkdir(parents=True, exist_ok=True)
+    for old in backups.glob(f"{brand.APP_NAME}-*.app"):        # one backup: the app being replaced
+        shutil.rmtree(old, ignore_errors=True)
+    backup = backups / f"{brand.APP_NAME}-{current_version()}.app"
+    script = work / "update.sh"
+    script.write_text(MAC_HELPER, encoding="utf-8")
+    script.chmod(0o755)
+    log_path = work / f"install_{entry['version']}.log"
+    for stale in (log_path, Path(str(log_path) + ".result")):
+        stale.unlink(missing_ok=True)
+    command = ["/bin/sh", str(script), str(root), str(new_app), str(backup), str(log_path)]
+    launcher = launcher or (lambda argv: subprocess.Popen(
+        argv, cwd=str(work), start_new_session=True, close_fds=True,
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
     launcher(command)
     return log_path
 
@@ -555,6 +661,7 @@ def status() -> dict:
             "state": state, "download_ready": ready, "automatic": True,
             "source": source(), "last_error": db.get_setting(ERROR, ""),
             "updated_at": str(release_info().get("updated_at") or ""), "setup_name": f"{SETUP}_<version>",
+            "package": f"{SETUP}_<version>{KIND}", "mac": MAC,
             "team_account": team_account(), "team_key_here": (paths.home() / "team_key.json").is_file()}
 
 
@@ -575,12 +682,12 @@ def _upload_problem(reply, who: str = PERSON) -> str:
 
 
 def upload_installer(installer, version: str, folder: str, notes: str = "", drive=None, who: str = PERSON,
-                     setup_prefix: str | None = None) -> dict:
-    """The installer into the release folder under the name every NoteCraft looks for."""
+                     setup_prefix: str | None = None, kind: str | None = None) -> dict:
+    """The installer (or the Mac app's .zip) into the release folder under the name every NoteCraft looks for."""
     installer = Path(installer)
     size = installer.stat().st_size
     drive = drive or drive_session(FULL_SCOPE)
-    meta = {"name": f"{setup_prefix or SETUP}_{version}.exe", "parents": [drive_folder_id(folder)],
+    meta = {"name": f"{setup_prefix or SETUP}_{version}{kind or KIND}", "parents": [drive_folder_id(folder)],
             "description": str(notes or "")[:300]}
     start = drive.post(UPLOAD + "?uploadType=resumable&supportsAllDrives=true", json=meta,
                        headers={"X-Upload-Content-Type": "application/octet-stream",
@@ -603,19 +710,20 @@ def upload_installer(installer, version: str, folder: str, notes: str = "", driv
 
 
 def publish(installer, version: str, folder: str, notes: str = "", drive=None,
-            setup_prefix: str | None = None) -> dict:
-    """What `build_installer.py --publish` does after building: as the team's service
-    account first (QBG's way; it goes through into a Shared drive), then as the person
-    signed in to NoteCraft on this computer (a person's Drive has storage)."""
+            setup_prefix: str | None = None, kind: str | None = None) -> dict:
+    """What `build_installer.py --publish` (and `build_macos.py --publish`) does after building:
+    as the team's service account first (QBG's way; it goes through into a Shared drive), then
+    as the person signed in to NoteCraft on this computer (a person's Drive has storage)."""
     if drive is not None:
-        return upload_installer(installer, version, folder, notes=notes, drive=drive, setup_prefix=setup_prefix)
+        return upload_installer(installer, version, folder, notes=notes, drive=drive, setup_prefix=setup_prefix,
+                                kind=kind)
     problems = []
     for who, make in ((TEAM, lambda: service_session(FULL_SCOPE)), (PERSON, person_session)):
         if who == TEAM and team_key() is None:
             continue
         try:
             return upload_installer(installer, version, folder, notes=notes, drive=make(), who=who,
-                                    setup_prefix=setup_prefix)
+                                    setup_prefix=setup_prefix, kind=kind)
         except PermissionError as exc:
             problems.append(str(exc))
     raise PermissionError(" ".join(problems) or "Nobody to publish as: add the team key or sign in.")

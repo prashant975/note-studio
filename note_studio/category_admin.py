@@ -90,6 +90,23 @@ def set_pw_logo(category_id: str, on: bool) -> None:
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def set_from_pdf(category_id: str, on: bool) -> None:
+    """B.Sc.-style notes take their header name and logo from each lecture PDF, or the category's own
+    words (a backup first). Only a category that makes B.Sc.-style notes has that header."""
+    pack = categories.get(category_id)
+    if not pack:
+        raise CategoryError("That category no longer exists.")
+    meta_path = Path(pack["folder"]) / "category.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    if on and "typeset_notes" not in (meta.get("note_types") or []):
+        raise CategoryError("Only a category that makes B.Sc.-style notes can take its header from the lecture PDF.")
+    shutil.copy2(meta_path, meta_path.with_name("category.json.bak"))
+    branding = meta.get("branding") if isinstance(meta.get("branding"), dict) else {}
+    branding["from_pdf"] = bool(on)
+    meta["branding"] = branding
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 GDOC_TYPE = categories.GDOC_TYPE
 
 
@@ -219,6 +236,8 @@ def add(form: dict) -> str:
                  "subject_auto": True, "languages": languages, "language_required": False, "note_types": chosen,
                  "default_note_type": chosen[0], "inputs": ["pdf_upload"]})
     meta.setdefault("branding", {})["signature_label"] = "Teacher name"
+    if form.get("from_pdf") and "typeset_notes" in chosen:      # B.Sc.-style: header name and logo from each PDF
+        meta["branding"]["from_pdf"] = True
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     first_rules = str(form.get("rules") or "").strip()
     if first_rules:

@@ -91,6 +91,19 @@ def test_every_paragraph_list_item_cell_and_picture_is_kept_in_order(tmp_path):
     assert texts[0] == "Anatomical Position" and "of the body" in texts and texts[-1].startswith("Posterior chest")
 
 
+def test_a_code_blocks_hidden_markers_are_not_text_but_its_words_stay(tmp_path):
+    # Google Docs marks a code block's start and end with U+E907, its own run, which Docs will not insert
+    # (row 411 of the Nursing sheet). Leading spaces then go as for any paragraph.
+    tab = nursing_tab()
+    tab["documentTab"]["body"]["content"].append(
+        para(run("", bold=True), run("      [ Standard Precautions ] (ALL patients)\n")))
+    tab["documentTab"]["body"]["content"].append(para(run("|\n")))
+    doc, manifest = gdoc_source.extract(gdoc_source.all_tabs(document(tab))[0], tmp_path, lambda uri: png())
+    texts = [b["text"] for b in doc["blocks"] if b["kind"] == "source_text"]
+    assert texts[-2:] == ["[ Standard Precautions ] (ALL patients)", "|"]
+    assert not any("" in t for u in manifest["units"] for t in u["texts"])
+
+
 @pytest.mark.parametrize("element, words", [
     ({"equation": {}}, "an equation"),
     ({"footnoteReference": {"footnoteNumber": "1"}}, "a footnote")])
@@ -590,3 +603,35 @@ def test_read_back_check_accepts_exact_content_and_names_a_change():
     problems = gdoc_writer.verify(blocks, units, changed)
     assert problems and "Paragraph 2 differs" in problems[0]
     assert "pictures" in " ".join(gdoc_writer.verify(blocks, units, dict(good, pictures=0)))
+
+
+class _Refused(Exception):
+    def __init__(self, status, content):
+        super().__init__(content)
+        self.resp, self.content = type("Resp", (), {"status": status})(), content
+
+
+class _Call:
+    def __init__(self, *answers):
+        self.answers, self.calls = list(answers), 0
+
+    def execute(self):
+        self.calls += 1
+        answer = self.answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+
+def test_drives_user_rate_limit_waits_and_tries_again_but_missing_access_does_not():
+    limit = _Refused(403, b'{"error": {"errors": [{"reason": "userRateLimitExceeded"}], '
+                          b'"message": "User rate limit exceeded."}}')
+    call = _Call(limit, {"id": "copy"})
+    assert gdoc_writer._execute(call, pause=0, outages=False) == {"id": "copy"} and call.calls == 2
+    denied = _Refused(403, b'{"error": {"errors": [{"reason": "forbidden"}], "message": "The caller does not have '
+                           b'permission"}}')
+    with pytest.raises(_Refused):
+        gdoc_writer._execute(_Call(denied, {"id": "never"}), pause=0)
+    with pytest.raises(_Refused):                       # a copy after an outage may exist: not made twice
+        gdoc_writer._execute(_Call(_Refused(503, b"backend error"), {"id": "twice"}), pause=0, outages=False)
+    assert gdoc_writer._execute(_Call(_Refused(503, b"backend error"), {"id": "batch"}), pause=0) == {"id": "batch"}

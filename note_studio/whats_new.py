@@ -16,7 +16,7 @@ import time
 import uuid
 
 from . import db
-from .version import EDITION
+from .version import EDITION, MAC_APP
 
 SHOWINGS = 2
 STATE = "whats_new_state"            # {tour id: {shown, boots, done, at}}
@@ -26,6 +26,18 @@ BOOT = uuid.uuid4().hex              # this start: a tour is shown once per star
 OMITTED = (["UPSC notes, Mains practice and DPP"] if "noupsc" in EDITION else []) + (
     ["PW Books"] if "nopwbooks" in EDITION else [])
 TOURS = [
+    dict(id="2026-11-27-csir-net", title="CSIR NET notes, with each PDF's own header and logo", steps=[
+        dict(title="CSIR NET in the B.Sc. template", href="/new", icon="file-text",
+             text="Make notes → CSIR NET: upload a lecture PDF. The notes come in the B.Sc. template, and the PDF's own header goes on every page: its name (e.g. CSIR NET - Life Sciences), its right-hand words (e.g. Unit 1: Biochemistry) and its logo when it has one."),
+        dict(title="For any category", href="/settings/categories", icon="layers",
+             text="Settings → Categories: set Header name and logo to Take them from each lecture PDF for any category with B.Sc.-style notes, or tick it when you add a category. A PDF without a header keeps the category's own words."),
+    ]),
+    *([dict(id="2026-11-25-mac-updates", title="NoteCraft updates itself on this Mac", steps=[
+        dict(title="Updates by itself", href="/settings/system#updates", icon="download",
+             text="A new NoteCraft for Mac downloads in the background and is checked. A pop-up then offers Install update: NoteCraft closes, puts the new version in Applications and opens again in about a minute. Your notes, runs and settings stay."),
+        dict(title="Never during a run", href="/settings/system#updates", icon="shield",
+             text="An update waits while notes are being made. The version you had is kept, so nothing is lost if an update does not finish."),
+    ])] if MAC_APP else []),
     dict(id="2026-11-25-gdoc-again", title="Google Docs from a sheet: Try again", steps=[
         dict(title="Try the unfinished rows again", href="/runs", icon="arrow-right",
              text="A Google Docs sheet run with rows that did not finish has Try the unfinished rows again on its page. Only those rows are made; the formatting they already paid for and any Doc that passed its checks are reused, so nothing is made twice."),

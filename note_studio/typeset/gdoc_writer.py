@@ -794,10 +794,22 @@ def page_requests(tab: str) -> list[dict]:
 
 
 # --------------------------------------------------------------------------- the document
-def _execute(call, pause: float = 8.0, tries: int = 12):
-    """Google's per-minute read/write limits (429) and brief outages (5xx) wait and retry (up to about
-    ten minutes, for several notes made at once). A batchUpdate applies all its requests or none, so a
-    retry never doubles content."""
+def rate_limited(exc) -> bool:
+    """Google's per-minute limits: 429, or Drive's 403 "userRateLimitExceeded" / "rateLimitExceeded"
+    (the template copy of row 764, 26 Nov). A 403 for missing access is not one."""
+    status = getattr(getattr(exc, "resp", None), "status", 0)
+    if status == 429:
+        return True
+    content = getattr(exc, "content", b"") or b""
+    text = (content.decode("utf-8", "ignore") if isinstance(content, bytes) else str(content)).lower()
+    return status == 403 and ("ratelimitexceeded" in text or "rate limit" in text)
+
+
+def _execute(call, pause: float = 8.0, tries: int = 12, outages: bool = True):
+    """Google's per-minute read/write limits and brief outages (5xx) wait and retry (up to about ten
+    minutes, for several notes made at once). A batchUpdate applies all its requests or none, so a
+    retry never doubles content. outages=False: only a refused request retries (a copy after a 5xx
+    may already exist)."""
     import time
 
     for attempt in range(tries):
@@ -805,7 +817,8 @@ def _execute(call, pause: float = 8.0, tries: int = 12):
             return call.execute()
         except Exception as exc:                       # noqa: BLE001 - only rate limits and outages retry
             status = getattr(getattr(exc, "resp", None), "status", 0)
-            if status not in (429, 500, 502, 503, 504) or attempt == tries - 1:
+            again = rate_limited(exc) or (outages and status in (500, 502, 503, 504))
+            if not again or attempt == tries - 1:
                 raise
             time.sleep(min(90.0, pause * (attempt + 1)))
 
@@ -1070,8 +1083,8 @@ def create_from_template(drive, docs, template_id: str, title: str, tabs: list[d
             f"The Google Doc template has {len(available)} tabs with the PW watermark but this note needs "
             f"{len(tabs)}. Open the template and duplicate its first tab {len(tabs) - len(available)} more "
             "times, then try again.")
-    made = drive.files().copy(fileId=template_id, body={"name": title}, fields="id",
-                              supportsAllDrives=True).execute()
+    made = _execute(drive.files().copy(fileId=template_id, body={"name": title}, fields="id",
+                                       supportsAllDrives=True), outages=False)
     document_id = made["id"]
     ids = template_tab_ids(docs, document_id)
     used, extra = ids[:len(tabs)], ids[len(tabs):]

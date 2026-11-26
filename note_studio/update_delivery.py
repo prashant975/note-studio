@@ -14,6 +14,7 @@ _lock = threading.Lock()
 _thread = None
 _poll_thread = None
 POLL_SECONDS = 300
+SIGNIN_WAIT = 30
 _stop = threading.Event()
 
 
@@ -22,7 +23,7 @@ def setup_path(entry):
     if not updater.parse_version(version) or len(digest)!=64 or any(c not in '0123456789abcdef' for c in digest):
         raise ValueError('The update does not have a verified release reference yet.')
     updater.require_edition(entry)
-    return paths.home()/'update_downloads'/(updater.SETUP+'_'+version+'_'+digest[:16]+'.exe')
+    return paths.home()/'update_downloads'/(updater.SETUP+'_'+version+'_'+digest[:16]+updater.KIND)
 
 
 def verified(entry, path):
@@ -33,7 +34,7 @@ def verified(entry, path):
         return False
     digest = hashlib.sha256()
     with path.open('rb') as handle:
-        if handle.read(2)!=b'MZ':
+        if handle.read(2)!=updater.MAGIC:   # a Windows installer, or the Mac app's zip
             return False
         handle.seek(0)
         for chunk in iter(lambda:handle.read(1024*1024), b''):
@@ -51,7 +52,7 @@ def prepare(entry, drive=None, progress=None):
     try:
         updater.download(entry,partial,drive=drive,progress=progress)
         if not verified(entry,partial):
-            raise ValueError('This file is not a verified Windows installer.')
+            raise ValueError('This file is not a verified ' + ('Mac update.' if updater.MAC else 'Windows installer.'))
         partial.replace(target)
     finally:
         partial.unlink(missing_ok=True)
@@ -114,14 +115,17 @@ def start_poller():
     _stop.clear()
     def loop():
         while not _stop.is_set():
+            wait = POLL_SECONDS
             try:
                 if updater.installed_root() and updater.source()['folder_id']:
                     result = updater.check()
                     if result.get('available'):
                         start_download(result['latest'])
+                    if result.get('error') == updater.NOT_SIGNED_IN:
+                        wait = SIGNIN_WAIT   # at start-up the sign-in comes back a few seconds later
             except Exception:
                 pass  # The status screen shows the check/download error and the next check retries.
-            _stop.wait(POLL_SECONDS)
+            _stop.wait(wait)
     _poll_thread = threading.Thread(target=loop,name='automatic-updates',daemon=True)
     _poll_thread.start()
 

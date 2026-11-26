@@ -1,0 +1,6 @@
+# CSIR NET rules for every subject. Plain commands, one per line; lines starting with # are notes for you.
+# The notes keep the lecture's own wording and order in the B.Sc. template; these commands are used when
+# notes are rewritten with AI. Subject-specific commands go in rules/<subject id>.txt.
+Write for CSIR NET (JRF and Lectureship) aspirants.
+Follow the lecture's own order and cover every topic it teaches; leave nothing out.
+Keep every formula, value, unit and worked example exactly as the lecture gives it.

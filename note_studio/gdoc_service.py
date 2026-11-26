@@ -32,6 +32,7 @@ log = logging.getLogger("note_studio.gdoc")
 TYPE = "typeset_gdoc"
 SHEET_KIND = "gdoc_sheet"
 PARALLEL = 3                     # notes made at the same time in a sheet run (as the 16-24 Nov batches)
+LINK_TRIES, LINK_PAUSE = 3, 3.0  # writing a row's link: tries, and seconds times the attempt between them
 MAX_LINKS = 50
 _stops: set[int] = set()
 _stop_lock = threading.Lock()
@@ -293,6 +294,14 @@ def _row_label(row: dict) -> str:
     return f"Row {row['row']} · {row.get('topic') or row['source_id'][:10]}"[:200]
 
 
+def write_link(google, payload: dict, row: dict, url: str) -> str:
+    """The row's Doc link into the sheet. A dropped connection or a busy Google is asked again
+    (LINK_TRIES in all); a refusal that reading again cannot change is not."""
+    return gdoc_sheet.asked_again(lambda: gdoc_sheet.write_link(google.sheets, payload["spreadsheet_id"], payload["tab"],
+                                                                row["row"], row["source_id"], url),
+                                  LINK_TRIES, LINK_PAUSE)
+
+
 def launch_sheet(entry: dict) -> tuple[str, str, int | None]:
     """The Sheets lane's launcher for a Google Docs sheet run."""
     payload = entry["payload"]
@@ -373,8 +382,14 @@ def _run_sheet(run_id: int, payload: dict, pack: dict, folder: Path) -> tuple[st
         if state == "failed":
             item(row, "failed", message, result.get("url", ""), cost)
             return {"state": "failed", "cost": cost}
-        result["sheet"] = gdoc_sheet.write_link(google.sheets, payload["spreadsheet_id"], payload["tab"], row["row"],
-                                                row["source_id"], result["url"])
+        try:
+            result["sheet"] = write_link(google, payload, row, result["url"])
+        except Exception as exc:  # noqa: BLE001 - one row's link, never the whole run (run 11 stopped on a reset)
+            log.exception("gdoc sheet run %s row %s link", run_id, row["row"])
+            _log_failure(f"sheet run {run_id} row {row['row']} link", exc)
+            item(row, "failed", "Made and checked, but Google did not let its link be written into the sheet"
+                 + _detail(exc) + ". Try again writes it, using this Doc.", result["url"], cost)
+            return {"state": "failed", "cost": cost}
         _report(row_folder, result)
         note = message if state == "needs_attention" else ""
         if not result["sheet"].startswith(("written", "already")):

@@ -88,7 +88,7 @@ def seed() -> list[str]:
             "rules_dir": "rules", "seeded_from": "engines/shortnotes/notesbot/format_rules/" + cid,
         })
         written.append(cid)
-    for name in ("upsc", "bsc", "_template"):
+    for name in ("upsc", "bsc", "csir_net", "_template"):
         if not (root / name).exists() and (BUILTIN_DIR / name).is_dir():
             shutil.copytree(BUILTIN_DIR / name, root / name, copy_function=shutil.copy2)
             written.append(name)
@@ -198,6 +198,12 @@ def pw_logo(pack: dict | None) -> bool:
         return False
     value = (pack.get("branding") or {}).get("pw_logo")
     return value if isinstance(value, bool) else pack.get("builtin") is not True
+
+
+def branding_from_pdf(pack: dict | None) -> bool:
+    """Whether the category's B.Sc.-style notes take their header name and logo from each lecture PDF
+    (branding.from_pdf; Settings -> Categories) instead of the category's fixed words (CSIR NET)."""
+    return bool(pack) and (pack.get("branding") or {}).get("from_pdf") is True
 
 
 GDOC_TYPE = "typeset_gdoc"

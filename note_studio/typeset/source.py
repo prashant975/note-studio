@@ -236,8 +236,15 @@ def _reference_groups(entries: list) -> list:
     return out
 
 
-def extract(pdf_bytes: bytes, folder: Path, *, title: str = "", transcriptions: dict | None = None) -> tuple[dict, dict]:
+def extract(pdf_bytes: bytes, folder: Path, *, title: str = "", transcriptions: dict | None = None,
+            furniture: dict | None = None) -> tuple[dict, dict]:
+    """furniture: the lecture's own running header (source_brand.furniture) when the notes print it in
+    their own header: its lines at the page's top, bare page numbers and its logo are left out."""
     import fitz
+
+    from .source_brand import is_furniture, is_logo
+
+    header_words = (furniture or {}).get("words") or set()
 
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
@@ -283,6 +290,11 @@ def extract(pdf_bytes: bytes, folder: Path, *, title: str = "", transcriptions: 
                     exclusions.append({"page": page.number+1, "text": "", "reason": "visual transcription identified a nonacademic page"})
                     continue
                 for item in transcript["items"]:
+                    if furniture and item["kind"] in {"heading", "paragraph", "list"} and \
+                            is_furniture(item["text"], item["bbox"][1] / 1000, header_words):
+                        exclusions.append({"page": page.number+1, "text": normal(item["text"]),
+                                           "reason": "the lecture's running header or page number (in the notes' header now)"})
+                        continue
                     rect = fitz.Rect(item["bbox"][0]*page.rect.width/1000, item["bbox"][1]*page.rect.height/1000,
                                      item["bbox"][2]*page.rect.width/1000, item["bbox"][3]*page.rect.height/1000)
                     if item["kind"] in {"equation", "table", "diagram"}:
@@ -315,9 +327,15 @@ def extract(pdf_bytes: bytes, folder: Path, *, title: str = "", transcriptions: 
             for block in textblocks:
                 if _decoration(block, page.rect.height):
                     exclusions.append({"page": page.number+1, "text": _text(block), "reason": "reference running header/footer"})
+                elif header_words and is_furniture(_text(block), block["bbox"][1] / page.rect.height, header_words):
+                    exclusions.append({"page": page.number+1, "text": _text(block),
+                                       "reason": "the lecture's running header or page number (in the notes' header now)"})
                 else:
                     body.append(block)
             images = [fitz.Rect(i["bbox"]) & page.rect for i in page.get_image_info()]
+            for rect in [r for r in images if is_logo(r, furniture)]:
+                images.remove(rect)
+                exclusions.append({"page": page.number+1, "text": "", "reason": "the lecture's header logo (in the notes' header now)"})
             drawings = page.get_drawings()
             if not body or any(True for _ in page.annots()):
                 raise LayoutRequired(page.number)
