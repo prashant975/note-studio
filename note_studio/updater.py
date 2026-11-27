@@ -621,6 +621,18 @@ def start_update(entry: dict | None = None):
     return thread
 
 
+def drop_backups() -> list[str]:
+    """The Mac update keeps the replaced app only until the new version opens; then it goes
+    (about 2 GB each; the user asked on 27 Nov 2026 that no old version be kept)."""
+    import shutil
+
+    removed = []
+    for old in (paths.home() / "update_backups").glob(f"{brand.APP_NAME}-*.app"):
+        shutil.rmtree(old, ignore_errors=True)
+        removed.append(old.name)
+    return removed
+
+
 def settle_state() -> dict:
     """What the last update left behind, read against what is running now."""
     state = _json(STATE)
@@ -630,6 +642,7 @@ def settle_state() -> dict:
     if state.get("state") == "installing":
         if state.get("version") == current:
             state = _state(state="done", version=current, message=f"Updated to {current}.")
+            drop_backups()
         else:
             result = Path(str(state.get("log") or "") + ".result")
             if result.is_file():

@@ -41,7 +41,8 @@ GUIDES = {
         "title": "How Audio notes work",
         "steps": [
             "When a chapter is finished, pick its category and add every day's lecture notes (PDFs), named by lecture "
-            "so they join in order: Lecture 1, Lecture 2 … Lecture 10. One merged PDF works too.",
+            "so they join in order: Lecture 1, Lecture 2 … Lecture 10. One merged PDF works too, or one ZIP of the "
+            "PDFs: the app opens it, and the ZIP's name becomes the chapter name when that is empty.",
             "Write the teacher's name: the two friends thank them, as the team's prompt does with \"Rahul Sir\". "
             "More options: the friends' names, their voices, and extra instructions.",
             "Press Make audio notes. PW AI writes the Hinglish script, checks every line against the notes and speaks "

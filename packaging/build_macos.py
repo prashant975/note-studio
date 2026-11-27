@@ -133,6 +133,37 @@ def build_disk_image(app: Path, destination: Path) -> None:
     print(f"Built installer: {destination}")
 
 
+def old_build(path: Path) -> bool:
+    """A Mac build output in dist/: the app, a disk image, an update zip, or a kept-* folder."""
+    name = path.name
+    return ((name.startswith("kept-") and path.is_dir())
+            or (name.startswith(NAME) and path.suffix in (".app", ".dmg"))
+            or (name.startswith(f"{NAME}_Mac") and path.suffix == ".zip"))
+
+
+def clear_old_builds(dist: Path, running: str | None = None) -> list[str]:
+    """No earlier version is kept (the user, 27 Nov 2026, after 51 GB of old copies filled the
+    Mac): dist/'s earlier Mac builds go before a new one. The installed app is in /Applications
+    and each published zip in the team folder. One that is open is left, and the build stops."""
+    if not dist.is_dir():
+        return []
+    if running is None:
+        running = subprocess.run(["ps", "-axo", "comm="], capture_output=True, text=True).stdout
+    removed = []
+    for old in sorted(dist.iterdir()):
+        if not old_build(old):
+            continue
+        inside = str(old.resolve()) + "/"
+        if any(line.strip().startswith(inside) for line in running.splitlines()):
+            raise SystemExit(f"{old} is open. Quit it, then build again.")
+        if old.is_dir() and not old.is_symlink():
+            shutil.rmtree(old)
+        else:
+            old.unlink()
+        removed.append(old.name)
+    return removed
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dmg", action="store_true", help="Also build dist/NoteCraft.dmg for drag-to-Applications installation.")
@@ -156,11 +187,9 @@ def main():
     if not (runtime / "BUILD").exists() or "cpython-3.13" not in runtime.name:
         raise SystemExit("Use a relocatable uv Python 3.13 environment (uv python install 3.13; recreate .venv).")
     app = ROOT / "dist" / (NAME + ".app")
-    if app.exists():
-        raise SystemExit(f"{app} already exists. Move that generated app aside before rebuilding.")
+    for name in clear_old_builds(ROOT / "dist"):
+        print(f"Removed the earlier build: dist/{name}")
     disk_image = app.with_suffix(".dmg")
-    if args.dmg and disk_image.exists():
-        raise SystemExit(f"{disk_image} already exists. Move it aside before rebuilding.")
     release = mac_release()
     bundle = edition_release(release, args.without)       # what this app carries and reads updates from
     if not bundle.get("releases"):
@@ -175,8 +204,6 @@ def main():
     print("Updates from the team release folder, read with "
           + (f"the team's service account {team_email}" if team_key else "each Mac's Google sign-in (no team key)"))
     package = ROOT / "dist" / f"{setup_name(bundle['edition'], mac=True)}_{release['version']}.zip"
-    if (args.zip or args.publish) and package.exists():
-        raise SystemExit(f"{package} already exists. Move it aside before rebuilding.")
     print(f"Building {NAME} {release['version']} ({bundle['edition']}: {', '.join(bundle['engines'])})")
     resources = app / "Contents/Resources"
     macos = app / "Contents/MacOS"

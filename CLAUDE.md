@@ -41,6 +41,16 @@ which phase is done.
   user says so in the current conversation.
 - **Releases.** Every release with a user-facing feature adds a
   `whats_new.TOURS` entry and updates the page guide.
+- **No old app versions are kept** (the user, 27 Nov 2026: about 51 GB of
+  old NoteCraft copies filled the Mac).
+  - `build_macos.py` clears dist/'s earlier Mac builds itself. Never move a
+    build aside to `dist/kept-*`.
+  - Never copy the installed app to `~/NoteStudio_backups` before an install.
+    A small copy of the database and categories is fine.
+  - The self-update removes its `update_backups` app once the new version
+    opens.
+  - Windows: `build_installer.py` keeps 1 build by default; don't pass a
+    larger `--keep`.
 - **File safety.**
   - Glob before creating a file; grep for a URL before adding a route.
   - Use Write/Edit, not heredocs.

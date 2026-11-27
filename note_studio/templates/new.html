@@ -154,10 +154,10 @@
       {% elif is_audio %}
       <h2>The chapter's lecture PDFs</h2>
       <label class="dropzone" data-dropzone data-ordered>
-        <input type="file" name="files" accept="application/pdf,.pdf" multiple required data-files>
+        <input type="file" name="files" accept="application/pdf,.pdf,application/zip,.zip" multiple required data-files>
         <span class="dz-ico">{{ ico.i('download', 22) }}</span>
-        <span class="dz-main">Drop every lecture PDF of one chapter here, or <u>choose files</u></span>
-        <span class="dz-sub">Up to 20 PDFs, {{ chosen.max_file_mb or 100 }} MB each, or one PDF that is already merged. They are joined in the order of their names (Lecture 1, Lecture 2 … Lecture 10), so name them by lecture. The whole chapter becomes one audio episode.</span>
+        <span class="dz-main">Drop every lecture PDF of one chapter here, or one ZIP of them, or <u>choose files</u></span>
+        <span class="dz-sub">Up to 20 PDFs, {{ chosen.max_file_mb or 100 }} MB each, or one PDF that is already merged, or a ZIP holding the PDFs (the app opens it; other files in it are left out, and the ZIP's name becomes the chapter name when that is empty). They are joined in the order of their names (Lecture 1, Lecture 2 … Lecture 10), so name them by lecture. The whole chapter becomes one audio episode.</span>
         <span class="dz-list" data-file-list></span>
       </label>
       {% else %}

@@ -844,7 +844,9 @@ def main():
                              f'computer\'s {APP} Settings -> Updates), so every install reads the release folder.')
     parser.add_argument('--no-team-key', action='store_true', help='Build without the team key.')
     parser.add_argument('--iscc', default='', help='Path to Inno Setup 6 ISCC.exe.')
-    parser.add_argument('--keep', type=int, default=3, help='How many builds to keep (default 3).')
+    parser.add_argument('--keep', type=int, default=1,
+                        help='How many builds to keep (default 1: no earlier version is kept, the user\'s rule of '
+                             '27 Nov 2026; each published installer is in the team folder).')
     parser.add_argument('--keep-package', action='store_true', help='Keep the staged package folder.')
     parser.add_argument('--resume-work', type=Path,
                         help='Reuse staged runtime/libraries after a failed build; re-copy code and rerun every check.')

@@ -1,8 +1,9 @@
 """Audio notes from the app: a finished chapter's lecture PDFs, uploaded on New notes, become
 one Smart Queue item and one run (the Notes lane makes it with engines/audio.py).
 
-    submit_chapter   the form: every lecture PDF of one chapter, put in lecture order
-    execute          the run: join, script, check, voice (or the voice alone for a fixed script)
+    submit_chapter   the form: every lecture PDF of one chapter (or a ZIP of them), put in lecture order
+    unpack           a ZIP among the uploads -> the lecture PDFs inside it (Python's zipfile, no program)
+    execute         the run: join, script, check, voice (or the voice alone for a fixed script)
     speak_script     the run page's "Make the audio": the script as the team fixed it, a new run
     retry            Try again / Make again; a run that stopped part way reuses its script and parts
     reuse            what a new run copies from the run it came from (launch calls it)
@@ -12,11 +13,13 @@ Later the chapter's lectures will come from a sheet; for now they are uploaded h
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import re
 import shutil
 import time
-from pathlib import Path
+import zipfile
+from pathlib import Path, PurePosixPath
 
 from . import db, job_queue, make_service, models, requirements
 from .audio import chapter
@@ -27,6 +30,7 @@ from .engines import audio as audio_engine
 TYPE = "audio_notes"
 SOURCE = "audio"
 MAX_FILES = 20
+MAX_ZIP_MB = 1000                       # one ZIP of a whole chapter's lectures
 SCRIPT_FILE = "script.txt"
 _KEPT_OUT = ("file", "files", "lectures", "requirements", "queue_id", "sign_in_problem", "voice_only", "from_run")
 
@@ -47,17 +51,79 @@ def _names_and_voices(options: dict) -> None:
         raise make_service.FormError("Choose two different voices, so the two friends sound different.")
 
 
+def is_zip(name: str, data: bytes) -> bool:
+    """By its name: a Word or PowerPoint file is a ZIP inside too, and stays "not a PDF"."""
+    return str(name).strip().lower().endswith(".zip")
+
+
+def unpack(files: list[tuple[str, bytes]], limit_mb: int = 100) -> list[tuple[str, bytes]]:
+    """The uploads with each ZIP replaced by the PDFs inside it; other files pass unchanged.
+    Folders the ZIP's PDFs all share (a zipped "Chapter 5" folder) are left out of the names;
+    deeper folders lead the name ("Day 2 - notes.pdf"), so lecture order still follows them.
+    Mac and hidden files are skipped. FormError in plain words for a ZIP that cannot be used."""
+    out = []
+    for name, data in files:
+        if not is_zip(name, data):
+            out.append((name, data))
+            continue
+        shown = make_service.safe_name(name)
+        if len(data) > MAX_ZIP_MB * 1024 * 1024:
+            raise make_service.FormError(f"{shown} is larger than {MAX_ZIP_MB} MB.")
+        try:
+            archive = zipfile.ZipFile(io.BytesIO(data))
+            entries = archive.infolist()
+        except (zipfile.BadZipFile, OSError, ValueError):
+            raise make_service.FormError(f"{shown} is not a ZIP file that opens. Make the ZIP again, "
+                                         "or add the lecture PDFs themselves.") from None
+        pdfs = []
+        for info in entries:
+            parts = PurePosixPath(info.filename.replace("\\", "/")).parts
+            if (info.is_dir() or not parts or not parts[-1].lower().endswith(".pdf")
+                    or parts[0] == "__MACOSX" or any(p.startswith(".") for p in parts)):
+                continue
+            if info.flag_bits & 0x1:
+                raise make_service.FormError(f"{shown} is locked with a password. Unzip it and add the "
+                                             "lecture PDFs themselves.")
+            if info.file_size > limit_mb * 1024 * 1024:
+                raise make_service.FormError(f"{parts[-1]} in {shown} is larger than {limit_mb} MB.")
+            pdfs.append((parts, info))
+        if not pdfs:
+            raise make_service.FormError(f"{shown} has no PDF inside. Put the chapter's lecture PDFs in the ZIP.")
+        if len(pdfs) > MAX_FILES:
+            raise make_service.FormError(f"{shown} holds {len(pdfs)} PDFs; one chapter takes at most {MAX_FILES}.")
+        shared = 0                                       # folders every PDF in the ZIP sits in
+        while (all(len(p) > shared + 1 for p, _i in pdfs)
+               and len({p[shared] for p, _i in pdfs}) == 1):
+            shared += 1
+        for parts, info in pdfs:
+            try:
+                with archive.open(info) as member:
+                    body = member.read(limit_mb * 1024 * 1024 + 1)
+            except (zipfile.BadZipFile, OSError, ValueError, RuntimeError, NotImplementedError):
+                raise make_service.FormError(f"{parts[-1]} in {shown} could not be read. Make the ZIP again, "
+                                             "or add the lecture PDFs themselves.") from None
+            out.append((" - ".join(parts[shared:]), body))
+    return out
+
+
 def submit_chapter(category: str, note_type: str, subject: str, language: str, options: dict,
-                   files: list[tuple[str, bytes]]) -> tuple[int, bool]:
+                   files: list[tuple[str, bytes]]) -> tuple[int, bool, int]:
     """The whole chapter as one Smart Queue item: its PDFs in lecture order (by their names,
-    Lecture 2 before Lecture 10). The same chapter pressed twice is added once."""
+    Lecture 2 before Lecture 10), a ZIP's PDFs among them. Returns (id, created, lectures);
+    the same chapter pressed twice is added once."""
     found = make_service.check(category, note_type, subject, language, options)
     _names_and_voices(options)
+    limit = int(found["type"].get("max_file_mb", 100))
+    zips = [name for name, data in files if is_zip(name, data)]
+    files = unpack(files, limit)
     if not files:
-        raise make_service.FormError("Add the chapter's lecture PDFs: one PDF per lecture, or one merged PDF.")
+        raise make_service.FormError("Add the chapter's lecture PDFs: one PDF per lecture, one merged PDF, "
+                                     "or one ZIP of them.")
     if len(files) > MAX_FILES:
         raise make_service.FormError(f"Add at most {MAX_FILES} lecture PDFs for one chapter.")
-    limit = int(found["type"].get("max_file_mb", 100))
+    if len(zips) == 1 and not str(options.get("chapter_title") or "").strip():
+        stem = re.sub(r"\.zip$", "", make_service.safe_name(zips[0]), flags=re.I).strip()
+        options = {**options, "chapter_title": stem[:120]} if stem else options   # the ZIP names the chapter
     digests = {}
     for name, data in files:
         shown = make_service.safe_name(name)
@@ -77,8 +143,9 @@ def submit_chapter(category: str, note_type: str, subject: str, language: str, o
     key = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()
                          + "".join(hashlib.sha256(d).hexdigest() for _n, d in ordered).encode()).hexdigest()
     title = str(options.get("chapter_title") or "").strip() or re.sub(r"\.pdf$", "", ordered[0][0], flags=re.I)
-    return job_queue.submit("new_notes", title[:150], payload,
-                            uploads=[(name, data) for name, (_n, data) in zip(stored, ordered)], key=key)
+    _id, created = job_queue.submit("new_notes", title[:150], payload,
+                                    uploads=[(name, data) for name, (_n, data) in zip(stored, ordered)], key=key)
+    return _id, created, len(ordered)
 
 
 # --------------------------------------------------------------------- the run

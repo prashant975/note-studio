@@ -1,5 +1,65 @@
 # Note Studio — Handoff (newest first)
 
+## Mac 2026.11.27.3 (No UPSC) built and installed: ZIP for Audio notes, no old versions kept — 27 November 2026 (20:32)
+
+The user: "build and install, then commit and push".
+- **Build:** `build_macos.py --without upsc` (no zip, not published) → 2026.11.27.3. The bundle holds the ZIP upload and
+  the no-old-versions code. Log: `_build/build_macos_20261127_3.log`.
+- **Install:**
+  - Database (SQLite backup API) and categories copied first to `~/NoteStudio_backups/*-before-install-20261127-203129`.
+  - No run active. Quit NoteCraft by AppleScript; it was closed after 2 s.
+  - Swapped `/Applications/NoteCraft.app`: old aside, `dist/NoteCraft.app` moved in (a move, so no copy stays in
+    dist), quarantine cleared, opened.
+  - It answered on 3100 after 4 s as 2026.11.27.3, and `/audio` accepts `.zip`.
+  - The replaced app was then deleted. Only `/Applications/NoteCraft.app` remains, and `dist/` is empty.
+- **Not published:** other Macs and Windows don't get 2026.11.27.3 until a build is published with `--publish`, with
+  the user's go.
+- **Gates:** compare `_build/before_install_20261127_3.json` → `after_…`: nothing lost, no original touched (changed:
+  `note_studio.db`, the sheet token). Drift clean. Full suite 497 passed, 19 skipped.
+
+## No old NoteCraft versions kept; 54 GB of old copies deleted — 27 November 2026 (18:15)
+
+The user (screenshot of Storage → Applications listing many NoteCraft copies): "delete these and avoid keeping the old
+version, add this in the project itself".
+- **Deleted** (none was open; checked by process path):
+  - `dist/`: 7 old apps, 5 disk images, the 2026.11.27.2 zip (already in the team folder) and 5 `kept-*` folders;
+  - `~/NoteStudio_backups/`: 6 `NoteCraft-installed-*.app`;
+  - `~/.note_studio/update_backups/NoteCraft-2026.11.27.1.app`.
+- **Result:** free space went from 95 to 149 GiB. Only `/Applications/NoteCraft.app` (2026.11.27.2) remains, and it
+  answers on 3100. The small database and categories copies in `~/NoteStudio_backups` were kept.
+- **In the project:**
+  - `packaging/build_macos.py` `clear_old_builds()` removes dist/'s earlier Mac builds (`NoteCraft*.app`/`.dmg`,
+    `NoteCraft_Mac*.zip`, `kept-*`) before building, instead of stopping with "Move it aside". It leaves `dist/team`
+    and other files alone, and stops if one of those apps is open.
+  - `note_studio/updater.py` `drop_backups()`: after a Mac self-update, the replaced app in `update_backups` is
+    removed once the new version opens (`settle_state` → done). Until then it stays, for a swap that fails. The tour
+    text says so.
+  - `packaging/build_installer.py`: `--keep` defaults to 1 (was 3).
+  - `CLAUDE.md`: new rule "No old app versions are kept".
+- **Tests:** `test_mac_updates.py` (+2: removes earlier builds, never an open one), `test_updates.py` (the backup
+  goes only after the new version opens). Full suite 497 passed, 19 skipped.
+- **Not built, installed or committed.** The installed 2026.11.27.2 still keeps its next update's backup until a
+  build with this change is installed.
+
+## Audio notes take a ZIP of the chapter's lectures — 27 November 2026
+
+The user: "also give option to upload zip file for audio notes".
+- **`audio_service.unpack()`:**
+  - A `.zip` upload (judged by its name: Word and PowerPoint files are ZIPs inside too, and stay "not a PDF") is opened
+    with Python's `zipfile`, with no program. Its PDFs join the other uploads; other files, `__MACOSX` and hidden files
+    are left out.
+  - Folders shared by all the PDFs (a zipped "Chapter 5" folder) are dropped from the names; deeper folders lead them
+    ("Day 2 - notes.pdf"), so lecture order follows the folders.
+  - Plain-words refusals: a ZIP that does not open, one locked with a password, one with no PDF inside, more than 20
+    PDFs, a PDF over the size limit, or a ZIP over 1,000 MB.
+- **`submit_chapter`:** unpacks first and returns `(id, created, lectures)`, so the toast counts the PDFs inside. With
+  one ZIP and an empty chapter name, the ZIP's name becomes the chapter name.
+- **Form:** accepts `.zip`, the drop-area words say so, and `app.js` lists a chosen ZIP without a join order (the app
+  gives that). Page guide `/audio` updated; tour `2026-11-27-audio-zip`.
+- **Tests:** `test_audio_notes.py` 29 (+6): a Mac-made ZIP through the app, folders and order, and four refusals. Full
+  suite 495 passed, 19 skipped.
+- Not built, installed or committed: the installed 2026.11.27.1 still takes PDFs only.
+
 ## Mac and Windows update from one folder (the team folder), as in Doubt Desk; Mac 2026.11.27.2 — 27 November 2026 (13:00)
 
 The user: "i want to give both update from the same folder check it like it was in dout desk". They chose the team

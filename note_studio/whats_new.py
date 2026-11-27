@@ -26,6 +26,10 @@ BOOT = uuid.uuid4().hex              # this start: a tour is shown once per star
 OMITTED = (["UPSC notes, Mains practice and DPP"] if "noupsc" in EDITION else []) + (
     ["PW Books"] if "nopwbooks" in EDITION else [])
 TOURS = [
+    dict(id="2026-11-27-audio-zip", title="Audio notes from a ZIP of lectures", steps=[
+        dict(title="One ZIP for the chapter", href="/audio", icon="download",
+             text="Make notes → Audio notes: drop one ZIP of the chapter's lecture PDFs instead of each PDF. The app opens it, takes the PDFs inside in lecture order and leaves other files out. The ZIP's name becomes the chapter name when you leave that empty."),
+    ]),
     dict(id="2026-11-27-csir-net", title="CSIR NET notes, with each PDF's own header and logo", steps=[
         dict(title="CSIR NET in the B.Sc. template", href="/new", icon="file-text",
              text="Make notes → CSIR NET: upload a lecture PDF. The notes come in the B.Sc. template, and the PDF's own header goes on every page: its name (e.g. CSIR NET - Life Sciences), its right-hand words (e.g. Unit 1: Biochemistry) and its logo when it has one."),
@@ -36,7 +40,7 @@ TOURS = [
         dict(title="Updates by itself", href="/settings/system#updates", icon="download",
              text="A new NoteCraft for Mac downloads in the background and is checked. A pop-up then offers Install update: NoteCraft closes, puts the new version in Applications and opens again in about a minute. Your notes, runs and settings stay."),
         dict(title="Never during a run", href="/settings/system#updates", icon="shield",
-             text="An update waits while notes are being made. The version you had is kept, so nothing is lost if an update does not finish."),
+             text="An update waits while notes are being made. The version you had is kept until the new one opens, so nothing is lost if an update does not finish; then it is removed to save space."),
     ])] if MAC_APP else []),
     dict(id="2026-11-26-audio-mp3", title="Audio notes: MP3, and the team's sound", steps=[
         dict(title="MP3 audio", href="/audio", icon="download",

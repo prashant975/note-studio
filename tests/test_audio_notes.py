@@ -518,3 +518,70 @@ def test_each_lecture_is_added_once_and_only_pdfs(client):
     assert same.status_code == 400 and "are the same file" in same.text
     word = client.post("/new", data=FORM, files=[("files", ("Lecture 1.docx", b"PK\x03\x04", "application/zip"))])
     assert word.status_code == 400 and "is not a PDF file" in word.text
+
+
+def _zip(entries: dict, *, locked: str = "") -> bytes:
+    """A ZIP of {name: bytes}; ``locked`` marks that entry as password-locked (the flag is what counts)."""
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, data in entries.items():
+            archive.writestr(name, data)
+    data = bytearray(buffer.getvalue())
+    if locked:
+        for marker in (b"PK\x03\x04", b"PK\x01\x02"):                    # local header and central directory
+            start = 0
+            while (at := data.find(marker, start)) >= 0:
+                flags = at + (6 if marker == b"PK\x03\x04" else 8)
+                name_at = at + (30 if marker == b"PK\x03\x04" else 46)
+                if bytes(data[name_at:name_at + len(locked)]) == locked.encode():
+                    data[flags] |= 0x1
+                start = at + 4
+    return bytes(data)
+
+
+def test_a_zip_of_the_chapter_is_opened_in_the_app_in_lecture_order(client, pw):
+    chapter_zip = _zip({"Electrochemistry/Lecture 10.pdf": pdf("ten"), "Electrochemistry/Lecture 2.pdf": pdf("two"),
+                        "Electrochemistry/Lecture 1.pdf": pdf("one"), "Electrochemistry/notes.txt": b"not a lecture",
+                        "__MACOSX/Electrochemistry/._Lecture 1.pdf": b"mac", "Electrochemistry/.hidden.pdf": b"x"})
+    form = {**FORM, "chapter_title": ""}
+    response = client.post("/new", data=form, files=[("files", ("Electrochemistry.zip", chapter_zip, "application/zip"))],
+                           follow_redirects=False)
+    assert response.status_code == 303 and "the chapter (3 lectures)" in unquote(response.headers["location"])
+    assert job_queue.wait_idle(120)
+    [run] = _runs()
+    assert run["state"] == "complete", run["error"]
+    assert run["title"] == "Electrochemistry"                            # the ZIP named the chapter
+    options = json.loads(run["options_json"])
+    assert options["lectures"] == ["Lecture 1.pdf", "Lecture 2.pdf", "Lecture 10.pdf"]
+    assert "Electrochemistry Audio notes.mp3" in _files(run)
+
+
+def test_folders_inside_a_zip_lead_the_names_and_keep_the_order():
+    from note_studio import audio_service
+
+    found = audio_service.unpack([("Week.zip", _zip({"Chapter 5/Day 2/notes.pdf": pdf("two"),
+                                                     "Chapter 5/Day 10/notes.pdf": pdf("ten"),
+                                                     "Chapter 5/Day 1/notes.pdf": pdf("one")})),
+                                  ("Extra.pdf", pdf("extra"))])
+    names = [name for name, _data in found]
+    assert names == ["Day 2 - notes.pdf", "Day 10 - notes.pdf", "Day 1 - notes.pdf", "Extra.pdf"]
+    assert sorted(names[:3], key=chapter.lecture_order) == ["Day 1 - notes.pdf", "Day 2 - notes.pdf",
+                                                            "Day 10 - notes.pdf"]
+    assert dict(found)["Day 1 - notes.pdf"] == pdf("one")
+    single = audio_service.unpack([("One.zip", _zip({"Only lecture.pdf": pdf("one")}))])
+    assert [n for n, _d in single] == ["Only lecture.pdf"]
+
+
+@pytest.mark.parametrize("upload, words", [
+    (_zip({"readme.txt": b"hello"}), "has no PDF inside"),
+    (b"PK\x03\x04 broken", "is not a ZIP file that opens"),
+    (_zip({"Lecture 1.pdf": b"%PDF-1.4 locked"}, locked="Lecture 1.pdf"), "locked with a password"),
+    (_zip({f"Lecture {n}.pdf": pdf(f"z{n}") for n in range(1, 23)}), "one chapter takes at most 20"),
+])
+def test_a_zip_that_cannot_be_used_is_named_in_plain_words(client, upload, words):
+    response = client.post("/new", data=FORM, files=[("files", ("Chapter.zip", upload, "application/zip"))])
+    assert response.status_code == 400 and words in response.text and "Traceback" not in response.text
+    assert "Make audio notes" in response.text                               # still the audio page
+    assert not _runs()

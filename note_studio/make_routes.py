@@ -97,11 +97,11 @@ def register(app, render, go):
             if "chapter_pdfs" in (entry.get("inputs") or []):
                 from . import audio_service
 
-                _id, created = audio_service.submit_chapter(category, note_type, values["subject"], values["language"],
-                                                            options, uploads)
+                _id, created, count = audio_service.submit_chapter(category, note_type, values["subject"],
+                                                                   values["language"], options, uploads)
                 if not created:
                     return go("/queue", "Already in the Smart Queue: it was not added twice.", "info")
-                lectures = "1 lecture" if len(uploads) == 1 else f"{len(uploads)} lectures"
+                lectures = "1 lecture" if count == 1 else f"{count} lectures"
                 return go("/queue", f"Added the chapter ({lectures}) to the Smart Queue: it becomes one audio episode.",
                           "ok")
             added = make_service.submit(category, note_type, values["subject"], values["language"], options, uploads)

@@ -115,6 +115,33 @@ def test_a_mac_build_without_upsc_leaves_its_engine_out(tmp_path):
     assert not build_macos.packaged("note_studio/deployment/service_account.json", engines)   # only built in on purpose
 
 
+def test_a_mac_build_removes_the_earlier_builds_and_keeps_nothing_old(tmp_path):
+    dist = tmp_path / "dist"
+    olds = ["NoteCraft.app", "NoteCraft-20261124a.app", "NoteCraft-20261124a.dmg", "NoteCraft.dmg",
+            "NoteCraft_Mac_NoUPSC_2026.11.27.2.zip", "kept-20261127-1-noupsc"]
+    for name in olds:
+        target = dist / name
+        if target.suffix in (".dmg", ".zip"):
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(b"old")
+        else:
+            (target / "Contents").mkdir(parents=True)
+    (dist / "team").mkdir()                                     # the Windows builder's folder stays
+    (dist / "notes.txt").write_text("mine", encoding="utf-8")
+    assert build_macos.clear_old_builds(dist, running="") == sorted(olds)
+    assert sorted(p.name for p in dist.iterdir()) == ["notes.txt", "team"]
+    assert build_macos.clear_old_builds(tmp_path / "none", running="") == []
+
+
+def test_a_mac_build_never_removes_an_app_that_is_open(tmp_path):
+    app = tmp_path / "dist" / "NoteCraft.app"
+    (app / "Contents" / "MacOS").mkdir(parents=True)
+    running = f"/usr/sbin/cfprefsd\n{app.resolve()}/Contents/MacOS/DesktopLauncher\n"
+    with pytest.raises(SystemExit, match="is open"):
+        build_macos.clear_old_builds(tmp_path / "dist", running=running)
+    assert app.is_dir()
+
+
 # ------------------------------------------------------- one folder for Mac and Windows (as Doubt Desk)
 TEAM_FOLDER_FILES = [
     {"id": "wf", "name": f"NoteCraft_Setup_{NEW}.exe", "sha256Checksum": "a"},
