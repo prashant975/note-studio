@@ -11,9 +11,13 @@ project's note_studio/static/release.json once the build has passed its check.
 shows only what it carries, and updates only from its own edition's files.
 
 Updates (the app updates itself, updater.py): --zip writes dist/NoteCraft_Mac[_NoUPSC...]_<version>.zip,
-a zip of the whole app; --publish also puts it into the Mac release folder on Google Drive, read
-by every Mac install with its Google sign-in. The folder is saved in packaging/macos_release.json
-and built into each Mac app (release.json "releases"); --publish <folder link> changes it.
+a zip of the whole app. Mac and Windows updates share one folder, as in Doubt Desk (27 Nov 2026): the
+team release folder in the project's release.json "releases", built into every Mac app as into the
+Windows installer. The file names keep them apart (NoteCraft_Mac..._<v>.zip, NoteCraft_Setup..._<v>.exe).
+Every Mac app carries the team's service-account key (--team-key, else the one added in Settings, else
+the QBG toolkit key on this Mac, where Doubt Desk's Mac build finds it), so each Mac reads the folder
+with no sharing; only the key's email is shown. --publish puts the zip into the team folder;
+--publish <folder link> into that folder instead (the app still reads the team folder).
 """
 import argparse
 import hashlib
@@ -29,7 +33,7 @@ import tempfile
 
 import build_version
 import make_icon
-from build_installer import CHILD_ENGINES, edition_release  # also puts the project on sys.path
+from build_installer import CHILD_ENGINES, TEAM_KEY, edition_release  # also puts the project on sys.path
 from note_studio.version import setup_name
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,11 +41,12 @@ NAME = "NoteCraft"
 ICON = NAME + ".icns"
 ENTRY = "run_studio.py"
 SOURCE_ROOTS = ["note_studio","engines","run_studio.py"]
-MAC_RELEASES = Path(__file__).resolve().parent / "macos_release.json"   # {"releases": <Drive folder id>}
+TOOLKIT_KEY = Path.home() / ".config/qbg-toolkit/QBG-One-Service-Account.json"   # Doubt Desk's Mac build reads it here
 
 
 def mac_release(source: Path = build_version.RELEASE_FILE) -> dict:
-    """The next version after the project's (the same day: N + 1, else .1), keeping its release folder."""
+    """The next version after the project's (the same day: N + 1, else .1), keeping its release folder:
+    the team folder, which Mac and Windows installs both read."""
     release = build_version.next_release(source)
     try:
         previous = json.loads(Path(source).read_text(encoding="utf-8"))
@@ -52,12 +57,23 @@ def mac_release(source: Path = build_version.RELEASE_FILE) -> dict:
     return release
 
 
-def mac_folder(path: Path = MAC_RELEASES) -> str:
-    """The Mac release folder's Drive id, '' when none is saved yet."""
+def team_key_source(explicit: Path | None = None, leave_out: bool = False,
+                    toolkit: Path = TOOLKIT_KEY) -> tuple[Path | None, str]:
+    """The team's service-account key to build into the app, and its email (the only part ever shown).
+    The Macs read the team release folder with it, as the Windows installs do."""
+    if leave_out:
+        return None, ""
+    from note_studio import updater
+
+    found = explicit or updater.team_key() or (toolkit if toolkit.is_file() else None)
+    if found is None:
+        raise SystemExit("No team key was found. Pass --team-key <the service account's .json file>, add the key "
+                         "in NoteCraft Settings -> Updates, or pass --no-team-key (then every Mac needs the team "
+                         "release folder shared with its Google account).")
     try:
-        return str(json.loads(Path(path).read_text(encoding="utf-8"))["releases"]).strip()
-    except (OSError, ValueError, KeyError, TypeError):
-        return ""
+        return Path(found), updater.team_key_only(found)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from None
 
 
 def packaged(rel: str, engines) -> bool:
@@ -78,7 +94,7 @@ def packaged(rel: str, engines) -> bool:
 
 
 def publish(package: Path, version: str, folder: str, notes: str, edition: str) -> dict:
-    """The zip into the Mac release folder, as the person signed in to NoteCraft here."""
+    """The zip into the release folder, as updater.publish does for the Windows installer."""
     shortnotes = str(ROOT / "engines" / "shortnotes")          # the sign-in lives in its sheets_bridge
     if shortnotes not in sys.path:
         sys.path.insert(0, shortnotes)
@@ -124,9 +140,14 @@ def main():
                         help="Leave out this engine, as the Windows builder does; repeat for both.")
     parser.add_argument("--zip", action="store_true",
                         help="Also write the update: dist/NoteCraft_Mac[_edition]_<version>.zip (a zip of the app).")
-    parser.add_argument("--publish", nargs="?", const="saved", default="", metavar="FOLDER",
-                        help="Write the update and put it into the Mac release folder: the one saved in "
-                             "packaging/macos_release.json, or this Drive folder link (then saved).")
+    parser.add_argument("--publish", nargs="?", const="team", default="", metavar="FOLDER",
+                        help="Write the update and put it into the team release folder (the one every Mac and "
+                             "Windows install reads), or into this Drive folder link instead.")
+    parser.add_argument("--team-key", type=Path, default=None,
+                        help="The team's service-account key to build in (default: the one added in Settings, "
+                             "else ~/.config/qbg-toolkit/QBG-One-Service-Account.json).")
+    parser.add_argument("--no-team-key", action="store_true",
+                        help="Build without the team key: each Mac then reads the folder with its Google sign-in.")
     parser.add_argument("--notes", default="", help="What changed, shown in the update pop-up ('; ' between fixes).")
     args = parser.parse_args()
     if sys.platform != "darwin":
@@ -140,17 +161,19 @@ def main():
     disk_image = app.with_suffix(".dmg")
     if args.dmg and disk_image.exists():
         raise SystemExit(f"{disk_image} already exists. Move it aside before rebuilding.")
-    release_folder = mac_folder()
-    if args.publish and args.publish != "saved":
-        from note_studio.updater import drive_folder_id
-
-        release_folder = drive_folder_id(args.publish)
-    if args.publish and not release_folder:
-        raise SystemExit("No Mac release folder is saved yet: pass --publish <Drive folder link>.")
     release = mac_release()
     bundle = edition_release(release, args.without)       # what this app carries and reads updates from
-    if release_folder:
-        bundle["releases"] = release_folder
+    if not bundle.get("releases"):
+        raise SystemExit(f"{build_version.RELEASE_FILE.relative_to(ROOT)} names no team release folder "
+                         "(\"releases\"), so the app would find no updates.")
+    publish_to = ""
+    if args.publish:
+        from note_studio.updater import drive_folder_id
+
+        publish_to = bundle["releases"] if args.publish == "team" else drive_folder_id(args.publish)
+    team_key, team_email = team_key_source(args.team_key, args.no_team_key)
+    print("Updates from the team release folder, read with "
+          + (f"the team's service account {team_email}" if team_key else "each Mac's Google sign-in (no team key)"))
     package = ROOT / "dist" / f"{setup_name(bundle['edition'], mac=True)}_{release['version']}.zip"
     if (args.zip or args.publish) and package.exists():
         raise SystemExit(f"{package} already exists. Move it aside before rebuilding.")
@@ -176,6 +199,9 @@ def main():
         target = resources / "source" / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
+    if team_key is not None:                               # where updater.team_key() finds it in the app
+        (resources / "source" / TEAM_KEY).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(team_key, resources / "source" / TEAM_KEY)
     build_version.write_release(resources / "source/note_studio/static/release.json", bundle)
     for engine in CHILD_ENGINES:
         if engine not in bundle["engines"]:
@@ -223,11 +249,9 @@ def main():
     build_version.write_release(build_version.RELEASE_FILE, release)   # the next build counts on from this one
     print(f"Version {release['version']} written to {build_version.RELEASE_FILE.relative_to(ROOT)}")
     if args.publish:
-        published = publish(package, release["version"], release_folder, args.notes, bundle["edition"])
+        published = publish(package, release["version"], publish_to, args.notes, bundle["edition"])
         if published["sha256"] != digest.hexdigest():
             raise SystemExit("The uploaded file does not match the update that was built.")
-        if release_folder != mac_folder():
-            MAC_RELEASES.write_text(json.dumps({"releases": release_folder}, indent=2) + "\n", encoding="utf-8")
         print(f"Published: {published['link']}  Mac installs find it within five minutes.")
     print("Unsigned local app. Launch from Terminal or Finder; distribute only after signing/notarizing.")
 

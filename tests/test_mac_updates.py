@@ -112,10 +112,66 @@ def test_a_mac_build_without_upsc_leaves_its_engine_out(tmp_path):
     assert build_macos.packaged("note_studio/engines/upsc.py", engines)     # the adapter says it is absent
     assert not build_macos.packaged("engines/pw_books/tests/test_x.py", engines)
     assert not build_macos.packaged("note_studio/token.json", engines)
-    saved = tmp_path / "macos_release.json"
-    assert build_macos.mac_folder(saved) == ""
-    saved.write_text('{"releases": "1MacFolderXyz"}')
-    assert build_macos.mac_folder(saved) == "1MacFolderXyz"
+    assert not build_macos.packaged("note_studio/deployment/service_account.json", engines)   # only built in on purpose
+
+
+# ------------------------------------------------------- one folder for Mac and Windows (as Doubt Desk)
+TEAM_FOLDER_FILES = [
+    {"id": "wf", "name": f"NoteCraft_Setup_{NEW}.exe", "sha256Checksum": "a"},
+    {"id": "wn", "name": f"NoteCraft_Setup_NoUPSC_{NEW}.exe", "sha256Checksum": "b"},
+    {"id": "wt", "name": f"NoteCraft_Setup_NoUPSC_{NEW}.txt"},
+    {"id": "mn", "name": f"NoteCraft_Mac_NoUPSC_{NEW}.zip", "sha256Checksum": "c"},
+    {"id": "mt", "name": f"NoteCraft_Mac_NoUPSC_{NEW}.txt"},
+]
+
+
+def test_mac_and_windows_updates_share_one_folder_each_taking_its_own(mac, monkeypatch):
+    mac_rows = updater.parse_files(TEAM_FOLDER_FILES)
+    assert [(r["file_id"], r["notes_file"]) for r in mac_rows] == [("mn", "mt")]
+    windows = version.setup_name("noupsc")
+    monkeypatch.setattr(updater, "_NAME", updater.name_pattern(windows, ".exe"))
+    monkeypatch.setattr(updater, "_NOTES", updater.name_pattern(windows, ".txt"))
+    assert [(r["file_id"], r["notes_file"]) for r in updater.parse_files(TEAM_FOLDER_FILES)] == [("wn", "wt")]
+
+
+def test_the_mac_app_reads_the_team_folder_the_windows_installer_reads(tmp_path):
+    project = tmp_path / "release.json"
+    project.write_text('{"version": "2026.11.27.1", "releases": "1TeamFolderXyz"}')
+    bundle = build_macos.edition_release(build_macos.mac_release(project), ["upsc"])
+    assert bundle["releases"] == "1TeamFolderXyz" and bundle["edition"] == "noupsc"
+    assert not (ROOT / "packaging" / "macos_release.json").exists()      # no separate Mac folder any more
+
+
+def team_key_file(folder: Path, email: str = "bot@team.iam.gserviceaccount.com") -> Path:
+    key = folder / "key.json"
+    key.write_text(json.dumps({"type": "service_account", "client_email": email, "private_key": "not-a-real-key"}))
+    return key
+
+
+def test_every_mac_app_carries_the_team_key_showing_only_its_email(tmp_path, monkeypatch):
+    monkeypatch.setattr(updater, "team_key", lambda: None)
+    key = team_key_file(tmp_path)
+    email = "bot@team.iam.gserviceaccount.com"
+    assert build_macos.team_key_source(key) == (key, email)
+    assert build_macos.team_key_source(None, toolkit=key) == (key, email)      # where Doubt Desk's build finds it
+    assert build_macos.team_key_source(key, leave_out=True) == (None, "")
+    with pytest.raises(SystemExit, match="No team key was found"):
+        build_macos.team_key_source(None, toolkit=tmp_path / "missing.json")
+    person = tmp_path / "token.json"
+    person.write_text('{"refresh_token": "a person sign-in"}')
+    with pytest.raises(SystemExit, match="not a valid team key"):
+        build_macos.team_key_source(person)
+    (tmp_path / "settings").mkdir()
+    settings_key = team_key_file(tmp_path / "settings")
+    monkeypatch.setattr(updater, "team_key", lambda: settings_key)
+    assert build_macos.team_key_source(None, toolkit=key)[0] == settings_key    # the key added in Settings first
+
+
+def test_a_mac_app_with_the_team_key_reads_the_folder_with_it(mac, tmp_path, monkeypatch):
+    key = team_key_file(tmp_path)
+    monkeypatch.setattr(updater.paths, "team_key_files", lambda: [tmp_path / "none.json", key])
+    assert [who for who, _make in updater._readers()] == [updater.TEAM, updater.PERSON]
+    assert updater.team_account() == "bot@team.iam.gserviceaccount.com"
 
 
 @pytest.mark.parametrize("error,expected", [(updater.NOT_SIGNED_IN, update_delivery.SIGNIN_WAIT),

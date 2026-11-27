@@ -222,7 +222,7 @@
     <tbody>
       <tr><td>Installed</td><td><strong>{{ updates.current }}</strong> <span class="small muted">({{ CHANNEL }})</span></td></tr>
       <tr><td>Newest in the folder</td><td>{% if updates.latest %}{{ updates.latest.version }} <span class="small muted">released {{ updates.latest.released }}</span>{% else %}<span class="muted">-</span>{% endif %}</td></tr>
-      <tr><td>Release folder</td><td class="small">{% if updates.source.folder_id %}<a href="https://drive.google.com/drive/folders/{{ updates.source.folder_id }}" target="_blank" rel="noopener noreferrer">{{ 'Your folder' if updates.source.own else ('The Mac release folder' if updates.mac else 'The team folder') }}</a>{% else %}<span class="muted">Not set yet</span>{% endif %}</td></tr>
+      <tr><td>Release folder</td><td class="small">{% if updates.source.folder_id %}<a href="https://drive.google.com/drive/folders/{{ updates.source.folder_id }}" target="_blank" rel="noopener noreferrer">{{ 'Your folder' if updates.source.own else 'The team folder' }}</a>{% else %}<span class="muted">Not set yet</span>{% endif %}</td></tr>
       <tr><td>Read with</td><td class="small">{% if updates.team_account %}The team's service account <span class="mono">{{ updates.team_account }}</span>{% else %}Your Google sign-in <span class="muted">(no team key)</span>{% endif %}</td></tr>
       {#- Only an update going on or one that failed: "Updated to <an old version>" is history (as QBG One). -#}
       {% if updates.state and updates.state.state and updates.state.state != 'done' %}<tr><td>Last update</td><td class="small">{{ updates.state.error or updates.state.message or updates.state.state }}</td></tr>{% endif %}
@@ -247,13 +247,13 @@
     <form class="stack" method="post" action="/settings/updates">
       <label class="field"><span>Google Drive folder link</span>
         <input type="text" name="folder" value="{{ ('https://drive.google.com/drive/folders/' ~ updates.source.folder_id) if updates.source.own else '' }}" placeholder="https://drive.google.com/drive/folders/…">
-        <span class="hint">Leave empty to use the folder this version was built with. {% if updates.mac %}Mac versions are put into it by the Mac build (build_macos.py --publish) as {{ updates.package }}.{% else %}To release a version: put {{ updates.setup_name }}.exe (and its .txt notes) from dist\team\&lt;version&gt;\ into this folder.{% endif %}</span></label>
+        <span class="hint">Leave empty to use the folder this version was built with. Mac and Windows versions share this folder, each picking only its own files. {% if updates.mac %}To release a Mac version: put {{ updates.package }} from dist/ into this folder (build_macos.py --publish does it when it can).{% else %}To release a version: put {{ updates.setup_name }}.exe (and its .txt notes) from dist\team\&lt;version&gt;\ into this folder.{% endif %}</span></label>
       <div class="btn-row"><button class="btn sm primary" type="submit">Save</button></div>
     </form>
     <form class="stack" method="post" action="/settings/updates/team-key" enctype="multipart/form-data">
       <label class="field"><span>Team key (service account)</span>
         <input type="file" name="key" accept=".json,application/json">
-        <span class="hint">Only for whoever releases {{ brand.APP_NAME }}: the service account's .json key file, as in QBG One. The release folder is then read with it, and the team installer carries it, so nobody else adds anything. Share the folder with the service account's email as Viewer. The key is kept in your data folder and never shown.</span></label>
+        <span class="hint">Only for whoever releases {{ brand.APP_NAME }}: the service account's .json key file, as in QBG One. The release folder is then read with it, and the Windows installer and the Mac app carry it, so nobody else adds anything. Share the folder with the service account's email as Viewer. The key is kept in your data folder and never shown.</span></label>
       <div class="btn-row"><button class="btn sm primary" type="submit">Add team key</button></div>
     </form>
     {% if updates.team_key_here %}<form method="post" action="/settings/updates/team-key/remove" data-confirm="Remove the team key from this computer? A backup copy is kept in the data folder.">

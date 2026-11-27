@@ -1,5 +1,53 @@
 # Note Studio — Handoff (newest first)
 
+## Mac and Windows update from one folder (the team folder), as in Doubt Desk; Mac 2026.11.27.2 — 27 November 2026 (13:00)
+
+The user: "i want to give both update from the same folder check it like it was in dout desk". They chose the team
+folder, the team key in the Mac app, and build, install, publish, commit and push.
+
+- **Doubt Desk** (`~/Projects/doubt-solving-bot`, read only) works like this:
+  - one Drive folder, "Doubt Desk Releases";
+  - every Windows and Mac installer carries the QBG service account `qbg-studio-bot@…`, encrypted; its Mac build
+    takes the key from `~/.config/qbg-toolkit/QBG-One-Service-Account.json`;
+  - file names carry the platform.
+- **NoteCraft now does the same:**
+  - Mac and Windows both read the team folder `1vQXzi3kWd-k_LnVcvF-Izeq2tKEND0zO`, which is the project's
+    `release.json` "releases".
+  - The names already keep them apart: `NoteCraft_Setup[_NoUPSC…]_<v>.exe` and `NoteCraft_Mac[_NoUPSC…]_<v>.zip`,
+    each with a `.txt` of notes. Each platform and edition takes only files with its own name (tested both ways).
+  - `packaging/build_macos.py`:
+    - the separate Mac folder is gone: `packaging/macos_release.json` is deleted and `mac_folder()` removed;
+    - every Mac app carries the team key at `Contents/Resources/source/deployment/service_account.json`, where
+      `updater.team_key()` finds it, as the Windows installer does. Only its email is printed.
+    - `team_key_source()` finds the key: `--team-key`, else the key added in Settings, else the QBG toolkit key on
+      this Mac. A key that is not a service account is refused. With no key the build stops, unless
+      `--no-team-key` is passed.
+    - `--publish` uploads into the team folder; `--publish <link>` uploads into that folder instead, and the app
+      still reads the team folder.
+  - Settings → Updates says "The team folder" on the Mac too. The hints say that both platforms share the folder and
+    that the Mac app carries the key.
+- **Move-over release 2026.11.27.2** (No UPSC): published once into the old "NoteCraft Mac updates" folder
+  (`1NomCq…`, private), because the installed 2026.11.27.1 reads only that folder. Zip 691,658,295 bytes,
+  SHA-256 `7cead972…825a`, Drive file `1dvOHiEwzoeGTu1w6v_R0uW9WPY3FjmVG`.
+- **Publishing into the team folder from this Mac is not possible yet.** The NoteCraft sign-in cannot see it, and
+  the service account owns no storage. Until the folder's owner gives the NoteCraft Google account edit access,
+  drop the Mac zip (and a `.txt`) into the team folder by hand, as the Windows `.exe` is.
+- **Tests:** `tests/test_mac_updates.py` 16 (+4: one folder, each taking its own; the Mac app reads the team folder;
+  the key is carried and only its email shown; a Mac with the key reads with it first). Full suite **489 passed,
+  19 skipped**.
+- **Installed by self-update:**
+  - The running 2026.11.27.1 found .2 in the old Mac folder, then downloaded and checked it.
+  - With no run going, Install update brought it back as 2026.11.27.2 ("Updated to 2026.11.27.2.").
+  - Its Check for updates now reads the team folder as `qbg-studio-bot@…`, with no error. No Mac zip is there yet,
+    so "Newest in the folder" is empty; the Windows files are skipped.
+  - Settings → Updates says "The team folder".
+- **Gates:**
+  - compare `_build/before_one_folder_20261127.json` → `after_…`: STOP only from the update's backup rotation. The
+    29,437 files of the kept `NoteCraft-2026.11.26.2.app` were replaced by `NoteCraft-2026.11.27.1.app`.
+  - No JSON entries lost and no original touched. Changed: `note_studio.db` and the sheet token.
+  - Drift (`--project . --baseline-ref HEAD`) is clean.
+- Committed: this change only. The audio session's work stays uncommitted.
+
 ## CSIR NET category: B.Sc.-style notes with each lecture PDF's own header name and logo; Mac 2026.11.27.1 — 27 November 2026
 
 The user asked for "more categories for notes generation which follow the B.Sc. style, but the name and logo come by

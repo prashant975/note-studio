@@ -17,6 +17,9 @@ Source: QBG_Complete_Toolkit/QBG_Studio_Vibecraft/backend/studio/qbg_studio/upda
 - The folder id is baked into each build (release.json, "releases");
   Settings -> System -> Updates can point one computer at another folder.
 - `build_installer.py --publish <folder>` uploads the installer into the folder.
+- The Mac app's update, NoteCraft_Mac[_edition]_<version>.zip, sits in the same team
+  folder (27 Nov 2026, as in Doubt Desk), and the Mac app carries the same team key
+  (`build_macos.py`). Each platform and edition takes only files with its own name.
 
 - The folder is read with the team's service-account key, as QBG reads its
   own (the user's decision, 4 Oct 2026: "you can copy service account too").
