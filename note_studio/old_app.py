@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+from pathlib import Path
 from functools import lru_cache
 
 from . import db, engine_catalog, paths
@@ -73,7 +74,10 @@ def environment(decision: str | None = None) -> dict:
     # The Google sign-in registration (never anyone's sign-in): the original app's
     # file on this computer, else the one an installed NoteCraft carries, as QBG
     # One and the old Short Notes exe carry theirs (packaging/build_installer.py).
-    for client in (paths.shortnotes_original() / "client_secret.json", paths.signin_registration()):
+    # An explicit per-computer import wins over the legacy installation.
+    explicit = os.environ.get("NOTE_STUDIO_GOOGLE_CLIENT", "").strip()
+    configured = Path(explicit).expanduser() if explicit else paths.home() / "google-client.json"
+    for client in (configured, paths.shortnotes_original() / "client_secret.json", paths.signin_registration()):
         if client.is_file():
             env["SHEETS_BRIDGE_CLIENT_SECRET"] = str(client)
             break

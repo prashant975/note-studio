@@ -1,0 +1,26 @@
+{
+  "_comment": "Built-in pack for CSIR NET (27 November 2026), from the team's CSIR NET notes. It offers the typeset notes in the B.Sc. template (note_studio/typeset). branding.from_pdf: each lecture PDF's own running header (left: the name, e.g. 'CSIR NET - Life Sciences'; right: e.g. 'Unit 1: Biochemistry') and its header logo go on the notes (typeset/source_brand.py); the words below are used only when a PDF has no header. pw_logo false: no PW logo when a PDF has no logo (Settings -> Categories can add it).",
+  "id": "csir_net",
+  "label": "CSIR NET",
+  "enabled": true,
+  "builtin": true,
+  "order": 5,
+  "summary": "CSIR NET notes in the B.Sc. template; each lecture PDF's own header name and logo go on the notes.",
+  "subjects": [
+    {"id": "life_sciences", "label": "Life Sciences"},
+    {"id": "physical_sciences", "label": "Physical Sciences"},
+    {"id": "chemical_sciences", "label": "Chemical Sciences"},
+    {"id": "mathematical_sciences", "label": "Mathematical Sciences"},
+    {"id": "earth_sciences", "label": "Earth Sciences"}
+  ],
+  "subject_auto": true,
+  "languages": ["english", "hindi", "hinglish"],
+  "language_required": false,
+  "note_types": ["typeset_notes"],
+  "default_note_type": "typeset_notes",
+  "inputs": ["pdf_upload"],
+  "branding": {"header_left": "CSIR NET", "header_right": "CSIR NET Notes", "footer_left": "CSIR NET",
+               "footer_right": "Concept • Understand • Apply", "audience": "CSIR NET", "from_pdf": true,
+               "pw_logo": false},
+  "rules_dir": "rules"
+}

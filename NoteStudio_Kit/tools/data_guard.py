@@ -28,6 +28,10 @@ import fnmatch
 import hashlib
 import json
 import os
+import io
+import subprocess
+import tarfile
+import tempfile
 import sys
 import zipfile
 from pathlib import Path
@@ -92,6 +96,15 @@ ENGINE_COPIES = {
     "shortnotes": {
         "copy": "engines/shortnotes",
         "allowed": {
+            "sheets_bridge/google_auth.py": "native credential protection and browser-owned OAuth popup; retain domain and allowlist gates",
+            "sheets_bridge/web_oauth.py": "explicit Web registration support with PKCE and state-checked loopback callback",
+            "tests/test_sheets_bridge.py": "OAuth tests use synthetic registration JSON when selecting Desktop/Web flow",
+            "sheets_bridge/auth_session.py": "optional browser-owned popup; preserve standalone login defaults; "
+                                             "sign-out clears pw-app-kit 2026-11-18's per-token passes",
+            "pw_access.py": "pw-app-kit 2026-11-18 (owner, 19 November 2026); only APP_NAME kept",
+            "sheets_bridge/pw_openai.py": "no timeout to the 2026-11-18 kit's gpt_generate, which rejects one",
+            "sheets_bridge/macos_credentials.py": "native macOS Keychain encryption adapter",
+            "sheets_bridge/windows_credentials.py": "DPAPI sidecars protect new sign-ins while preserving legacy shared files",
             "notesbot/categories.py": "category list read from the packs; labels/prompt_block/fingerprint byte-identical",
             "notesbot/generation_profile.py": "per-run model as a context variable",
             "sheets_bridge/pw_transport.py": "per-run model/account context; current original's budget-stop "
@@ -104,20 +117,31 @@ ENGINE_COPIES = {
         "copy": "engines/upsc",
         "allowed": {
             "src/prompt_builder.py": "append-only 'extra instructions' hook (doc 08); prompt without it unchanged",
+            "pw_access.py": "pw-app-kit 2026-11-18 (owner, 19 November 2026); only APP_NAME kept",
+            "src/ai_client.py": "no timeout to the 2026-11-18 kit's gemini/gpt_generate, which reject one",
         },
         "protected": ["prompts/*", "src/dmp/prompts.py", "config/*.yaml"],
     },
     "pw_books": {
         "copy": "engines/pw_books",
         "allowed": {
+            "src/pdf_exporter.py": "use local Chrome PDF conversion on macOS; preserve Windows conversion",
+            "src/pdf_browser.py": "offline Pandoc MathML and Chrome PDF adapter for macOS",
+            "requirements.txt": "conditional macOS browser dependency for PDF export",
             "src/prompt_builder.py": "append-only 'extra instructions' hook",
             "src/pw_auth.py": "token from the Studio (environment) instead of Streamlit",
+            "pw_access.py": "pw-app-kit 2026-11-18 (owner, 19 November 2026); only APP_NAME kept",
+            "src/ai_client.py": "no timeout to the 2026-11-18 kit's gemini_generate, which rejects one",
+            "src/model_router.py": "no timeout to the 2026-11-18 kit's gemini_generate (model probe)",
         },
         "protected": ["prompts/*"],
     },
     "notes_qc": {
         "copy": "engines/notes_qc",
-        "allowed": {},
+        "allowed": {
+            "pw_access.py": "pw-app-kit 2026-11-18 (owner, 19 November 2026); only APP_NAME kept",
+            "src/ai_client.py": "no timeout to the 2026-11-18 kit's gemini_generate, which rejects one",
+        },
         "protected": ["src/qc_prompts.py", "config/*.yaml"],
     },
 }
@@ -264,7 +288,7 @@ def _matches(rel: str, patterns) -> bool:
     return any(fnmatch.fnmatch(rel, p) for p in patterns)
 
 
-def drift(project: Path) -> int:
+def drift(project: Path, normalize_line_endings: bool = False) -> int:
     bad_total = 0
     for name, spec in ENGINE_COPIES.items():
         copy_root = project / spec["copy"]
@@ -286,6 +310,8 @@ def drift(project: Path) -> int:
                     bad.append(f"{rel} (added inside a protected prompt/rules path)")
                 continue
             if _sha256(f) == _sha256(src):
+                continue
+            if normalize_line_endings and f.read_bytes().replace(b"\r\n", b"\n") == src.read_bytes().replace(b"\r\n", b"\n"):
                 continue
             changed.append(rel)
             if _matches(rel, spec["protected"]):
@@ -353,6 +379,7 @@ def main(argv=None) -> int:
     c.add_argument("after", type=Path)
     d = sub.add_parser("drift")
     d.add_argument("--project", type=Path, default=DEFAULT_PROJECT)
+    d.add_argument("--baseline-ref", help="Compare engine copies with this trusted Git ref when originals are unavailable.")
     args = ap.parse_args(argv)
     if args.cmd == "snapshot":
         snapshot(args.out, args.extra)
@@ -361,6 +388,16 @@ def main(argv=None) -> int:
     elif args.cmd == "compare":
         return compare(args.before, args.after)
     else:
+        if args.baseline_ref:
+            project = args.project.resolve()
+            archive = subprocess.check_output(["git", "-C", str(project), "archive", args.baseline_ref, "engines"])
+            with tempfile.TemporaryDirectory(prefix="notecraft-engine-baseline-") as folder:
+                with tarfile.open(fileobj=io.BytesIO(archive)) as source:
+                    source.extractall(folder, filter="data")
+                for name in ORIGINALS:
+                    ORIGINALS[name]["root"] = Path(folder) / "engines" / name
+                print(f"Git engine baseline: {args.baseline_ref} (original folders were not compared; checkout line endings normalized)")
+                return drift(project, normalize_line_endings=True)
         return drift(args.project.resolve())
     return 0
 

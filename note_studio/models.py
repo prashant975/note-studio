@@ -20,8 +20,9 @@ from . import db, note_types
 KEY = "model_order"
 STAGES = {"notes": "Writing the notes", "speech": "Listening to the class recording",
           "vision": "Reading the slide pictures", "qc": "Checking the notes", "images": "Looking at slide pictures",
-          "figures": "Drawing the figures"}
+          "figures": "Drawing the figures", "voice": "Speaking the script"}
 IMAGE_STAGES = ("images", "figures")       # picture models only: the type's own list
+OWN_LIST_STAGES = IMAGE_STAGES + ("voice",)   # speech models too: never PW's text models
 # How many models each engine can use per stage, and what the first and the next do.
 RULES = {
     "notesbot": {"slots": {"notes": 4}, "first": "Makes the notes", "next": "Saved alternate (budget failures stop)"},
@@ -35,10 +36,15 @@ RULES = {
     # Typeset notes (note_studio/typeset/ai.py): each stage tries its next model when the first fails.
     "typeset": {"slots": {"notes": 2, "qc": 2, "figures": 2}, "first": "Used first",
                 "next": "If the first is unavailable or stays busy"},
+    # Audio notes (note_studio/audio): the script, its check and the voices, each with a next model.
+    "audio": {"slots": {"notes": 2, "qc": 2, "voice": 2}, "first": "Used first",
+              "next": "If the first is unavailable or stays busy"},
 }
-EXTRA_LABELS = {"gemini-3.5-flash": "Gemini 3.5 Flash", "gemini-2.5-flash-image": "Gemini 2.5 Flash Image",
+EXTRA_LABELS = {"gemini-3.1-flash-tts-preview": "Gemini 3.1 Flash voices",
+                "gemini-2.5-flash-preview-tts": "Gemini 2.5 Flash voices",
+                "gemini-3.5-flash": "Gemini 3.5 Flash", "gemini-2.5-flash-image": "Gemini 2.5 Flash Image",
                 "gemini-3.1-flash-image": "Gemini 3.1 Flash Image", "gemini-2.5-pro": "Gemini 2.5 Pro"}
-GEMINI_ONLY = ("pw_books", "notes_qc", "typeset")
+GEMINI_ONLY = ("pw_books", "notes_qc", "typeset", "audio")
 
 
 def _rules(type_id: str) -> dict:
@@ -68,7 +74,7 @@ def selectable(type_id: str = "", stage: str = "notes") -> list[dict]:
     from sheets_bridge.pw_transport import SELECTABLE_MODELS
 
     gemini_only = stage == "speech" or (note_types.get(type_id) or {}).get("engine") in GEMINI_ONLY
-    listed = [] if stage in IMAGE_STAGES else [(m, label) for m, label in SELECTABLE_MODELS
+    listed = [] if stage in OWN_LIST_STAGES else [(m, label) for m, label in SELECTABLE_MODELS
                                                if not (gemini_only and m.startswith("gpt"))]
     for model in default_order(type_id, stage) if type_id else []:
         if model not in {m for m, _ in listed}:

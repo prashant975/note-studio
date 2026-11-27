@@ -1,5 +1,983 @@
 # Note Studio — Handoff (newest first)
 
+## Mac 2026.11.27.3 (No UPSC) built and installed: ZIP for Audio notes, no old versions kept — 27 November 2026 (20:32)
+
+The user: "build and install, then commit and push".
+- **Build:** `build_macos.py --without upsc` (no zip, not published) → 2026.11.27.3. The bundle holds the ZIP upload and
+  the no-old-versions code. Log: `_build/build_macos_20261127_3.log`.
+- **Install:**
+  - Database (SQLite backup API) and categories copied first to `~/NoteStudio_backups/*-before-install-20261127-203129`.
+  - No run active. Quit NoteCraft by AppleScript; it was closed after 2 s.
+  - Swapped `/Applications/NoteCraft.app`: old aside, `dist/NoteCraft.app` moved in (a move, so no copy stays in
+    dist), quarantine cleared, opened.
+  - It answered on 3100 after 4 s as 2026.11.27.3, and `/audio` accepts `.zip`.
+  - The replaced app was then deleted. Only `/Applications/NoteCraft.app` remains, and `dist/` is empty.
+- **Not published:** other Macs and Windows don't get 2026.11.27.3 until a build is published with `--publish`, with
+  the user's go.
+- **Gates:** compare `_build/before_install_20261127_3.json` → `after_…`: nothing lost, no original touched (changed:
+  `note_studio.db`, the sheet token). Drift clean. Full suite 497 passed, 19 skipped.
+
+## No old NoteCraft versions kept; 54 GB of old copies deleted — 27 November 2026 (18:15)
+
+The user (screenshot of Storage → Applications listing many NoteCraft copies): "delete these and avoid keeping the old
+version, add this in the project itself".
+- **Deleted** (none was open; checked by process path):
+  - `dist/`: 7 old apps, 5 disk images, the 2026.11.27.2 zip (already in the team folder) and 5 `kept-*` folders;
+  - `~/NoteStudio_backups/`: 6 `NoteCraft-installed-*.app`;
+  - `~/.note_studio/update_backups/NoteCraft-2026.11.27.1.app`.
+- **Result:** free space went from 95 to 149 GiB. Only `/Applications/NoteCraft.app` (2026.11.27.2) remains, and it
+  answers on 3100. The small database and categories copies in `~/NoteStudio_backups` were kept.
+- **In the project:**
+  - `packaging/build_macos.py` `clear_old_builds()` removes dist/'s earlier Mac builds (`NoteCraft*.app`/`.dmg`,
+    `NoteCraft_Mac*.zip`, `kept-*`) before building, instead of stopping with "Move it aside". It leaves `dist/team`
+    and other files alone, and stops if one of those apps is open.
+  - `note_studio/updater.py` `drop_backups()`: after a Mac self-update, the replaced app in `update_backups` is
+    removed once the new version opens (`settle_state` → done). Until then it stays, for a swap that fails. The tour
+    text says so.
+  - `packaging/build_installer.py`: `--keep` defaults to 1 (was 3).
+  - `CLAUDE.md`: new rule "No old app versions are kept".
+- **Tests:** `test_mac_updates.py` (+2: removes earlier builds, never an open one), `test_updates.py` (the backup
+  goes only after the new version opens). Full suite 497 passed, 19 skipped.
+- **Not built, installed or committed.** The installed 2026.11.27.2 still keeps its next update's backup until a
+  build with this change is installed.
+
+## Audio notes take a ZIP of the chapter's lectures — 27 November 2026
+
+The user: "also give option to upload zip file for audio notes".
+- **`audio_service.unpack()`:**
+  - A `.zip` upload (judged by its name: Word and PowerPoint files are ZIPs inside too, and stay "not a PDF") is opened
+    with Python's `zipfile`, with no program. Its PDFs join the other uploads; other files, `__MACOSX` and hidden files
+    are left out.
+  - Folders shared by all the PDFs (a zipped "Chapter 5" folder) are dropped from the names; deeper folders lead them
+    ("Day 2 - notes.pdf"), so lecture order follows the folders.
+  - Plain-words refusals: a ZIP that does not open, one locked with a password, one with no PDF inside, more than 20
+    PDFs, a PDF over the size limit, or a ZIP over 1,000 MB.
+- **`submit_chapter`:** unpacks first and returns `(id, created, lectures)`, so the toast counts the PDFs inside. With
+  one ZIP and an empty chapter name, the ZIP's name becomes the chapter name.
+- **Form:** accepts `.zip`, the drop-area words say so, and `app.js` lists a chosen ZIP without a join order (the app
+  gives that). Page guide `/audio` updated; tour `2026-11-27-audio-zip`.
+- **Tests:** `test_audio_notes.py` 29 (+6): a Mac-made ZIP through the app, folders and order, and four refusals. Full
+  suite 495 passed, 19 skipped.
+- Not built, installed or committed: the installed 2026.11.27.1 still takes PDFs only.
+
+## Mac and Windows update from one folder (the team folder), as in Doubt Desk; Mac 2026.11.27.2 — 27 November 2026 (13:00)
+
+The user: "i want to give both update from the same folder check it like it was in dout desk". They chose the team
+folder, the team key in the Mac app, and build, install, publish, commit and push.
+
+- **Doubt Desk** (`~/Projects/doubt-solving-bot`, read only) works like this:
+  - one Drive folder, "Doubt Desk Releases";
+  - every Windows and Mac installer carries the QBG service account `qbg-studio-bot@…`, encrypted; its Mac build
+    takes the key from `~/.config/qbg-toolkit/QBG-One-Service-Account.json`;
+  - file names carry the platform.
+- **NoteCraft now does the same:**
+  - Mac and Windows both read the team folder `1vQXzi3kWd-k_LnVcvF-Izeq2tKEND0zO`, which is the project's
+    `release.json` "releases".
+  - The names already keep them apart: `NoteCraft_Setup[_NoUPSC…]_<v>.exe` and `NoteCraft_Mac[_NoUPSC…]_<v>.zip`,
+    each with a `.txt` of notes. Each platform and edition takes only files with its own name (tested both ways).
+  - `packaging/build_macos.py`:
+    - the separate Mac folder is gone: `packaging/macos_release.json` is deleted and `mac_folder()` removed;
+    - every Mac app carries the team key at `Contents/Resources/source/deployment/service_account.json`, where
+      `updater.team_key()` finds it, as the Windows installer does. Only its email is printed.
+    - `team_key_source()` finds the key: `--team-key`, else the key added in Settings, else the QBG toolkit key on
+      this Mac. A key that is not a service account is refused. With no key the build stops, unless
+      `--no-team-key` is passed.
+    - `--publish` uploads into the team folder; `--publish <link>` uploads into that folder instead, and the app
+      still reads the team folder.
+  - Settings → Updates says "The team folder" on the Mac too. The hints say that both platforms share the folder and
+    that the Mac app carries the key.
+- **Move-over release 2026.11.27.2** (No UPSC): published once into the old "NoteCraft Mac updates" folder
+  (`1NomCq…`, private), because the installed 2026.11.27.1 reads only that folder. Zip 691,658,295 bytes,
+  SHA-256 `7cead972…825a`, Drive file `1dvOHiEwzoeGTu1w6v_R0uW9WPY3FjmVG`.
+- **Publishing into the team folder from this Mac is not possible yet.** The NoteCraft sign-in cannot see it, and
+  the service account owns no storage. Until the folder's owner gives the NoteCraft Google account edit access,
+  drop the Mac zip (and a `.txt`) into the team folder by hand, as the Windows `.exe` is.
+- **Tests:** `tests/test_mac_updates.py` 16 (+4: one folder, each taking its own; the Mac app reads the team folder;
+  the key is carried and only its email shown; a Mac with the key reads with it first). Full suite **489 passed,
+  19 skipped**.
+- **Installed by self-update:**
+  - The running 2026.11.27.1 found .2 in the old Mac folder, then downloaded and checked it.
+  - With no run going, Install update brought it back as 2026.11.27.2 ("Updated to 2026.11.27.2.").
+  - Its Check for updates now reads the team folder as `qbg-studio-bot@…`, with no error. No Mac zip is there yet,
+    so "Newest in the folder" is empty; the Windows files are skipped.
+  - Settings → Updates says "The team folder".
+- **Gates:**
+  - compare `_build/before_one_folder_20261127.json` → `after_…`: STOP only from the update's backup rotation. The
+    29,437 files of the kept `NoteCraft-2026.11.26.2.app` were replaced by `NoteCraft-2026.11.27.1.app`.
+  - No JSON entries lost and no original touched. Changed: `note_studio.db` and the sheet token.
+  - Drift (`--project . --baseline-ref HEAD`) is clean.
+- Committed: this change only. The audio session's work stays uncommitted.
+
+## First real audio note (run 18), and the voice fix in 2026.11.27.1 — 27 November 2026 (01:30)
+
+The user: "make a test audio note from my lecture pdfs" → "foundation notes which i make today", Rahul Sir, 15 minutes.
+- **Input:** the two Concise Notes PDFs from runs 15–16 (`chapter-16-loci`, 3 pages; `chapter-22-heights-and-distances`,
+  2 pages), sent to the running app (POST /new, category foundation) as one chapter, "Loci and Heights and Distances".
+- **Run 17 (00:34):** the script was made and checked (₹3.10). It then stopped at voice part 1: "This Google account is
+  not on the PW list".
+- **Cause:** PW AI's `/api/gemini/native` refuses both speech models for the app's key, with 403
+  `key_model_access_denied`. The account is allowed: the allowlist answered "allowed" and the script calls worked.
+  `/api/gemini/tts` (one voice per call) works for both models and answers WAV. `ai.py` read every 403 as the account.
+- **Fix (in 2026.11.27.1, built and installed by the CSIR NET session):**
+  - `typeset/ai.py` `_model_refused()`: that 403 is no longer a sign-in stop. Speech falls back to one line at a time;
+    a JSON call tries the next model.
+  - `audio/voice.py` `line_text()`: each line spoken alone is led by "Say this as Raju, a young Indian man chatting
+    with a college friend: natural, lively spoken Hinglish … urban Indian accent:". It was tried on one line and
+    transcribed back: followed, not read out. REVISION `audio-voice-v3`.
+  - Tests: `test_audio_notes.py` 23 (+2). The real 403 completes line by line, and a refused account still stops in
+    plain words. Full suite 484 passed, 19 skipped (the one failure then was the CSIR NET session's test, since fixed).
+- **The episode:**
+  - Spoken from the fixed source into a scratch copy of run 17: 94 calls, ₹26.02, 37 min.
+  - Parts 2 and 3 took 18 and 13 min: PW AI requests that hung until the 300 s timeout, then asked again.
+  - The parts were copied into run 17's `audio_parts`, then **Try again** in the app made **run 18**: complete, ₹0,
+    every part reused.
+  - Result: 9 min 12 s, MP3 6.6 MB, quality report "passed".
+  - Gemini listening check (₹1.28): no instruction read aloud, a male and a female voice taking turns, natural Hindi,
+    no glitches.
+  - Total paid: **₹30.41** (script 3.10, voice 26.02, check 1.28; tiny probes besides, under ₹2).
+- **Short episode:** 15 minutes asked, but the 5 pages gave a 1,374-word script, about 7 minutes of words.
+- **Not done:** speaking lines in parallel or with a shorter speech timeout, which would shorten the 37 minutes.
+- **Gates:** compare `_build/after_csir_net_20261127.json` → `after_audio_test_20261127.json`: nothing lost, no
+  original touched. Only `note_studio.db`, the sheet token, run 17's new `audio_parts` and run 18 changed or are new.
+  Drift is clean.
+- Audio files stay uncommitted: the user has not asked for a commit.
+
+## CSIR NET category: B.Sc.-style notes with each lecture PDF's own header name and logo; Mac 2026.11.27.1 — 27 November 2026
+
+The user asked for "more categories for notes generation which follow the B.Sc. style, but the name and logo come by
+auto-fetching from the PDF", then to build, install, commit and push. They sent four CSIR NET notes PDFs, made in the
+same LaTeX template family:
+- `LifeScience_Biomolecules Part 1_ Proteins.pdf`
+- `Physics_Potentials.pdf`
+- `Mathematical Fundamental Handbook.pdf`
+- `Chemistry _Periodicity_ Rules for Electron Filling.pdf`
+
+Each prints a running header: the name on the left (e.g. "CSIR NET - Life Sciences") and the unit on the right
+(e.g. "Unit 1: Biochemistry"). None of them has a logo.
+
+- **New** `note_studio/typeset/source_brand.py` reads a lecture PDF's running header. Nothing is guessed:
+  - Text in the top 10 % of the page counts when it repeats on the same side on at least 60 % of the first 12 pages,
+    is at most 13 pt, and is not a page number. Its left part becomes `header_left` and `footer_left`; its right
+    part becomes `header_right`.
+  - A logo-sized picture repeated in the top 15 % becomes the corner logo and the faded watermark, drawn as the PW
+    logo is (`render.Branding.logo`, `render.own_logos`, `render.logo_box`). A wide logo is 11 mm tall and at most
+    3.5× as wide.
+  - A one-page PDF counts only small text in the top 4.5 %.
+  - The words come out right on all four PDFs. A PW concise-notes PDF gives the PW logo.
+- **The notes:** `engines/typeset.make_notes` reads the header first when the category has `branding.from_pdf`.
+  - `source.extract(furniture=…)` leaves out of the content the header lines (AI-read or text), bare page numbers at a
+    page's top or bottom, and the header logo. They are listed in `source_map.json` `excluded_furniture`.
+  - The quality report's first check is "Header name and logo": what was taken, or why the category's words stayed.
+  - With no logo in the PDF, the category's PW logo choice applies.
+  - A Word input keeps the category's words.
+  - Categories without `from_pdf` are unchanged.
+- **Category** `note_studio/packs/csir_net` (built in, seeded on start like B.Sc.):
+  - subjects Life, Physical, Chemical, Mathematical and Earth Sciences;
+  - offers `typeset_notes`, plus Audio notes, which every category gets from the audio session's work;
+  - `from_pdf: true` and `pw_logo: false`, so no Google Docs type;
+  - fallback words "CSIR NET" | "CSIR NET Notes".
+- **Settings → Categories:**
+  - per category with B.Sc.-style notes, the switch "Header name and logo: From each lecture PDF / This category's own
+    words" (`/settings/categories/{id}/from_pdf`, `category_admin.set_from_pdf`, a `.bak` first);
+  - Add a category has the checkbox for it, kept only when B.Sc.-style notes are chosen.
+- **Also:**
+  - What's new tour `2026-11-27-csir-net`;
+  - the New notes and Settings page guides;
+  - `tests/test_gdoc_pdf.py` no longer depends on the order of PDFs made in parallel (it failed now and then).
+- **Tests:**
+  - `tests/test_source_brand.py` (11) and `test_category_packs` (csir_net seeded);
+  - full suite in the working tree passed;
+  - the committed tree alone (without the audio session's uncommitted files) also passed, except
+    `test_gdoc_app::test_a_missing_sign_in_holds_the_queue`, which is old and timing-dependent and passes when rerun.
+- **Not checked with AI:** no paid run was made. The default path reads every page with AI; the header lines it
+  transcribes are dropped by the same rule, which is tested with saved page answers.
+- **Not done:** vector-drawn logos and Word headers are not read.
+- **Mac 2026.11.27.1** (No UPSC):
+  - The 26.2 output was moved to `dist/kept-20261126-2-noupsc/`.
+  - Built with `build_macos.py --without upsc --zip --publish`: zip 691,655,292 bytes, SHA-256 31c506d9…5abe,
+    Drive file 1IXh51UHpk5JwOPNctr64hES1x2-vkqUQ. It includes the audio session's voice-step fix as it was in the tree.
+  - Installed by self-update at 00:55 (no run active; the audio session was told before and after). It was back on
+    3100 as 2026.11.27.1 within a minute. `~/.note_studio/categories/csir_net` was seeded, and New notes and Settings
+    show CSIR NET with its switch.
+- **Gates:**
+  - `data_guard` snapshot `_build/before_csir_net_20261127.json`;
+  - compare with `after_csir_net_20261127.json`: STOP only from the update's backup rotation. The 29,429 files of
+    `update_backups/NoteCraft-2026.11.26.1.app` were replaced by `NoteCraft-2026.11.26.2.app`; no JSON entries
+    lost; no original touched. Changed: `note_studio.db`. New: the `csir_net` pack;
+  - drift: STOP only for the known reason (the originals are not on this Mac); `git status engines` is clean.
+- **Commit:** only this session's files and hunks. The audio session's work stays uncommitted at its request: `audio/`,
+  `audio_service.py`, `engines/audio.py`, its hunks in shared files and its HANDOFF sections.
+
+## "Bsc Nursing Notes": a PDF of every made Doc, its link in Concise Notes Link (853 rows) — 26 November 2026 (night)
+
+The user asked to "convert doc into pdf and paste the link"; they chose all 853 B.Sc.-style Docs, links in column M
+"Concise Notes Link" (empty in every row before).
+- **New code** `note_studio/gdoc_pdf.py` (+ `gdoc_sheet.write_pdf_link`, `gdoc_sheet.asked_again`, now also used by
+  `gdoc_service.write_link`; `gdoc_sheet.read` returns each row's `pdf` and the tab's `pdf_column`):
+  - the PDF is the Doc's tabs exported one by one (`gdoc_make.export_tab`) and joined with pypdf, a bookmark per tab
+    when there are several. A whole-Doc export breaks pages differently from what the quality check passed
+    (row 113: 4 pages instead of 3), so it is not used;
+  - one Drive folder per sheet tab, "Bsc Nursing Notes - PDFs (B.Sc. style)" (id 1afLbw9EbCaiCcaaMXPlhCH3ScbHBAYcC),
+    in the NoteCraft sign-in's My Drive; folder and PDFs readable by anyone at the account's domain with the link;
+  - each Doc is uploaded once: `~/.note_studio/gdoc/pdfs.json` remembers it, so asking again only writes missing links;
+  - a link goes into M only while that row's P still links the same Doc, only into an empty cell, never by adding a column.
+  - Tests: `tests/test_gdoc_pdf.py` (6). Full suite 472 passed, 19 skipped.
+- **Run** (`_build/gdoc_pdfs_20261126.py`, the app's code path with NoteCraft's sign-in; no AI, no cost): rows 113 and
+  251 as a pilot (checked by eye: logo, watermark, footer, bookmarks), then the other 851 in 44 min, 3 at a time.
+  Result: 853 of 853 rows have M = the PDF of their P Doc; 8,684 pages, 1.33 GB. Results JSON `_build/gdoc_pdfs_20261126_*.json`.
+- **Not yet in the app:** no button, and new sheet runs do not make the PDF by themselves. A PDF does not follow later
+  edits of its Doc. The 25 rows still without a Doc (equations, drawings) have no PDF either.
+
+## Mac 2026.11.26.2 (No UPSC) built, published and installed by self-update — 26 November 2026 (13:15)
+
+The user said "when it complete then build and install" once the other session's MP3 audio work was finished (its last
+message, 13:00: 466 passed, 19 skipped; no file changed after 12:57).
+- **Tests:** 466 passed, 19 skipped (full suite, 13:08).
+- **Build:** the other session's 2026.11.26.1 output was moved (not deleted) to `dist/kept-20261126-1-noupsc/`, then
+  `build_macos.py --without upsc --zip --publish --notes "…MP3…Raju and Riya…"` → 2026.11.26.2, zip 691,633,093 bytes,
+  SHA-256 2c3825c6…6c92, Drive file 1LlPAMEVG57h-2CyNuJ0xqJaTnilnLv1a in "NoteCraft Mac updates". `lameenc` is in the bundle's libs.
+  Log: `_build/build_macos_20261126_2.log`.
+- **Install by the app's own update:** Check for updates (POST /update/check) → downloaded and checked in 2 min →
+  no run or job active → Install update at 13:14 → reopened 13:15 as 2026.11.26.2 ("Updated to 2026.11.26.2.");
+  backup `~/.note_studio/update_backups/NoteCraft-2026.11.26.1.app`. The startup "Sign in" message cleared on the next check.
+- **Gate:** compare says STOP only because the one kept backup rotated (old `NoteCraft-2026.11.25.2.app` replaced by
+  the 2026.11.26.1 one, by design); otherwise only `note_studio.db` changed, nothing lost, no original touched,
+  engines have no diff against HEAD. Not committed (the tree still holds both sessions' uncommitted work).
+
+## Audio notes as MP3 — 26 November 2026
+
+The user: "okay give me mp3", after being offered the `lameenc` library (an install, no program) or an MP3 voice route.
+- `lameenc` 1.9.0 (LGPL; a 126 kB wheel with LAME inside) was installed into `.venv`; the Mac build bundles
+  `.venv`'s packages. It is in `requirements.txt` for the Windows builder's environment. No ffmpeg or other program.
+- `audio/voice.py`:
+  - `mp3_of()` writes the joined PCM as MP3: mono, 44.1 kHz (MPEG-1, like the reference episode), 96 kbps,
+    quality 2. That is about 11 MB for 15 minutes; the sample was 14.6 MB at 128 kbps stereo.
+  - `join(..., mp3=True)` is used for the episode only. Saved parts stay lossless WAV, so a reused part is never
+    encoded twice.
+  - Without the library the episode is a WAV, and the quality report says so.
+- Registry "You get" says MP3. Tour `2026-11-26-audio-mp3`: MP3 audio, and the reference sound (Raju and Riya).
+- Tests: `test_audio_notes.py` 21 (+1: MP3 frames, size at 96 kbps, the WAV fallback). Full suite **466 passed,
+  19 skipped**.
+- The installed app (2026.11.26.1) still writes WAV until the next build.
+
+## "Bsc Nursing Notes": 16 more rows made on 2026.11.26.1 (853 of 878 rows have a Doc) — 26 November 2026 (midday)
+
+The user shared the 14 unreadable sources and said to make the remaining rows once the other session had built and
+installed 2026.11.26.1 (it has the link retry, code-block marker and Drive rate-limit fixes; checked in the bundle).
+- **The tab changed overnight:** one row near the top was removed, so every row after it moved up by one (old 114 is
+  now 113), and a new row 879 ("Communication and Utilization of Research") was added. All 837 made Docs were still
+  in column P (checked by Doc id against every done run item), so nothing was lost; the app writes a link by
+  matching the source Doc, not only the row number.
+- **Run 14** (app, Sheets lane, 3 at a time; 12:47–12:56; ₹51.62): rows 113, 251, 255, 286, 314, 327–330, 334,
+  338–341, 343, 345, 347–349, 352, 376, 383, 384, 398, 410, 416, 431, 461, 462, 469, 470, 478, 486, 688, 691, 706, 817,
+  829, 840, 841, 879.
+  - **16 made:** 13 of the 14 newly shared rows, the 2 code-block rows (now 410 and 688) and the new row 879.
+    Row 251 (Myocardial Disorders) is a whole unit: 13 tabs, 100 pages, ₹30.12.
+  - **25 not made, nothing spent:** 23 have a Google Docs equation (327–330, 334, 338–341, 343, 345, 347–349, 352,
+    383, 384, 486, 706, 817, 829, 840, 841; row 341 was one of the unshared ones and turned out to have an equation),
+    and 2 have a drawing (376, 691).
+  - **5 flagged:** 251 ("Mostimportant"), 398 and 469 (raw LaTeX in the source), 478 (source typos `20{-22G`, `→$`)
+    are the sources' own text. 462 is a real layout point: the "Dysplasia (Pre-malignant)" table row splits across the
+    page and leaves page 2 almost empty.
+- The old unlinked failed-check Docs for these two code-block rows (made in run 11/12) are still in Drive; trash them only if the user says so.
+
+## Audio notes follow the team's reference episode — 26 November 2026
+
+The user downloaded their audio-notes sample ("WhatsApp Audio 2026-11-25 at 5.13.21 PM.mpeg") and asked to take it as
+the reference.
+- **The file, read for free:** MP3, 15 min 14 s, 128 kbps, 44.1 kHz stereo, 14.6 MB. Its tag shows an M4A
+  converted by ffmpeg (Lavf), likely a NotebookLM download sent over WhatsApp.
+- **Heard once** by PW AI (Gemini 3.7, the NoteCraft sign-in; the user approved; ₹4.79):
+  `_build/audio_reference_20261126.py` → `.json` (transcript, speakers, segments, delivery) and `.txt`.
+  - A is a young man: he opens and asks, recaps with analogies. B is a young woman: she explains most and sums up
+    lectures. Names are never said; the teacher is "Amit Sir".
+  - 170 turns, 2,823 words (about 185 a minute), a median of 16 words a turn, with many 1–3-word reactions
+    ("Wahi toh.", "Sahi baat.", "Mhm."), fillers and laughs.
+  - Formulas are said "W is equal to F dot s", "F is equal to minus dU by dx".
+  - The flow goes lecture by lecture and ends with praise of the teacher's notes and a confident wrap-up.
+
+**Changed** (code; tests pass; not built)
+- `audio/script.py` (`audio-script-v2`):
+  - each friend's gender, with Hindi verb agreement;
+  - roles from the sample;
+  - short turns with quick reactions in between;
+  - fillers, and laughs written as "haha";
+  - formulas said the classroom way;
+  - which lecture each idea came from;
+  - 185 words a minute and 16.6 words a turn, so 15 min is about 2,775 words in about 167 turns.
+- `audio/reference_excerpt.txt`: 31 turns of the sample (the banter, the teacher's praise, lecture 1 and a formula).
+  They are sent as manner only ("Never copy its content, sentences or opening"), with the run's friends and
+  teacher in place of A, B and "Amit Sir".
+  The team's prompt is unchanged; only its example names are swapped, as before.
+- `audio/voice.py` (`audio-voice-v2`): the speaking style names each friend as a young man or woman (from the voice),
+  with a brisk natural pace, quick reactions, light laughs and an urban Indian Hinglish accent.
+- Defaults: Raju (Puck, male) and Riya (Kore, female). The prompt's "Raju aur Ram" were examples ("jaise"), and a
+  woman's voice needs a woman's name. Both are editable under More options, with hints.
+- Tests: `test_audio_notes.py` 20 (+1). Full suite **465 passed, 19 skipped**.
+- **Not changed:** the audio is still WAV (about 43 MB for 15 min, against the sample's 14.6 MB MP3). MP3 without
+  ffmpeg would need the `lameenc` library bundled into the app (an install), or a voice route that answers MP3
+  (ElevenLabs or OpenAI, one line per call). This is the user's call.
+- **Built and installed 2026.11.26.1, No UPSC** (the user: "build and install"). It also carries the Nursing
+  session's three Google Docs fixes below.
+  - The .4 build was moved to `dist/kept-20261125-4-noupsc/`.
+  - `build_macos.py --without upsc --dmg --zip` → PACKAGE_OK. Log: `_build/build_macos_20261126_audio_ref.log`.
+    - dmg: 956,334,044 bytes, SHA-256 `e930720a…599d4`.
+    - zip: `NoteCraft_Mac_NoUPSC_2026.11.26.1.zip`, 691,499,534 bytes, SHA-256 `11df0859…ffd9a4`. Not published.
+  - NoteCraft was idle (13 runs, nothing waiting or running) and was quit by a normal Quit.
+  - Backups in `~/NoteStudio_backups/`: `note_studio-before-install-20261126-124634.db` (integrity ok),
+    `categories-before-install-20261126-124634`, and the old app `NoteCraft-installed-20261125-4-noupsc.app`.
+  - `ditto` → identical to the build. Reopened: v2026.11.26.1, signed in; `/audio` shows Riya and Kore.
+  - Gate: nothing lost, no original touched. Changed: the database (app start). Drift clean; `engines/` no diff.
+  - Note: other apps on this Mac (QBG One, Doubt Desk, QBG Data, Doubt Desk Data) also run a program named
+    `DesktopLauncher`. Check that NoteCraft has quit by its PID or path, never by that name.
+
+## "Bsc Nursing Notes" rows 108–879 made (837 of 877 rows have a Doc); 3 fixes in code — 26 November 2026 (night)
+
+The user asked: "did you remember bsc nursing note continue the remaining note", then "start runing i will charge it".
+Everything below ran from the installed app (2026.11.25.3, No UPSC), 3 rows at a time. PW AI, Gemini 3.7, no cap.
+
+| Run | What | Made | ₹ |
+|---|---|---|---|
+| 11 | rows 108–879 (772) | 513, then stopped at 02:21 (see fix 1) | 1,118.59 |
+| 12 | Try again from run 11 (259 rows; row 651's checked Doc reused) | 217 | 558.67 |
+| 13 | rows 764 and 835 (Google's rate limit, fix 3) | 2 | 4.71 |
+
+- **Total: 732 notes, ₹1,681.97.** The sheet check (free) shows 837 of 877 rows with a Doc in P. 40 are left.
+- **40 rows without a Doc**, none of them paid:
+  - **Source Doc cannot be opened by the NoteCraft account** (14): 114, 252, 256, 287, 315, 342, 399, 417, 432,
+    462, 463, 470, 471, 479. These need sharing, or a correct link in the sheet.
+  - **Google Docs equation in the source** (21): 328–331, 335, 339–341, 344, 346, 348–350, 353, 384, 385, 487,
+    707, 818, 830, 841, 842.
+    - Google gives no API (not even an export) for what is inside an equation.
+    - The gaps sit at things like "High-flow [O₂?] via…" and "Delayed ([?]) / Rapid ([?])".
+    - The content team must type them as text.
+  - **Google Drawing / object without a picture** (2): 377, 692.
+  - **Code block** (2): 411, 689. Fixed in code (fix 2). These need the new app, then Try again.
+    - Each left an unlinked, failed-check Doc in Drive: 411 → `1r148YZU…`, and one for 689 in run 12.
+- **Quality review: 120 made notes "need attention"** (139 points).
+  - 71 "language" points (missing spaces and the like) and 33 "formula_render" points (raw LaTeX such as
+    `$30^\circ$` or `\text{ mmHg}`, sometimes pasted twice) are the sources' own text. The Docs passed word for
+    word, and 276 and 343 were checked against the source. Content is locked, so they are kept.
+  - 35 "layout" points in 29 notes: 160, 169, 179, 249, 269, 276, 402, 405, 420, 426, 431, 449, 460, 464, 475,
+    484, 499, 582, 594, 608, 655, 694, 703, 716, 719, 735, 750, 847, 855.
+    - 23 are a heading at a page bottom before a table or box. Google ignores keep-with-next before a table, and
+      headings already have it.
+    - The rest: narrow table columns (269), a trailing empty page (276), a last line alone on a page (426, 484,
+      594), a split flowchart (475), a cropped table picture (582), and a bulleted heading (655).
+  - The full list is in the run folders' `result.json` → `quality`.
+- **Fixes in code** (not in the installed app yet; they need a release):
+  1. `gdoc_service.write_link()`: writing a row's link tries 3 times on a dropped connection or a busy Google.
+     If it still fails, only that row fails ("Made and checked… Try again writes it"), not the run.
+     - Run 11 stopped on "Connection reset by peer" while re-reading the sheet for row 651's link.
+  2. `gdoc_source._clean()` drops U+E907, Google Docs' hidden code-block start/end marker. Docs will not insert it,
+     so the word-for-word check failed on rows 411 and 689.
+  3. `gdoc_writer.rate_limited()`: Drive's 403 "userRateLimitExceeded" waits and retries like a 429. The template
+     copy now uses `_execute(..., outages=False)`; after a 5xx a copy may exist, so it is not retried.
+  - Tests: +1 in `test_gdoc_app.py`, +2 in `test_typeset_gdoc.py`.
+- Gate: nothing lost, no original touched. Changed: the database and token. New: 8,071 run files.
+- Claude kept the Mac awake with `caffeinate -i -t 36000` during the run, and stopped it afterwards.
+
+## Audio notes: a finished chapter's revision podcast — 25 November 2026 (evening)
+
+The user wants audio notes once a chapter is finished: the day-wise lecture notes are merged, and two friends
+revise the chapter in a podcast. The team does this today in NotebookLM, with the prompt in
+`~/Downloads/Voice Note.docx`. The user's choices:
+- Later the lectures come from a sheet; for now they are uploaded by hand in the app.
+- "dont use local ffmpeg use ai for this".
+- An "Audio notes" section in the Make notes menu (the user sent a screenshot).
+
+**Built** (code only: not committed, not built, nothing paid; the user will test it)
+- `note_studio/audio/`:
+  - `prompt.txt`: the docx text word for word (SHA-256 `e45783f0…`, pinned by a test). Only its example names
+    change per run: "Rahul Sir" becomes the Teacher name, "Raju aur Ram" the friends' names.
+  - `chapter.py`: PDFs joined in lecture order (Lecture 2 before 10) with a bookmark each. PW AI gets a lighter
+    copy when the join is over 40 MB.
+  - `script.py`: the system text asks only for a voice-readable form (two speakers, spoken words only) and the
+    length. Gemini 3.7 writes JSON lines, then a second call checks every line against the notes. A correction
+    is placed only where it fits; topics left out are listed. The script is also plain text ("Raju: …").
+  - `voice.py`: groups of about 1,800 characters, each spoken in one native Gemini call with two voices
+    (`gemini_native`, `speechConfig.multiSpeakerVoiceConfig`).
+    - If PW AI refuses that request (4xx), the rest is spoken line by line through `gemini_tts`.
+    - PCM is joined into one WAV with Python's `wave` module; an MP3 answer is joined as frames. No ffmpeg.
+    - Parts are saved under a fingerprint of their lines and voices, so Try again or a fixed script pays only
+      for changed parts.
+- `typeset/ai.py`: `Session.speech()` / `speech_line()` (same retries, budget and sign-in stops) and `audio_of()`.
+- `engines/audio.py`: join → script → check → voice.
+  - "After I check the script" stops after the check.
+  - A run stopped at the voice keeps its script, and Try again reuses it.
+  - Outputs: `<chapter> Audio notes.wav`, `… Audio script.txt`, `… merged notes.pdf`, `Quality report.json`.
+- `audio_service.py`: the whole chapter is one queue item and one run (source `audio`). Also: Make the audio
+  from a fixed script (a new voice-only run, which reuses unchanged parts), and Try again.
+- Registry `audio_notes` (engine `audio`):
+  - Models: Gemini 3.7 for the script and check; voice `gemini-3.1-flash-tts-preview` then `gemini-2.5-flash-preview-tts`.
+  - Hinglish only (`own_languages`).
+  - Form options: teacher name, chapter, length 10/15/25 min, when the audio is made; under More options the
+    friends' names and voices (12 Gemini voices).
+- Categories: every category offers it by itself (last in its list). Settings → Categories can stop offering it
+  (`"offer_audio": false`, `.bak` first). A category whose own types are all missing (UPSC in the smaller
+  installer) offers nothing.
+- Pages:
+  - Make notes menu → Audio notes (`/audio`, the New notes form with the type fixed); also a type card on New notes.
+  - Run page: an audio player, the script in a box with Make the audio, and Start another goes to `/audio`.
+  - Settings → AI models has the "Speaking the script" stage.
+  - Tour `2026-11-25-audio-notes`; guides for `/audio`, `/new`, `/runs` and `/settings`.
+
+**Tests and gates**
+- 461 passed, 19 skipped (the baseline this afternoon was 440). `tests/test_audio_notes.py` is new (19).
+  `test_note_types`, `test_gdoc_app` updated: types now end with `audio_notes`, and the newest tour is the audio one.
+- Looked at in a scratch copy (port 3299, scratch data, fake PW AI): `/audio` and a finished run's page.
+- `data_guard` compare (`_build/before_audio_notes_20261125.json` → `after_…`): nothing lost, no original touched.
+  - New: 29,421 files, all `~/.note_studio/update_backups/NoteCraft-2026.11.25.2.app`. The installed app updated
+    itself to 2026.11.25.3 during the session.
+  - Changed: the database and the token (the running app). Drift clean; `engines/` no diff.
+
+**Not known until the first real run** (needs the user's go: it is paid)
+- Does the proxy's `/api/gemini/native` route accept the speech models with `speechConfig`? If not, the line-by-line
+  route is used, if `/api/gemini/tts` answers. Its answer shape is guessed (`result.audio_base64`); `audio_of`
+  also reads Gemini's inline data.
+- How Gemini's voices sound reading romanised Hinglish. Sarvam and ElevenLabs routes exist in `pw_access`, but
+  are not wired.
+- Size: WAV at 24 kHz is about 2.9 MB a minute (15 minutes ≈ 43 MB). MP3 needs a route that answers MP3.
+- Next: the sheet as the source of a chapter's lectures.
+
+**Built and installed 2026.11.25.4, No UPSC** (the user: "build and install"; then "Quit it and install")
+- The .3 build was moved to `dist/kept-20261125-3-noupsc/` (app, dmg, zip).
+- `build_macos.py --without upsc --dmg --zip` → PACKAGE_OK. Log: `_build/build_macos_20261125_audio.log`.
+  - `dist/NoteCraft.dmg`: 962,225,163 bytes, SHA-256 `d3c3d16f…a23e8e6`.
+  - `dist/NoteCraft_Mac_NoUPSC_2026.11.25.4.zip`: 691,491,826 bytes, SHA-256 `94f4da1a…3052c`, carrying the
+    update pop-up notes.
+  - The built app holds `note_studio/audio/` (prompt byte-identical) and `audio_service.py`.
+- **Not published.** `--publish` was refused by the permission check (an upload the user had not asked for), so the
+  Mac release folder still holds .3. To publish later: `build_macos.py --publish` per the section below, or upload
+  that zip.
+- Install:
+  - The user's NoteCraft .3 was idle (no run or queue item waiting or running). It was quit with their OK, by
+    a normal Quit (`osascript … quit`).
+  - Backups in `~/NoteStudio_backups/`: `note_studio-before-install-20261125-182025.db` (integrity ok, 10 runs),
+    `categories-before-install-20261125-182025`, and the old app `NoteCraft-installed-20261125-3-noupsc.app`.
+  - `ditto` → `/Applications/NoteCraft.app`; `diff -rq` shows it identical to the build. Opened: port 3100 answers
+    v2026.11.25.4 and is still signed in.
+  - The live app shows Make notes → Audio notes; `/audio` offers B.Sc., Foundation, NEET-JEE and Nursing (no UPSC
+    in this edition). Settings has the switch and the "Speaking the script" stage.
+- Gate (`_build/before_install_audio_20261125.json` → `after_…`): nothing lost, no original touched, nothing new.
+  Changed: the database and the token (app start). Drift clean; `engines/` no diff.
+- Nothing was committed. The tree also holds the other session's uncommitted Mac-update work (see the next section).
+
+## Mac app: No UPSC edition that updates itself (2026.11.25.2 → .3 proven) — 25 November 2026 (evening)
+
+The user asked: "is auto update is workin on this app", then "i dont want that version it was with upsc exclude it
+then make it for auto update".
+
+**Why it did not work on the Mac**
+- The updater was QBG One's Windows flow: `NoteCraft_Setup_<v>.exe` from the team release folder, run by PowerShell.
+  It switched itself off unless `NoteCraft.exe` was found.
+- The team folder (`1vQXzi…`) is not shared with the NoteCraft sign-in on this Mac.
+  - Drive answers an empty list for a folder you cannot see, so the app said "Up to date". It now says the folder
+    is not shared.
+
+**What was built**
+- `version.setup_name(edition, mac=True)` gives `NoteCraft_Mac[_NoUPSC…]`. `version.mac_app_root()` finds the
+  `.app` this Python runs inside.
+- `updater.py` on the Mac app (`MAC = version.MAC_APP`):
+  - looks for `NoteCraft_Mac_<edition>_<v>.zip` (never a Windows `.exe`, never another edition);
+  - `installed_root()` is the `.app`, so the 5-minute background check and download run;
+  - the download is refused unless Drive's SHA-256 and size match and the file starts `PK`;
+  - `install()` → `unpack_mac()` unzips with `ditto` next to the download and checks the version, edition,
+    launcher and runtime. Then the zip is deleted.
+  - `MAC_HELPER` (`/bin/sh`, its own session) waits for NoteCraft's own programs to end (matched by program path
+    via `ps comm`, never by command line) and moves the old app to
+    `~/.note_studio/update_backups/NoteCraft-<old>.app` (one backup kept). It then moves the new app in, opens it
+    and writes `exit N` to `<log>.result`.
+  - Any failure puts the old app back and opens it. Log: `$TMPDIR/notecraft_update/install_<v>.log`.
+  - When the first check at start-up runs before the sign-in is back, it tries again in 30 s, not 5 min.
+- `update_delivery.py`: the file ending and first bytes come from the updater (`.zip`/`PK` on the Mac).
+- Settings → Updates: "The Mac release folder", and a Mac hint.
+- What's new tour `2026-11-25-mac-updates`, shown only in the Mac app.
+- `packaging/build_macos.py`:
+  - `--without upsc` (and/or `pw_books`) uses the Windows builder's `edition_release`. It leaves out that
+    engine's code, libraries and wrapper; `packaged()` is the file filter.
+  - `--zip` writes `dist/NoteCraft_Mac_NoUPSC_<v>.zip`.
+  - `--publish [folder link]` uploads it as the NoteCraft sign-in and checks the SHA-256. The folder id is in
+    `packaging/macos_release.json` and is built into the Mac app's `release.json` "releases". The project's
+    `release.json` keeps the team (Windows) folder.
+  - The build's own temporary folder had overwritten the release-folder variable. It was renamed to
+    `release_folder`; 2026.11.25.3 was then uploaded with the same `publish()`.
+- Mac release folder: "NoteCraft Mac updates" in the NoteCraft sign-in's My Drive, id
+  `1NomCqCouPrJwwkl7UzL-OrMGTc__pUMN`. It is private (owner only).
+- Tests: `tests/test_mac_updates.py` (12, with real `ditto`/`sh` on synthetic apps). **442 passed, 19 skipped.**
+
+**Builds and the proof** (the user's go: "Yes, quit it now")
+- 2026.11.25.2, No UPSC: 1.8 GB app (the full one is 2.6 GB). Kept as `dist/NoteCraft-20261125-2-noupsc.app`.
+  - Installed by hand. The user's own NoteCraft (opened at 12:17, nothing running) was quit with their OK.
+  - Backups: `~/NoteStudio_backups/note_studio-before-install-20261125-171316.db` and
+    `NoteCraft-installed-20261125-1-full.app`.
+  - New notes no longer offers UPSC; Nursing is still there.
+- 2026.11.25.3, No UPSC: `dist/NoteCraft.app`, `dist/NoteCraft.dmg` (946,780,596 bytes, SHA-256 `ae8fdc3a…`), and
+  `dist/NoteCraft_Mac_NoUPSC_2026.11.25.3.zip`.
+  - The zip is 691,389,297 bytes, SHA-256 `a6f99e68…31675`, published as Drive file `1EcoIJKlt2QExII2aMoGz5oBe9O4ftjXP`.
+- The installed .2 found .3 by itself at 17:18:53 and downloaded it in 2 min ("ready"). Install update was pressed
+  at 17:21:05.
+  - The app closed at 17:21:35 after unpacking, the helper swapped it (`exit 0`) and it reopened at 17:23:12.
+  - "Updated to 2026.11.25.3." The sign-in came back; .2 is kept in `update_backups`.
+- **Bug found by the proof, fixed in code, NOT in the installed .3:** the helper matched processes with `pgrep -f`
+  on the app path. Claude's own watch loop named that path, so the helper waited 90 s and then killed that loop.
+  - The fix matches by program path, with a test in which a process that only names the app is left alone.
+  - The first update from .3 still uses .3's helper. Do not run commands naming
+    `/Applications/NoteCraft.app/Contents/` while it installs.
+- Gate: nothing lost, no original touched. Changed: the database and token. New: the 29k files of the kept .2
+  backup. Engines: no diff against HEAD.
+
+**Another session was working in the tree at the same time** (an "Audio notes" feature, uncommitted, about 20
+files, `note_studio/audio/`).
+- Both builds above were made before those edits; checked: no `audio/` and `ai.py` equals HEAD.
+- `settings.html` and `whats_new.py` hold both sessions' changes.
+- **Do not build or commit the whole tree while that work is unfinished.** A Mac build copies the working tree.
+  Commit only this section's files and hunks.
+
+**Releasing the next Mac version:**
+`.venv/bin/python packaging/build_macos.py --without upsc --dmg --publish --notes "fix one; fix two"`.
+Move `dist/NoteCraft.app`, `.dmg` and the old zip aside first.
+
+## Mac build gets its own version (2026.11.25.1); the 24 Nov fixes installed — 25 November 2026
+
+The user sent a screenshot of the installed Mac app's account menu: "Version 2026.11.19.1 · Development copy". They
+asked: "after new build also update the version name on frontend just like you are doing on qbg one and note craft".
+- Cause: only the Windows builder (`build_installer.py`) gave each build a new `YYYY.M.D.N`.
+  - `build_macos.py` copied the project's `release.json` as it was.
+  - `version.CHANNEL` knew only the Windows install layout, so the Mac app called itself a development copy.
+- `packaging/build_macos.py`:
+  - `mac_release()` gives the next version after the project's `note_studio/static/release.json`: the same day is
+    N + 1, a new day is .1. It keeps the release folder id.
+  - The version goes into the app's `release.json` and `Info.plist` (`CFBundleShortVersionString`/`CFBundleVersion`).
+  - It goes into the project's `release.json` only after the package check passes, so the next Mac or Windows build
+    counts on from it.
+- `note_studio/version.py`: `mac_app()` recognises the app's own runtime
+  (`NoteCraft.app/Contents/Resources/runtime`), and `CHANNEL` becomes "Mac app".
+  - `INSTALLED` stays False on the Mac. The updater's own check (`installed_root`, NoteCraft.exe) is unchanged.
+- What's new tour `2026-11-25-gdoc-again`:
+  - Try the unfinished rows again;
+  - why a row did not finish;
+  - long notes finish.
+- The Runs page guide has a step for Try the unfinished rows again.
+- Tests: +2 in `tests/test_installed.py`; `test_gdoc_app` updated for the new tour. **430 passed, 19 skipped.**
+- Build (user's go: "after new build"):
+  - The previous build was kept as `dist/NoteCraft-20261124b.{app,dmg}`.
+  - New `dist/NoteCraft.dmg`: 1,357,573,476 bytes, SHA-256
+    `225426a38403eaaf5dba2402ca148d2b9a9c0c4ce01129f52df79fcb5dd26fbc`.
+  - PACKAGE_OK. Log: `_build/build_macos_20261125.log`.
+- Install:
+  - Backups: the database (`~/NoteStudio_backups/note_studio-before-install-20261125-105442.db`, integrity ok) and the
+    categories.
+  - Nothing was waiting or running. Claude quit the copy it had opened itself on 24 Nov at 22:07.
+  - The old app is kept as `~/NoteStudio_backups/NoteCraft-installed-20261124b.app`.
+  - `ditto` → `/Applications/NoteCraft.app`; `diff -rq` shows it identical to the build.
+  - Reopened. The sign-in came back by itself, and the menu shows "Version 2026.11.25.1 · Mac app".
+- Gate:
+  - Compare: nothing lost, no original touched. Changed: the database and the sign-in token (app start).
+  - Engines: no diff against HEAD. Drift still says STOP on this Mac only because the originals are not here.
+- This build has every fix from the section below: parts, the complete-PDF check, resume, Try again, failure reasons.
+
+## 100 more "Bsc Nursing Notes" rows (2–107 all done); long tabs, cut-short exports, Try again — 24 November 2026 (night)
+
+The user asked: "make the next 100 rows from the sheet", then "and from the starting". So the run covered the first
+100 rows without a Doc from row 2: rows 2–15 and 22–107. Paid PW AI, Gemini 3.7, no spend cap.
+
+**Free size check first:** 15 rows are a whole unit in one tab of 900–3,743 paragraphs: 2–5, 7, 8, 11, 13, 73–76, 78–80.
+- The formatting call caps its answer at 12,000 tokens (about 600 choices), so those rows needed a fix.
+
+**Runs** (all show in the app's Runs page)
+
+| Run | What | Made | Time | ₹ (recorded) |
+|---|---|---|---|---|
+| 5 | 85 normal rows, from the installed app (3 at a time) | 84 + 1 failed (row 86) | 43 min | 180.89 |
+| 6 | 15 long rows, project code (`_build/bscn_long_rows_20261124.py`, 2 at a time) | 12 + 3 failed (rows 2, 3, 7) | 69 min | 249.22 |
+| 7 | Try again for rows 2, 3, 7 (`_build/bscn_retry_20261124.py`) | 3; the Docs of run 6 reused, no new formatting | 3 min | 24.15 |
+| 8 | Try again for row 86 | 1 | 1 min | 1.28 |
+
+- Not recorded in run 6 (old code): rows 2/3/7 formatting, ₹30.16. Not recorded in run 5: row 86's first formatting
+  (small).
+- **Total ≈ ₹487** for 100 notes.
+- Sheet check: rows 2–107 all have a distinct Google Doc link in P (105, with the 5 from earlier). Next: row 108.
+- Sign-in: after the reinstall, the app's one-time silent restore failed and a sign-in press timed out. Claude restarted
+  its own idle copy of the app and the restore worked.
+  - Suggestion: retry the silent restore later instead of only once.
+
+**Fixes in the project code** (NOT yet in the installed app, not committed)
+- `word_source.style`: a reference over 500 paragraphs (`STYLE_PART`) is formatted in parts.
+  - Each part is saved as `word_styles_part-NN.json`, so a retry pays only for missing parts.
+  - Each part may only choose for its own paragraphs; a reference of 500 or fewer still makes the one call it always did.
+- `gdoc_make.export_tab`: accepts only a complete PDF (`complete_pdf`: `%%EOF` and pypdf opens it).
+  - Google's export of three ~100-page tabs came back cut short, and the quality step failed on "EOF marker not found".
+- `gdoc_make.reusable`: a retry in a folder whose earlier attempt wrote and checked the Doc carries on with that Doc
+  (same source revision, still in Drive); it is checked word for word again. No duplicate Docs.
+- `gdoc_service`:
+  - A sheet run's "Try the unfinished rows again" (`retry_sheet`; payload `again_from` copies each row's saved folder).
+  - A failed row reports its paid formatting (`spent.json`) and a short reason, e.g. "Google answered 400: …".
+  - Full errors go to `~/.note_studio/logs/gdoc.log`.
+- Tests: 428 passed, 19 skipped (+3 in `test_typeset_word.py`, +4 in `test_gdoc_app.py`).
+
+**Quality flags, checked by hand.** Content is fine everywhere; the word-for-word check passed on every Doc.
+- Checker misreads (the source and the Doc have the spaces): rows 8, 54, 57, 60, 86, 103 and 104, plus row 2's
+  "diamond-shaped" (a normal line-end hyphen).
+- Source issues, kept: row 2 "opposites.directional" and "human bod"; row 3 heading joined into a bullet and a
+  "460 × 300" string; row 11 a bullet ending in ","; row 23 "Microminererals".
+- Layout points worth a look:
+  - row 31: a small diagram;
+  - row 38: a heading left at a page bottom, above its table;
+  - row 39: ion signs breaking in narrow table cells, and one bullet alone on the last page;
+  - row 57: a flowchart split across pages.
+- Gates: compare `_build/before_bscn_100_20261124.json` → `after_…`: nothing lost. 1,709 new files (runs 5–8);
+  changed: the database and the token.
+
+## B.Sc.-style Google Docs from the app (New notes + Sheet automation); 5 "Bsc Nursing Notes" rows made — 24 November 2026
+
+The user reported that B.Sc.-style notes "were not made directly from the app", and that Sheet automation had no
+option for them either. Both were true: the 14 Nursing Docs of 16–17 Nov were made by `_build/` scripts.
+They then gave the sheet ("Notes Testing") and asked for 5 notes first, then the app. Their words: "the doc file
+content doesn't miss, that was already a final notes, I have to just design it like you did for B.Sc. Nursing".
+
+**The 5 notes** (paid, Gemini 3.7, no spend cap; ₹13.73 in all)
+- The sheet has a new tab, **"Bsc Nursing Notes"** (gid 689523849, rows 2–879).
+  - Its links are plain hyperlinks; Sheet1 used smart chips.
+  - Every source Doc there has **one tab**.
+- Free preflight of rows 2–30 (`_build/nursing_bscn_batch_20261124.py preflight`):
+  - rows 9, 12, 14 and 15 have exactly the content of Docs already made from Sheet1;
+  - rows 2–8, 10, 11 and 13 are the Sheet1 units merged into one long tab (row 3: ~2,200 paragraphs, ~120 pages);
+  - rows 16, 17, 18, 20 and 21 are the first topics never made, so those were made.
+- Results:
+
+  | Row | Topic | Pages | Quality | ₹ |
+  |---|---|---|---|---|
+  | 16 | Clinical Enzymology | 13 | passed | 3.57 |
+  | 17 | Introduction to Nutrition | 24 | reviewer misread "ofthe" (the PDF text and source have "of the") | 4.60 |
+  | 18 | Carbohydrates & Energy | 9 | passed | 1.97 |
+  | 20 | Proteins | 8 | passed | 1.79 |
+  | 21 | Fats | 8 | passed | 1.80 |
+
+  - All rows: word-for-word check OK, watermark and logo on every page, link in column P, editable by anyone at pw.live.
+  - Summary file: `output/gdoc/bscn_batch_20261124.json`.
+- **Lesson:** the batch shared one Google client across threads. httplib2 is not thread-safe, and sharing rows 20–21
+  failed with an SSL record-layer error; they were finished one at a time.
+  - The app's maker now gives every thread its own clients (`gdoc_make.Google`).
+
+**In the app now** (new note type `typeset_gdoc`, "Google Doc with tabs (B.Sc. style)", Gemini 3.7 only)
+- `note_studio/typeset/gdoc_make.py`: the make script's steps as a library.
+  - Steps: read the source, AI formatting per tab, copy the template, write, verify, last-page fixes, watermark/logo
+    check, quality, optional domain sharing.
+  - The template record is `~/.note_studio/gdoc/template.json`, seeded with the 34-tab template.
+  - Plain-words `GdocError`; a Doc left half-written by an error is put in the bin.
+- `note_studio/gdoc_sheet.py`: reads a tab's rows (hyperlink, chip, linked text or plain link) and writes a link.
+  - It never writes over a filled cell or into a row whose link changed.
+  - A missing "Google Doc (B.Sc. style)" column is added only if `sheets_bridge.columns.Layout` reads the tab the same.
+- `note_studio/gdoc_service.py`:
+  - New notes: paste Google Doc links (one Notes-lane run each, source `gdoc`; Try again works).
+  - Sheet runs: queue kind `gdoc_sheet` in the Sheets lane; 3 rows at a time; one run with a row table;
+    Stop after these rows.
+- Pages:
+  - New notes asks for "Google Doc links" for this type.
+  - Runs shows "Open the Google Doc".
+  - Sheet automation has a "Google Docs from a sheet (B.Sc. style)" card: Check rows (free), Make Google Docs.
+  - Settings → Categories has "Offer Google Docs" for B.Sc.-style categories (`.bak` first).
+  - Tour `2026-11-24-gdoc-bsc`; guides for New notes, Sheet automation and Settings.
+- Free real check, read-only: the app code read the real tab (column P; rows 16–21 done) and read the Vitamins source.
+
+**Tests and gates**
+- Tests: 421 passed, 19 skipped (404 + `tests/test_gdoc_app.py` 17). `test_note_types` lists the new ready type.
+- `data_guard` compare (`_build/before_nursing_5_20261124.json` → `after_…`): nothing lost, no original touched.
+  The only change is the Google token refresh.
+- `drift` says STOP on this Mac only because the originals (`~/Downloads/shortnotes-core` …) are not here.
+  `git diff HEAD -- engines/` is empty.
+
+**Open**
+- Rows 2–8, 10, 11 and 13: remake them from the merged one-tab sources, and if so, split them into one tab per topic?
+  It is the user's call. One ~120-page tab is a large single formatting/quality call.
+- **No Settings step any more** (after the install, the user asked "why it was not directly on sheet automation page").
+  - The card said "No category makes Google Docs yet": this Mac had no Nursing category, and a category had to switch
+    Google Docs on in Settings first.
+  - Nursing was added to this Mac's data the way the Settings form does (`category_admin.add`): 30 subjects from the
+    "Bsc Nursing Notes" tab, English/Hindi/Hinglish, both B.Sc. types. The running app showed the card at once.
+  - Code: `categories.gdoc_offered()` / `type_ids()`. A category whose B.Sc.-style notes carry the PW logo (Nursing,
+    any category added from Settings) offers Google Docs by itself; Settings can switch it off (`"offer_gdoc": false`).
+  - The built-in B.Sc. Wallah keeps its unbranded look until switched on, since the Doc template carries the PW watermark.
+  - Sheet automation has a "Google Docs from a sheet (B.Sc. style)" button at the top. Tests: 421 passed, 19 skipped.
+  - Pushed for the Windows build (`c6a9efb`).
+  - Rebuilt and reinstalled on the Mac at the user's request ("yes rebuild and reinstall it"):
+    - The earlier build was kept as `dist/NoteCraft-20261124a.{app,dmg}`.
+    - New `dist/NoteCraft.dmg`: 1,350,575,867 bytes, SHA-256 `aabac36627138434b3c32ecf1a1ba3fdf3963d9a66e9a12d6cd59b75a4911340`.
+      Log: `_build/build_macos_20261124b.log`.
+    - Claude quit the idle NoteCraft it had opened itself (PID 75023).
+    - Backups: `note_studio-before-install-20261124-214648.db` (ok, 4 runs), its categories, and the replaced app
+      `NoteCraft-installed-20261124a.app` in `~/NoteStudio_backups/`.
+    - The installed app is identical to the build; PACKAGE_OK; reopened. The live pages show the top button,
+      Nursing in the card, and the Google Doc type on New notes.
+    - `data_guard` compare: nothing lost. New: the Nursing pack and `gdoc/template.json`; changed: the database and token.
+- Template Doc: shared with PW as viewer on 24 Nov, so other installs can copy it.
+- **Installed on the Mac (same evening, the user said "yes install it and share the template with pw.live"):**
+  - The user quit the old app; it was idle.
+  - Backups in `~/NoteStudio_backups/`: `note_studio-before-install-20261124-210308.db` (integrity ok, 4 runs),
+    `categories-before-install-…`, and the old app `NoteCraft-installed-before-20261124.app`.
+  - `ditto` of `dist/NoteCraft.app` → `/Applications/NoteCraft.app`; `diff -rq` shows it identical; PACKAGE_OK.
+  - Opened; port 3100 serves the new card, switch and guide; still 4 runs.
+  - `data_guard` compare: nothing lost. Changed: `note_studio.db` (app start) and the token; new: `gdoc/template.json`.
+- **Template shared:** the domain is now a viewer (link only, not discoverable). Google lists it under PW's primary
+  domain `physicswallah.org`, which covers pw.live accounts.
+  - So `share_with_domain`'s "already editable" check, which compares with "pw.live", never matches: it re-creates
+    the permission, which is harmless.
+
+**Mac build** (the user asked "build the app")
+- The previous build was kept as `dist/NoteCraft-before-20261124.{app,dmg}`.
+- `packaging/build_macos.py --dmg` gave `dist/NoteCraft.app` (PACKAGE_OK) and `dist/NoteCraft.dmg`:
+  1,353,318,287 bytes, SHA-256 `0156c5ae6b857c289fa3fda9eb3123f9ff7419aed280910073cbdca93e4499e3`.
+  Log: `_build/build_macos_20261124.log`.
+- The bundled runtime, run on a scratch data folder, showed the new New notes page, Sheet automation card and
+  Settings switch (PACKAGED_PAGES_OK).
+- The version label is unchanged; only the Windows builder bumps it.
+- Committed and pushed to `codex/macos-windows-compatibility` so the user can build the Windows installer.
+
+## All 14 Nursing Google Docs made, shared with PW, last-page fixes — night of 16–17 November 2026
+
+**Where things stand**
+- All 14 rows of "Notes Testing" (rows 2–15) have their Doc in column P "Google Doc (B.Sc. style)". Totals: 115 tabs, 994 pages.
+- Every tab's exported PDF shows the PW watermark and the header logo on every page.
+- The quality check passed 103 of 115 tabs. The other 12 were checked by hand:
+  - Source issues, kept exactly because content is locked:
+    - UNIT-1 "produce", "human bod";
+    - UNIT-2 "Respiratory bronchioles" has no bullet in the source, and the heading "Mechanism of Airflow…" is joined into a bullet in the source;
+    - UNIT-3 "Sublingual papill";
+    - UNIT-4 "Reply NEXT for .";
+    - Unit 9: a missing ")";
+    - Unit 10: a bullet ends with ",".
+  - Reviewer misreads (the PDF text and the source have the space):
+    - "ofthe";
+    - "Attachmentfor";
+    - "Wallthickness";
+    - "Coat(".
+
+**Sharing**
+- The user asked that anyone at Physics Wallah can edit.
+- `_build/nursing_share_20261116.py` adds a Drive domain permission: pw.live, writer, not discoverable.
+- The batch's `finish` now does this after writing the sheet link.
+- Report: `output/gdoc/sharing_20261116.json`.
+
+**Edit guard**
+- Uses Drive revisions (`make.edited_since`), not modifiedTime. Sharing bumps modifiedTime, which made the first fix run skip every note.
+
+**Fixes after the batch** (formatting only; each was tested on throwaway Drive copies first)
+- **Carbohydrates "CₙH₂ₙOₙ".** Lato has no ₙ or ₘ. `glyph_styles` sets characters missing from Lato in Noto Sans.
+- **Blank last page** (UNIT-4 tab 10, UNIT-5 tab 1, Unit 9 tab 1).
+  - Cause: the page was full to the footer, so Google's required last empty paragraph started a page of its own, even at 1 pt.
+  - Text ending: `end_requests` now joins that paragraph to the last text paragraph. Google keeps the text paragraph's style, bullet and spacing.
+  - Table ending: `full_page_requests` removes the first of a doubled spacer above the last table (Google refuses to delete the spacer touching the table), or shrinks a single spacer to 1 pt.
+- **Last page holding only a table's last row or a box's last line** (UNIT-1 tab 9, UNIT-2 tab 13, UNIT-3 tab 10, Unit-6 tab 5).
+  - `last_table_break_requests` sets pageBreakBefore on the heading above that table, or on the spacer above a box.
+  - `make.fix_last_page` keeps the break only if no page is added, the last page is no longer a sliver (`last_page_nearly_empty`, under 5% of the page) and the page it left stays at least half full (`page_fill`). Otherwise it undoes the break.
+- **Both last-page fixes now run automatically** in `make.quality_all` (`result["blank_last_page"]`).
+  - `_build/nursing_pages_20261117.py` applies them to Docs already made.
+  - Logs: `_build/nursing_fix_20261116.log`, `_build/nursing_pages_20261117*.log`.
+- **Re-check script.**
+  - It removes `tab_reviewed.pdf` once used. A stale one from before UNIT-1's logo rebuild made all 12 UNIT-1 tabs be reviewed again (₹11.83).
+  - It now re-checks tabs whose earlier check did not finish (UNIT-1 tab 7 lost the network).
+
+**Cost**
+- Notes as made: ₹261.92.
+- Tonight's fixes and re-checks: ₹21.38 (₹13.30 + ₹5.09 + ₹2.99).
+
+**Gates, tests and what is not done**
+- Gates: `data_guard` snapshot `_build/after_nursing_batch_20261117.json` against `before_nursing_gdoc_20261116.json`. Nothing lost; no original touched. Note Studio's own database and sheet token changed. Drift is clean.
+- Tests: `test_typeset_gdoc.py` has 32; the full suite has 404 passed, 19 skipped.
+- Not done, waiting for the user's go: the note type and Automation page in the app, a `whats_new` tour, and a commit.
+
+## PW watermark on every Nursing Google Doc (template) — 16 November 2026 (evening)
+
+The user asked for the NEET/JEE PW watermark in every note, as the default for all future runs.
+
+- **Google limits.** The Docs API cannot add a watermark or copy a tab (live description, revision 20261109:
+  only add, delete and rename tabs). A Word file with the faded PW logo in its header converts into a native
+  Docs watermark, but only on that one tab. A tab added through the API has none, and re-importing a Word
+  file replaces the whole Doc.
+- **What survives (scratch Docs):** the watermark stays through B.Sc. page setup, our header bar written
+  into that tab's header, the footer, content, renaming, copying the Doc and deleting other tabs.
+- **Design: every note is a copy of a template whose tabs all carry the watermark.**
+  - `gdoc_writer.make_template` uses the engine's own `notes_doc.faded_logo` at the
+    `pdf_branding.watermark_opacity()` strength, 124 mm, centred.
+  - The person duplicates the template's first tab once in Google Docs (tab menu > Duplicate).
+  - `create_from_template` copies the template, deletes unused tabs and renames the rest. A note that needs
+    more tabs than the template has stops before writing and says how many to add.
+  - `header_footer` now empties and reuses an existing header and footer, never deleting them, because
+    the watermark goes with the header.
+  - `has_watermark` checks every exported page; the quality step records it per tab (`result["watermark"]`).
+- **Template:** "NoteCraft – Nursing notes template (PW watermark)",
+  https://docs.google.com/document/d/1VOEMzskaheh-nPBz7e7oRFIboLkdSb3q20zJQbvgVek/edit
+  (`output/gdoc/template.json`). It has 1 tab, checked to carry the watermark.
+- **Waiting for the user:** duplicate the template's tab up to 30 tabs. Then run
+  `make.py --check-template` and `make.py --new-doc` (formatting is cached; the quality check about ₹15),
+  run `sheet_link.py`, which replaces P2 with the new Doc's link, and bin the old UNIT-1 Doc, which has no
+  watermark.
+- Tests: `test_typeset_gdoc.py` has 25.
+- **Update, same evening.** The user duplicated that template to 34 tabs, but rebuilding UNIT-1 from it lost
+  the watermark twice. Scratch copies showed two Google behaviours:
+  1. A footer created while the header is empty drops the tab's watermark; the header must be written first.
+  2. Any picture inserted into the header through the API drops the watermark.
+
+  The user wants both the corner logo and the watermark. A converted Word header keeps both, so
+  **template v2** builds the header bar (labels, navy rule, PW logo), the footer (labels and a live PAGE
+  number) and the watermark into the Word file (`watermark_word_file(branding)`). Notes from a branded
+  template never touch the header or footer (`template.json` `"branded": true`).
+  - Template v2: https://docs.google.com/document/d/1rzEPDvwy1hiDU77yvalRZ6K6nKPczesnmcTMk9bkTKk/edit
+  - Checked on scratch copies: watermark, logo and page number survive page setup, content, copy and tab deletion.
+  - v1 (34 tabs, no logo) is kept as `output/gdoc/template_v1_no_logo.json` until v2 is duplicated.
+  - Writer guards for unbranded templates: header written before the footer; no header picture when watermarked.
+  - The title clears the bottom border that Word's "Title" style brings.
+  - `has_header_logo` checks the logo on every page.
+- **Superseded later that night: no second duplication needed.** The user objected to duplicating again,
+  saying NEET/JEE/Foundation get the logo and watermark automatically. More scratch tests found that the
+  user's existing 34-tab template (v1) can carry both, written by the writer, if:
+  1. the logo goes into the header bar's right cell in its own step, after the bar exists;
+  2. the header is written before the footer is created;
+  3. the template header's paragraphs are never deleted. Duplicated tabs' headers hold two empty
+     paragraphs; deleting the first drops the watermark.
+
+  `_segment` now removes only an earlier bar table. Template v2 (one tab) was binned; template.json is v1
+  again (`branded: false`). Reads now retry on 429 too (`_get`), and `_execute` waits up to about 10 minutes.
+- **Batch (user: "create all tonight"):** `_build/nursing_batch_20261116.py`.
+  - `preflight` is free. All 14 sheet rows passed: up to 20 tabs; nothing that cannot be copied.
+  - `run` makes notes 3 at a time with the make script (`--source-id/--out-name`) and writes column P only
+    after the read-back, watermark and header-logo checks pass on every page.
+  - Summary: `output/gdoc/batch_20261116.json`; logs: `_build/batch_20261116_*.log`.
+  - The Lipids canary showed the paragraph-deletion problem; that Doc and the logo-less UNIT-1 Doc were binned.
+- Tests: 27 in `test_typeset_gdoc.py`; full suite 399 passed, 19 skipped.
+
+## Nursing Google Doc: closer to the B.Sc. reference, content strictly the source's — 16 November 2026 (later)
+
+The user shared `Lec-14.pdf` (B.Sc. Wallah reference) and `UNIT - 2 Notes.pdf` and asked for more format
+improvement, then for a rewrite of the UNIT-1 output. They added: "content must be similar to the reference
+doc, only formatting should be implemented".
+
+- **`gdoc_writer.plan()`** decides the presentation; words are never changed.
+  - Title and kicker: the tab's first heading becomes the centred navy title; a short line before it
+    (the course line) becomes a small grey kicker.
+  - Labelled boxes: a source label ("Definition:"), or a short subheading leading straight into a box,
+    moves into the box's title bar. This also fixes a heading left alone at the bottom of a page,
+    because Google never keeps a paragraph with a table that follows it.
+  - Key sections: "Important Points", "Key Points" and "Definition" sections become boxes with real
+    bullets.
+  - **No template labels.** A box without a source label has no bar. "Note" and "Key Concept" were
+    briefly added and then removed at the user's request.
+  - Key terms: bold inside a sentence is navy; a bold lead label stays black; headings lose the source
+    underline.
+  - Formulas: simple `$...$` notation shows with real superscripts and subscripts ($Ca^{2+}$ → Ca²⁺).
+    Prices like `$5` are left alone.
+  - Tables: booktabs; short columns centred; the header row repeats on each page.
+  - Header and footer: split 1×2 bars, with the PW logo on the right of the header.
+- **Box layout:** one cell. The bar is the first paragraph, shaded, with side borders in the bar colour
+  (Google shades only between indents), and set to keep with the next paragraph.
+  - Scratch Docs showed a two-row box leaving its title alone at the bottom of a page; the one-cell box never did.
+  - Tables and boxes go into a fresh, unindented paragraph, because Google indents a new table like its
+    host paragraph (a following list item pushed a box inwards).
+  - The empty paragraph after a tab's last table is made 1 pt, because it caused a blank last page.
+- **verify is strict:** besides the word-for-word source check, it rejects anything added except a list
+  item's own number or bullet.
+- **UNIT-1, same Doc and link** (rewritten in place; Drive modifiedTime checked first):
+  - all 12 tabs pass the read-back check;
+  - quality: 9 tabs passed. Tabs 4 and 7 have only "ofthe" misreads (the source and the PDF text have
+    "of the"); tab 11 has the source typo "human bod".
+  - `_build/nursing_unit1_20261116_recheck.py` re-reviews only tabs whose pages changed, compared pixel
+    for pixel with the reviewed PDF (`tab_reviewed.pdf`).
+- **Cost for UNIT-1 including all improvement passes: ₹66.11.**
+  - Formatting: ₹14.43, once; it is cached.
+  - Quality: ₹14.09 + ₹15.07 + ₹1.54 + ₹15.08 + ₹5.90.
+  - A fresh unit should be about ₹29: one formatting pass and one quality pass.
+- **Tests:** `test_typeset_gdoc.py` has 23 tests. Full suite: 395 passed, 19 skipped.
+- **Gates:** compare with the session baseline: nothing lost, no original touched.
+  - Changed: the Google token (refresh), and `note_studio.db`, through the running installed app's own
+    `update_checked` at 16:27:08. No script of this session ran then; integrity OK.
+  - Drift against HEAD: 0 changes. Nothing committed or built.
+
+## Nursing notes as editable Google Docs with tabs (B.Sc. style): first unit made — 16 November 2026
+
+The user asked for Nursing notes as editable Google Docs, one tab per topic, in the B.Sc. look, made from the
+sheet. They approved one paid note (UNIT-1) using Gemini 3.7 only (3.6 does not work), with no AI spend limit.
+Docs must belong to their own account (prashant.kumar15@pw.live, which is NoteCraft's sign-in on this Mac).
+
+- **Why a new writer:** uploading a .docx with conversion (`engines/shortnotes/sheets_bridge/notes_doc.py`)
+  makes a single-tab Doc, so tabs need the Google Docs API. The user enabled the Docs API in the sign-in's
+  Cloud project 195954488363. The existing Drive scope covers it, so nobody signs in again.
+- **`note_studio/typeset/gdoc_source.py`:** reads a tabbed Google Doc literally, one locked source per tab,
+  in word_source's shape. It keeps every paragraph, list item (level, numbering), table (merges), 1×1 table
+  (as a box) and picture (inline and wrapped). The source's bold/italic/underline/links are kept as spans.
+  Layout tables holding pictures are laid out in reading order. An equation, a drawing, a footnote or a
+  date chip fails before any AI call.
+- **`note_studio/typeset/gdoc_writer.py`:** writes one tab per topic.
+  - Each tab is built by inserting its blocks in reverse at index 1, so every range is exact.
+  - B.Sc. look from `render.py`: A4, the B.Sc. margins and faint-blue page, Lato, TITLE/HEADING_1/HEADING_2,
+    native lists, booktabs-like tables, boxes as one-cell tables (frame colour, tint, 3 pt left rule),
+    centred pictures, and a per-tab header ("Nursing | Nursing Notes", navy rule, PW logo) and footer.
+  - A numbered list split by other content gets its source numbers as text, because Google would restart
+    the numbers of each part.
+  - Local pictures (the PW logo) reach Google through a temporary converted Doc's own picture links, so
+    nothing is shared publicly. The temporary Doc is binned afterwards.
+  - `read_back` and `verify` prove every tab word for word against the source.
+  - Retries on 429/5xx; `clear_tab` allows an in-place rewrite.
+- **Google facts learnt:**
+  - Setting a paragraph's named style resets its runs' text style, so paragraph style must come first.
+  - `/document/d/<id>/export?tab=t.0` gives 400; `/document/export?id=<id>&tab=<tab>` exports exactly that tab.
+  - A plain request to a picture's contentUri never connects from this Mac; the signed-in request takes 1–2 s.
+  - Per-account limits apply to PDF exports (429).
+- **AI:** `word_source.style` unchanged (appearance only, words locked), 4 tabs at a time;
+  `source_quality.review` runs on each tab's PDF export, 4 at a time.
+- **Made:** source "UNIT -1 A&P" (Doc 1U-3hlO2rnFC6HfB9MNAdOR5V5SAckV3yzkVfBQAR7CQ; 12 tabs, 144 pictures).
+  - Output: "UNIT -1 A&P – Nursing Notes (B.Sc. style)",
+    https://docs.google.com/document/d/16tlGMyIzKDxAIS_fLTHtz0JvNrTA9SbCChfKdhrdtkM/edit
+  - Read-back: all 12 tabs OK.
+  - Cost: ₹14.43 formatting (12 calls) + ₹14.09 final quality (12 calls, 138 pages) = **₹28.52**.
+  - Quality: 6 tabs passed. The real findings are all in the source and were kept: raw `$HCl$`, `$T_3, T_4$`,
+    `$Ca^{2+}$`, "human bod", "The pronator teres produce", an "Elbow bending" label in a source picture.
+    The 9 "missing space" findings are reviewer misreads (spaces checked in the source, the Doc and the PDF text).
+- **Sheet:** "Notes Testing" (1g8hTDHf868PNOWe8A3V3L85PDwla_38sOkg-Cub3GLU), Sheet1.
+  - New column P "Google Doc (B.Sc. style)"; P2 holds the link. The row was found by its Docs smart chip
+    (the sheet links each unit by chip, not hyperlink).
+  - The copied automation's `Layout.from_header` reads the tab identically after the change.
+- **Scripts (gitignored `_build/`):** `nursing_unit1_20261116_make.py`, with `--feature-test` (free scratch
+  Doc, binned) and `--rewrite`, and saving each paid step per tab under `output/gdoc/nursing-unit1/`.
+  Also `nursing_unit1_20261116_sheet_link.py`. Do not rerun the make script just to check: read `result.json`.
+- **Tests:** `tests/test_typeset_gdoc.py` adds 13, including a Docs index simulator for the reverse insertion
+  and spans. Full suite: 384 passed, 19 skipped, 1 failed. The failure,
+  `test_practice::test_a_paid_step_without_sign_in_holds_the_queue`, passes alone (timing).
+- **Gates:** compare `_build/{before,after}_nursing_gdoc_20261116.json`: nothing lost, no original touched;
+  the only data change is the refreshed Google token in `~/.note_studio/sheets/tokens/`. Drift against HEAD:
+  0 changes in all four engine copies.
+- **Not done (waits for the user's go):**
+  - a note type plus a sheet runner that reads chip links, makes rows 2–3 at a time and writes the link back;
+  - Automation page wiring, `whats_new` tour and guide;
+  - rendering the source's raw `$…$` formulas as sub/superscripts.
+
+  Nothing committed or built.
+
+## PW logo and watermark on Nursing (B.Sc.-style) notes; Mac app rebuilt and installed — 4 November 2026
+
+User asked: Nursing notes (B.Sc. template) get the PW logo in the corner and the
+watermark, as NEET/JEE PDFs; then build and install.
+
+- `typeset/render.py`: `Branding.pw_logo`. When on, every page gets the PW logo
+  11 mm in the top-right corner (5 mm in) and the 124 mm faded logo watermark in
+  the centre, under the text. Both are made by the shortnotes engine's own
+  `sheets_bridge/pdf_branding.py` helpers from `engines/shortnotes/assets/watermarks/center-logo.png`,
+  with the same watermark strength (`SHEETS_BRIDGE_WATERMARK_OPACITY`, default 0.10).
+  The header's right label and rule end 6 pt before the logo. Words are
+  unchanged and renders stay byte-identical, so quality receipts can still be reused.
+- Category data decides: `categories.pw_logo(pack)`. `branding.pw_logo` wins; otherwise a
+  category added from Settings (Nursing) has it and a built-in pack (B.Sc. Wallah) does not.
+  Settings → Categories shows "Add/Remove the PW logo" for packs that make
+  `typeset_notes` (POST `/settings/categories/{id}/pw_logo`, `.bak` first).
+- What's-new tour `2026-11-04-nursing-pw-logo`; New notes and Settings guides updated.
+- Tests: new `tests/test_typeset_pw_logo.py` (12); full suite **372 passed, 19 skipped,
+  0 failed** (61 s). Drift gate: engine copies match except the earlier allowed changes.
+- Mac: previous build moved to `dist/NoteCraft-before-20261104.app`; new
+  `dist/NoteCraft.app` built (PACKAGE_OK) and copied to `/Applications/NoteCraft.app`
+  (PACKAGE_OK again from there). The bundled runtime rendered a Nursing PDF with both images.
+  Version label is still the repo's `2026.10.26.1` (only the Windows builder bumps it).
+  Not committed. No Windows installer built.
+
 ## Nursing UNIT-2 completed; NoteCraft 2026.10.30.4 installed — 30 October 2026
 
 Latest explicit user instructions: use the B.Sc. template for Nursing, keep all

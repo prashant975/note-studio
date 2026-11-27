@@ -76,6 +76,88 @@ def set_enabled(category_id: str, on: bool) -> None:
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def set_pw_logo(category_id: str, on: bool) -> None:
+    """The PW logo and watermark on this category's typeset notes (a backup first)."""
+    pack = categories.get(category_id)
+    if not pack:
+        raise CategoryError("That category no longer exists.")
+    meta_path = Path(pack["folder"]) / "category.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    shutil.copy2(meta_path, meta_path.with_name("category.json.bak"))
+    branding = meta.get("branding") if isinstance(meta.get("branding"), dict) else {}
+    branding["pw_logo"] = bool(on)
+    meta["branding"] = branding
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def set_from_pdf(category_id: str, on: bool) -> None:
+    """B.Sc.-style notes take their header name and logo from each lecture PDF, or the category's own
+    words (a backup first). Only a category that makes B.Sc.-style notes has that header."""
+    pack = categories.get(category_id)
+    if not pack:
+        raise CategoryError("That category no longer exists.")
+    meta_path = Path(pack["folder"]) / "category.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    if on and "typeset_notes" not in (meta.get("note_types") or []):
+        raise CategoryError("Only a category that makes B.Sc.-style notes can take its header from the lecture PDF.")
+    shutil.copy2(meta_path, meta_path.with_name("category.json.bak"))
+    branding = meta.get("branding") if isinstance(meta.get("branding"), dict) else {}
+    branding["from_pdf"] = bool(on)
+    meta["branding"] = branding
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+GDOC_TYPE = categories.GDOC_TYPE
+
+
+def set_gdoc(category_id: str, on: bool) -> None:
+    """Offer (or stop offering) Google Docs with tabs (B.Sc. style) in this category (a backup first).
+    Only a category that makes B.Sc.-style notes may offer it: it uses the same header and footer words.
+    Off is remembered ("offer_gdoc": false), because a category with the PW logo offers it by itself."""
+    pack = categories.get(category_id)
+    if not pack:
+        raise CategoryError("That category no longer exists.")
+    meta_path = Path(pack["folder"]) / "category.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    offered = [t for t in meta.get("note_types") or [] if t != GDOC_TYPE]
+    if on:
+        if "typeset_notes" not in offered:
+            raise CategoryError("Only a category that makes B.Sc.-style notes can offer Google Docs.")
+        offered.insert(offered.index("typeset_notes") + 1, GDOC_TYPE)
+        meta.pop("offer_gdoc", None)
+    elif not offered:
+        raise CategoryError("A category needs at least one note type.")
+    else:
+        meta["offer_gdoc"] = False
+    shutil.copy2(meta_path, meta_path.with_name("category.json.bak"))
+    meta["note_types"] = offered
+    if meta.get("default_note_type") not in offered:
+        meta["default_note_type"] = offered[0]
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def set_audio(category_id: str, on: bool) -> None:
+    """Offer (or stop offering) Audio notes in this category (a backup first). Every category offers
+    them by itself, so on is the absence of "offer_audio": false."""
+    pack = categories.get(category_id)
+    if not pack:
+        raise CategoryError("That category no longer exists.")
+    meta_path = Path(pack["folder"]) / "category.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    offered = [t for t in meta.get("note_types") or [] if t != categories.AUDIO_TYPE]
+    if not on and not offered:
+        raise CategoryError("A category needs at least one note type.")
+    shutil.copy2(meta_path, meta_path.with_name("category.json.bak"))
+    meta["note_types"] = offered
+    if on:
+        meta.pop("offer_audio", None)
+    else:
+        meta["offer_audio"] = False
+    if meta.get("default_note_type") not in offered and offered:
+        meta["default_note_type"] = offered[0]
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def check(category_id: str) -> list[dict]:
     """What is right and wrong with one category, in plain words."""
     found: list[dict] = []
@@ -176,6 +258,8 @@ def add(form: dict) -> str:
                  "subject_auto": True, "languages": languages, "language_required": False, "note_types": chosen,
                  "default_note_type": chosen[0], "inputs": ["pdf_upload"]})
     meta.setdefault("branding", {})["signature_label"] = "Teacher name"
+    if form.get("from_pdf") and "typeset_notes" in chosen:      # B.Sc.-style: header name and logo from each PDF
+        meta["branding"]["from_pdf"] = True
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     first_rules = str(form.get("rules") or "").strip()
     if first_rules:

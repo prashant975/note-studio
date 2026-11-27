@@ -110,6 +110,32 @@
               <button class="btn ghost sm" type="submit">{{ 'Switch off' if p.enabled else 'Switch on' }}</button></form>
           </div>
           <div id="check-{{ p.id }}"></div>
+          {% if p.typeset %}
+          <form method="post" action="/settings/categories/{{ p.id }}/pw_logo" class="btn-row">
+            <input type="hidden" name="on" value="{{ '0' if p.pw_logo else '1' }}">
+            <span class="small">PW logo and watermark on B.Sc.-style notes:
+              {% if p.pw_logo %}<span class="chip ok xs"><span class="dot"></span> On</span>{% else %}<span class="chip xs">Off</span>{% endif %}</span>
+            <button class="btn ghost sm" type="submit">{{ 'Remove the PW logo' if p.pw_logo else 'Add the PW logo' }}</button>
+          </form>
+          <form method="post" action="/settings/categories/{{ p.id }}/from_pdf" class="btn-row">
+            <input type="hidden" name="on" value="{{ '0' if p.from_pdf else '1' }}">
+            <span class="small">Header name and logo on B.Sc.-style notes:
+              {% if p.from_pdf %}<span class="chip ok xs"><span class="dot"></span> From each lecture PDF</span>{% else %}<span class="chip xs">This category's own words</span>{% endif %}</span>
+            <button class="btn ghost sm" type="submit">{{ "Use this category's own words" if p.from_pdf else 'Take them from each lecture PDF' }}</button>
+          </form>
+          <form method="post" action="/settings/categories/{{ p.id }}/gdoc" class="btn-row">
+            <input type="hidden" name="on" value="{{ '0' if p.gdoc else '1' }}">
+            <span class="small">Google Docs with tabs (B.Sc. style), from final notes in a Google Doc:
+              {% if p.gdoc %}<span class="chip ok xs"><span class="dot"></span> Offered</span>{% else %}<span class="chip xs">Not offered</span>{% endif %}</span>
+            <button class="btn ghost sm" type="submit">{{ 'Stop offering Google Docs' if p.gdoc else 'Offer Google Docs' }}</button>
+          </form>
+          {% endif %}
+          <form method="post" action="/settings/categories/{{ p.id }}/audio" class="btn-row">
+            <input type="hidden" name="on" value="{{ '0' if p.audio else '1' }}">
+            <span class="small">Audio notes (a chapter's revision podcast, from its lecture PDFs):
+              {% if p.audio %}<span class="chip ok xs"><span class="dot"></span> Offered</span>{% else %}<span class="chip xs">Not offered</span>{% endif %}</span>
+            <button class="btn ghost sm" type="submit">{{ 'Stop offering audio notes' if p.audio else 'Offer audio notes' }}</button>
+          </form>
 
           <h3 class="sub-h">Rules</h3>
           {% for r in p.rules %}
@@ -159,6 +185,7 @@
       <div class="checks">{% for code, label in languages.items() %}<label class="row checkrow"><input type="checkbox" name="languages" value="{{ code }}" {% if code in ('auto', 'english', 'hindi') %}checked{% endif %}><span>{{ label }}</span></label>{% endfor %}</div></fieldset>
     <fieldset class="field"><span class="legend">Note types</span>
       <div class="checks">{% for t in all_types %}<label class="row checkrow {{ 'off' if t.status != 'ready' }}"><input type="checkbox" name="note_types" value="{{ t.id }}" {% if t.id == 'concise_handdrawn' %}checked{% endif %} {% if t.status != 'ready' %}disabled{% endif %}><span>{{ t.label }}{% if t.status != 'ready' %} <span class="navtag">Soon</span>{% endif %}</span></label>{% endfor %}</div></fieldset>
+    <label class="row checkrow"><input type="checkbox" name="from_pdf" value="1"><span>B.Sc.-style notes: take the header name and logo from each lecture PDF (as CSIR NET does), not from the category's name</span></label>
     <label class="field"><span>What is different for this exam (one rule per line, optional)</span>
       <textarea name="rules" rows="3" placeholder="e.g. Quote every section and article number exactly."></textarea></label>
     <div class="btn-row"><button class="btn primary" type="submit">{{ ico.i('plus', 15) }} Add the category</button></div>
@@ -226,13 +253,13 @@
     <form class="stack" method="post" action="/settings/updates">
       <label class="field"><span>Google Drive folder link</span>
         <input type="text" name="folder" value="{{ ('https://drive.google.com/drive/folders/' ~ updates.source.folder_id) if updates.source.own else '' }}" placeholder="https://drive.google.com/drive/folders/…">
-        <span class="hint">Leave empty to use the folder this version was built with. To release a version: put {{ updates.setup_name }}.exe (and its .txt notes) from dist\team\&lt;version&gt;\ into this folder.</span></label>
+        <span class="hint">Leave empty to use the folder this version was built with. Mac and Windows versions share this folder, each picking only its own files. {% if updates.mac %}To release a Mac version: put {{ updates.package }} from dist/ into this folder (build_macos.py --publish does it when it can).{% else %}To release a version: put {{ updates.setup_name }}.exe (and its .txt notes) from dist\team\&lt;version&gt;\ into this folder.{% endif %}</span></label>
       <div class="btn-row"><button class="btn sm primary" type="submit">Save</button></div>
     </form>
     <form class="stack" method="post" action="/settings/updates/team-key" enctype="multipart/form-data">
       <label class="field"><span>Team key (service account)</span>
         <input type="file" name="key" accept=".json,application/json">
-        <span class="hint">Only for whoever releases {{ brand.APP_NAME }}: the service account's .json key file, as in QBG One. The release folder is then read with it, and the team installer carries it, so nobody else adds anything. Share the folder with the service account's email as Viewer. The key is kept in your data folder and never shown.</span></label>
+        <span class="hint">Only for whoever releases {{ brand.APP_NAME }}: the service account's .json key file, as in QBG One. The release folder is then read with it, and the Windows installer and the Mac app carry it, so nobody else adds anything. Share the folder with the service account's email as Viewer. The key is kept in your data folder and never shown.</span></label>
       <div class="btn-row"><button class="btn sm primary" type="submit">Add team key</button></div>
     </form>
     {% if updates.team_key_here %}<form method="post" action="/settings/updates/team-key/remove" data-confirm="Remove the team key from this computer? A backup copy is kept in the data folder.">

@@ -11,7 +11,7 @@ def test_ids_are_unique_and_the_ready_types_are_the_connected_engines():
     assert len(ids) == len(set(ids))
     assert [t["id"] for t in note_types.all_types() if t["status"] == "ready"] == [
         "concise_handdrawn", "upsc_dcn", "upsc_simple", "upsc_mains", "upsc_prelims", "upsc_mains_practice",
-        "dpp_from_notes", "pw_books_handwritten", "typeset_notes"]
+        "dpp_from_notes", "pw_books_handwritten", "typeset_notes", "typeset_gdoc", "audio_notes"]
 
 
 def test_the_upsc_types_use_the_engines_own_formats_and_defaults():
@@ -46,7 +46,8 @@ def test_every_pack_offers_known_types_in_a_language_both_allow():
     categories.seed()
     for pack in categories.all_packs():
         offered = categories.offered_types(pack)
-        assert [t["id"] for t in offered] == pack["note_types"], pack["id"]
+        # The pack's own list, then Audio notes, which every category offers by itself.
+        assert [t["id"] for t in offered] == pack["note_types"] + ["audio_notes"], pack["id"]
         for entry in offered:
             assert categories.language_choices(pack, entry), (pack["id"], entry["id"])
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 import glob
 import os
 import shutil
+import sys
 from pathlib import Path
 
 from . import engine_catalog, engine_host
@@ -21,7 +22,9 @@ FONTS = {"Coming Soon": "[Cc]oming*[Ss]oon*.[to]tf", "Kalam": "[Kk]alam*.[to]tf"
 
 
 def _font_dirs() -> list[str]:
-    return [r"C:\Windows\Fonts", os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Windows\Fonts")]
+    return [r"C:\Windows\Fonts", os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Windows\Fonts"),
+            str(Path.home() / "Library/Fonts"), "/Library/Fonts", "/System/Library/Fonts",
+            str(Path.home() / ".local/share/fonts"), "/usr/share/fonts"]
 
 
 def font_installed(pattern: str) -> bool:
@@ -33,7 +36,9 @@ def soffice() -> str:
     if found:
         return found
     for candidate in (r"C:\Program Files\LibreOffice\program\soffice.exe",
-                      r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"):
+                      r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+                      "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+                      str(Path.home() / "Applications/LibreOffice.app/Contents/MacOS/soffice")):
         if Path(candidate).exists():
             return candidate
     return ""
@@ -53,6 +58,12 @@ def word_installed() -> bool:
 
 def office() -> str:
     """'LibreOffice' / 'Word' / '' - what will turn the Word notes into a PDF."""
+    if sys.platform == "darwin":
+        pandoc = shutil.which("pandoc") or (Path.home()/".local/bin/pandoc").is_file()
+        chrome = os.environ.get("PW_BOOKS_CHROME_EXE") or os.environ.get("CHROMIUM_PATH") or any(
+            (folder/"Google Chrome.app/Contents/MacOS/Google Chrome").is_file()
+            for folder in (Path("/Applications"), Path.home()/"Applications"))
+        return "Pandoc and Chrome" if pandoc and chrome else ""
     return "LibreOffice" if soffice() else "Word" if word_installed() else ""
 
 
@@ -61,7 +72,8 @@ def ffmpeg() -> tuple[str, str]:
     bundled = engine_catalog.engine_dir("upsc") / "third_party" / "ffmpeg"
     found = []
     for name in ("ffmpeg", "ffprobe"):
-        path = shutil.which(name) or (str(bundled / f"{name}.exe") if (bundled / f"{name}.exe").is_file() else "")
+        path = shutil.which(name) or (str(bundled / f"{name}.exe")
+                                     if os.name == "nt" and (bundled / f"{name}.exe").is_file() else "")
         found.append(path)
     return found[0], found[1]
 
@@ -85,7 +97,7 @@ def run() -> list[dict]:
     missing = _missing_modules()
     if missing is None:
         say("UPSC engine's Python", "bad", f"It could not be started ({where}).",
-            "Reinstall NoteCraft, or on a project-folder copy keep the UPSC Notes app's own folder (with its .venv).")
+            "Run this project's setup on this computer, or reinstall NoteCraft.")
     elif missing:
         say("UPSC engine's Python", "bad", f"Missing: {', '.join(UPSC_MODULES[m] + ' (' + m + ')' for m in missing)}.",
             f"Install the UPSC Notes app's requirements into {where}.")
@@ -96,18 +108,28 @@ def run() -> list[dict]:
         say("ffmpeg and ffprobe", "ok", "Found: class recordings can be turned into a transcript.")
     else:
         say("ffmpeg and ffprobe", "bad", "Not found: recordings without captions cannot be transcribed.",
-            "The engine copy's third_party/ffmpeg folder is missing; copy it again.")
+            "Install FFmpeg and FFprobe on this computer, then restart NoteCraft.")
     which = office()
-    if which:
-        say("PDF from Word notes", "ok", f"{which} makes the PDF.")
+    if sys.platform == "darwin":
+        ready = bool(shutil.which("pandoc") or (Path.home()/".local/bin/pandoc").is_file())
+        ready = ready and bool(os.environ.get("PW_BOOKS_CHROME_EXE") or os.environ.get("CHROMIUM_PATH") or
+                               any((folder/"Google Chrome.app/Contents/MacOS/Google Chrome").is_file()
+                                   for folder in (Path("/Applications"), Path.home()/"Applications")))
+        say("PDF from Word notes", "ok" if ready else "warn",
+            "UPSC uses its bundled renderer. PW Books uses local Pandoc and Chrome; no office suite is needed.",
+            "Install Pandoc and Google Chrome." if not ready else "")
+    elif which:
+        say("PDF from Word notes", "ok", f"UPSC uses its bundled PDF renderer. PW Books can use {which}.")
+    elif not engine_catalog.available("pw_books"):
+        say("PDF from Word notes", "ok", "UPSC uses its bundled PDF renderer.")
     else:
-        say("PDF from Word notes", "warn", "Neither LibreOffice nor Microsoft Word was found: the Word notes are made, "
-            "but not the PDF.", "Install LibreOffice (free) or Microsoft Word.")
+        say("PDF from Word notes", "warn", "UPSC uses its bundled PDF renderer. PW Books needs LibreOffice "
+            "or Microsoft Word for its PDF.", "Install LibreOffice on macOS, or LibreOffice/Microsoft Word on Windows.")
     missing_fonts = [name for name, pattern in FONTS.items() if not font_installed(pattern)]
     if missing_fonts:
         say("Handwriting fonts", "warn", f"Not installed: {', '.join(missing_fonts)}. The Word file carries them, "
             "but the PDF falls back to another face.",
-            "Install them from engines/upsc/assets/fonts (right-click the .ttf, Install).")
+            "Open and install the font files from engines/upsc/assets/fonts for this account.")
     else:
         say("Handwriting fonts", "ok", "Coming Soon and Kalam are installed.")
     from . import practice_service

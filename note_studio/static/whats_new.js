@@ -2,6 +2,7 @@
  * Shown on the first page after a start, at most twice per release; "Got it"
  * ends it; "What's new" in the account menu opens it again any time. */
 (function () {
+  if (document.querySelector('[data-auth-start]')) return; // Show sign-in before the release tour.
   "use strict";
   var dialog = null, tour = null, index = 0;
 

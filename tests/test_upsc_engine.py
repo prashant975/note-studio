@@ -161,7 +161,7 @@ def test_a_class_from_new_notes_to_its_files(client, mock_class, lecture_pdf):
         assert words in page, words
     link = re.search(rf'href="(/runs/{run["id"]}/files/\d+)"', page).group(1)
     assert client.get(link).content.startswith(b"PK")                    # a real .docx
-    engine_run = next((Path(run["run_dir"]) / "engine_runs").glob("run_*"))
+    engine_run = next(folder for folder in (Path(run["run_dir"]) / "engine_runs").glob("run_*") if folder.is_dir())
     prompt = (engine_run / "prompt_upsc.txt").read_text(encoding="utf-8")
     assert prompt.rstrip().endswith("Keep every Article number exactly.")    # this run's instruction, at the end
     request = json.loads((Path(run["run_dir"]) / "request.json").read_text(encoding="utf-8"))
@@ -191,7 +191,7 @@ def test_a_pasted_transcript_from_the_form_is_used_without_fetching_the_recordin
     folder = Path(run["run_dir"])
     request = json.loads((folder / "request.json").read_text(encoding="utf-8"))
     assert request["transcript_text_override"] == TRANSCRIPT.strip()
-    engine_run = next((folder / "engine_runs").glob("run_*"))
+    engine_run = next(path for path in (folder / "engine_runs").glob("run_*") if path.is_dir())
     transcript = json.loads((engine_run / "transcript_segments.json").read_text(encoding="utf-8"))
     assert transcript["source_type"] == "supplied" and transcript["retrieval_seconds"] == 0
     assert (engine_run / "transcript.txt").read_text(encoding="utf-8") == TRANSCRIPT.strip()
@@ -284,17 +284,21 @@ def test_settings_offers_the_upsc_model_stages(client):
     assert models.order("upsc_dcn", "speech") == ["gemini-3.6-flash"]          # GPT has no speech route
 
 
-def test_a_seeded_upsc_pack_from_phase_2_is_brought_up_to_date():
+@pytest.mark.parametrize("newline", ["lf", "crlf"])
+def test_a_seeded_upsc_pack_from_phase_2_is_brought_up_to_date(newline):
     from note_studio import categories
 
     root = categories.packs_dir()
     folder = root / "upsc"
     folder.mkdir(parents=True)
     old = (ROOT / "tests" / "data" / "upsc_category_phase2.json")
-    (folder / "category.json").write_bytes(old.read_bytes())
+    original = old.read_bytes().replace(b"\r\n", b"\n")
+    if newline == "crlf":
+        original = original.replace(b"\n", b"\r\n")
+    (folder / "category.json").write_bytes(original)
     assert "upsc" in categories.seed()
     assert categories.get("upsc")["enabled"] is True
-    assert (folder / "category.json.bak").read_bytes() == old.read_bytes()
+    assert (folder / "category.json.bak").read_bytes() == original
     edited = json.loads(old.read_text(encoding="utf-8"))
     edited["label"] = "UPSC (edited)"
     (folder / "category.json").write_text(json.dumps(edited), encoding="utf-8")

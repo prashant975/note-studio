@@ -174,8 +174,18 @@ def test_an_update_needs_a_newer_version_and_an_install(monkeypatch, tmp_path):
 
 
 def test_after_the_restart_the_update_says_how_it_went(tmp_path):
+    from note_studio import paths
+
+    kept = paths.home() / "update_backups" / "NoteCraft-2026.11.25.2.app" / "Contents"
+    kept.mkdir(parents=True)
+    other = paths.home() / "update_backups" / "notes.txt"
+    other.write_text("not an app", encoding="utf-8")
+    db.set_setting(updater.STATE, json.dumps({"state": "failed", "version": "2099.1.1.1", "at": 0}))
+    updater.settle_state()
+    assert kept.is_dir()                                       # kept while no new version has opened
     db.set_setting(updater.STATE, json.dumps({"state": "installing", "version": updater.current_version(), "at": 0}))
     assert updater.settle_state()["state"] == "done"
+    assert not kept.parent.exists() and other.exists()        # the new version opened: the old app goes
     log = tmp_path / "install_2099.1.1.1.log"
     Path(str(log) + ".result").write_text("exit 5", encoding="utf-8")
     db.set_setting(updater.STATE, json.dumps({"state": "installing", "version": "2099.1.1.1", "log": str(log),

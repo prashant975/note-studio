@@ -18,11 +18,18 @@
       </p>
     </div>
     <div class="acts">
-      {% if run.sheet and run.state == 'running' %}
+      {% if run.gdoc_sheet and run.state == 'running' %}
+        <form method="post" action="/runs/{{ run.id }}/stop" data-confirm="Stop after the rows being made now? Rows not reached stay ready for the next run.">
+          <button class="btn danger sm" type="submit">{{ ico.i('stop', 13) }} Stop after these rows</button></form>
+      {% elif run.sheet and run.state == 'running' %}
         <form method="post" action="/automation/stop" data-confirm="Stop after the row being made now? Rows not reached stay ready for the next run.">
           <button class="btn danger sm" type="submit">{{ ico.i('stop', 13) }} Stop after this row</button></form>
       {% elif run.sheet and not run.active %}
-        <a class="btn sm" href="/automation">{{ ico.i('sheet', 13) }} Sheet automation</a>
+        {% if run.gdoc_sheet and run.files | rejectattr('state', 'in', ['done', 'skipped']) | list %}
+        <form method="post" action="/runs/{{ run.id }}/again" data-confirm="Make the rows that did not finish again? What they saved (formatting, a checked Doc) is reused; the rest uses PW AI credit.">
+          <button class="btn sm primary" type="submit">{{ ico.i('arrow-right', 13) }} Try the unfinished rows again</button></form>
+        {% endif %}
+        <a class="btn sm" href="/automation{{ '#gdocs' if run.gdoc_sheet }}">{{ ico.i('sheet', 13) }} Sheet automation</a>
       {% elif run.stoppable %}
         <form method="post" action="/runs/{{ run.id }}/stop" data-confirm="Stop making these notes now? What was paid for so far is not refunded, and the Smart Queue holds until you press Continue.">
           <button class="btn danger sm" type="submit">{{ ico.i('stop', 13) }} Stop</button></form>
@@ -51,15 +58,22 @@
     <thead><tr><th>Row</th><th>Outcome</th><th>Notes</th><th class="num">&#8377;</th></tr></thead>
     <tbody>{% for f in run.files %}
       <tr><td>{{ f.label }}</td><td><span class="chip xs {{ f.cls }}">{{ f.words }}</span>{% if f.message %} <span class="small muted">{{ f.message }}</span>{% endif %}</td>
-        <td>{% if f.output_path %}<a href="{{ f.output_path }}" target="_blank" rel="noopener">Open in Drive</a>{% endif %}</td>
+        <td>{% if f.output_path %}<a href="{{ f.output_path }}" target="_blank" rel="noopener">{{ 'Open the Google Doc' if f.link else 'Open in Drive' }}</a>{% endif %}</td>
         <td class="num">{% if f.cost_inr %}{{ '%.2f' % f.cost_inr }}{% endif %}</td></tr>{% endfor %}</tbody>
   </table></div>
   {% elif run.files %}
   <ul class="needs files">
     {% for f in run.files %}
-    <li><span class="nico ok">{{ ico.i('file-text', 16) }}</span>
-      <div class="grow"><strong>{{ f.label }}</strong><span class="small muted">{{ f.kind_words }} &middot; ready</span></div>
+    <li><span class="nico ok">{{ ico.i('message' if f.audio else 'file-text', 16) }}</span>
+      <div class="grow"><strong>{{ f.label }}</strong><span class="small muted">{{ f.kind_words }} &middot; {{ 'in your Google Drive' if f.link else 'ready' }}</span></div>
+      {% if f.link %}
+      <a class="btn primary sm" href="{{ f.output_path }}" target="_blank" rel="noopener noreferrer">{{ ico.i('arrow-right', 13) }} Open the Google Doc</a></li>
+      {% elif f.audio %}
+      <audio class="run-audio" controls preload="none" src="/runs/{{ run.id }}/files/{{ f.id }}" aria-label="Listen to {{ f.label }}"></audio>
       <a class="btn primary sm" href="/runs/{{ run.id }}/files/{{ f.id }}">{{ ico.i('download', 13) }} Download</a></li>
+      {% else %}
+      <a class="btn primary sm" href="/runs/{{ run.id }}/files/{{ f.id }}">{{ ico.i('download', 13) }} Download</a></li>
+      {% endif %}
     {% endfor %}
   </ul>
   {% endif %}

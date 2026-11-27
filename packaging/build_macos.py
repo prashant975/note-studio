@@ -1,0 +1,324 @@
+"""Build an unsigned, self-contained macOS app using a relocatable uv CPython runtime.
+
+Run with the project's .venv/bin/python. Use --dmg to also build an installer disk image.
+The runtime allowlist excludes local data and credentials.
+
+Each build gets the next version, YYYY.M.D.N, as the Windows builder does (build_version.py):
+it is written into the app (shown under the account menu) and its Info.plist, and into the
+project's note_studio/static/release.json once the build has passed its check.
+
+--without upsc (or pw_books) leaves that engine out, as the Windows builder does: the app then
+shows only what it carries, and updates only from its own edition's files.
+
+Updates (the app updates itself, updater.py): --zip writes dist/NoteCraft_Mac[_NoUPSC...]_<version>.zip,
+a zip of the whole app. Mac and Windows updates share one folder, as in Doubt Desk (27 Nov 2026): the
+team release folder in the project's release.json "releases", built into every Mac app as into the
+Windows installer. The file names keep them apart (NoteCraft_Mac..._<v>.zip, NoteCraft_Setup..._<v>.exe).
+Every Mac app carries the team's service-account key (--team-key, else the one added in Settings, else
+the QBG toolkit key on this Mac, where Doubt Desk's Mac build finds it), so each Mac reads the folder
+with no sharing; only the key's email is shown. --publish puts the zip into the team folder;
+--publish <folder link> into that folder instead (the app still reads the team folder).
+"""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import os
+import plistlib
+import shutil
+import subprocess
+import sys
+import sysconfig
+import tempfile
+
+import build_version
+import make_icon
+from build_installer import CHILD_ENGINES, TEAM_KEY, edition_release  # also puts the project on sys.path
+from note_studio.version import setup_name
+
+ROOT = Path(__file__).resolve().parents[1]
+NAME = "NoteCraft"
+ICON = NAME + ".icns"
+ENTRY = "run_studio.py"
+SOURCE_ROOTS = ["note_studio","engines","run_studio.py"]
+TOOLKIT_KEY = Path.home() / ".config/qbg-toolkit/QBG-One-Service-Account.json"   # Doubt Desk's Mac build reads it here
+
+
+def mac_release(source: Path = build_version.RELEASE_FILE) -> dict:
+    """The next version after the project's (the same day: N + 1, else .1), keeping its release folder:
+    the team folder, which Mac and Windows installs both read."""
+    release = build_version.next_release(source)
+    try:
+        previous = json.loads(Path(source).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        previous = {}
+    if isinstance(previous, dict) and previous.get("releases"):
+        release["releases"] = previous["releases"]
+    return release
+
+
+def team_key_source(explicit: Path | None = None, leave_out: bool = False,
+                    toolkit: Path = TOOLKIT_KEY) -> tuple[Path | None, str]:
+    """The team's service-account key to build into the app, and its email (the only part ever shown).
+    The Macs read the team release folder with it, as the Windows installs do."""
+    if leave_out:
+        return None, ""
+    from note_studio import updater
+
+    found = explicit or updater.team_key() or (toolkit if toolkit.is_file() else None)
+    if found is None:
+        raise SystemExit("No team key was found. Pass --team-key <the service account's .json file>, add the key "
+                         "in NoteCraft Settings -> Updates, or pass --no-team-key (then every Mac needs the team "
+                         "release folder shared with its Google account).")
+    try:
+        return Path(found), updater.team_key_only(found)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from None
+
+
+def packaged(rel: str, engines) -> bool:
+    """Whether a project file goes into the app: the code, no tests, run data or sign-ins,
+    and only the engines this edition carries."""
+    if not rel or not any(rel == prefix or rel.startswith(prefix + "/") for prefix in SOURCE_ROOTS):
+        return False
+    path = Path(rel)
+    if rel.startswith("engines/") and len(path.parts) > 2 and path.parts[1] not in engines:
+        return False
+    if (set(path.parts) & {"tests", "__pycache__", "node_modules", ".venv", "runs", "output", "runtime"}
+            and not rel.startswith("data/examples/")):
+        return False
+    return not (path.name in {"token.json", "tokens.json", "credentials.json", "service_account.json",
+                              "client_secret.json"}
+                or path.name.startswith(".env") and path.name != ".env.example"
+                or path.suffix in {".log", ".db", ".sqlite3", ".pyc"})
+
+
+def publish(package: Path, version: str, folder: str, notes: str, edition: str) -> dict:
+    """The zip into the release folder, as updater.publish does for the Windows installer."""
+    shortnotes = str(ROOT / "engines" / "shortnotes")          # the sign-in lives in its sheets_bridge
+    if shortnotes not in sys.path:
+        sys.path.insert(0, shortnotes)
+    from note_studio import updater
+
+    return updater.publish(package, version, folder, notes=notes, setup_prefix=setup_name(edition, mac=True),
+                           kind=".zip")
+
+
+def build_app_icon(target: Path) -> None:
+    from PIL import Image
+
+    artwork = make_icon.draw()
+    with tempfile.TemporaryDirectory(prefix="notecraft-icon-") as folder:
+        iconset = Path(folder) / (NAME + ".iconset")
+        iconset.mkdir()
+        for size in (16, 32, 128, 256, 512):
+            artwork.resize((size, size), Image.Resampling.LANCZOS).save(iconset / f"icon_{size}x{size}.png")
+            artwork.resize((size * 2, size * 2), Image.Resampling.LANCZOS).save(iconset / f"icon_{size}x{size}@2x.png")
+        subprocess.run(["iconutil", "--convert", "icns", "--output", target, iconset], check=True)
+
+
+def build_disk_image(app: Path, destination: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="notecraft-dmg-", dir=destination.parent) as folder:
+        staging = Path(folder) / "payload"
+        staging.mkdir()
+        subprocess.run(["ditto", app, staging / app.name], check=True)
+        (staging / "Applications").symlink_to("/Applications", target_is_directory=True)
+
+        disk_image = Path(folder) / destination.name
+        subprocess.run(["hdiutil", "create", "-srcfolder", staging, "-volname", NAME,
+                        "-format", "UDZO", "-quiet", disk_image], check=True)
+        subprocess.run(["xcrun", "swift", "-e", SET_INSTALLER_ICON, disk_image,
+                        app / "Contents/Resources" / ICON], check=True)
+        disk_image.rename(destination)
+    print(f"Built installer: {destination}")
+
+
+def old_build(path: Path) -> bool:
+    """A Mac build output in dist/: the app, a disk image, an update zip, or a kept-* folder."""
+    name = path.name
+    return ((name.startswith("kept-") and path.is_dir())
+            or (name.startswith(NAME) and path.suffix in (".app", ".dmg"))
+            or (name.startswith(f"{NAME}_Mac") and path.suffix == ".zip"))
+
+
+def clear_old_builds(dist: Path, running: str | None = None) -> list[str]:
+    """No earlier version is kept (the user, 27 Nov 2026, after 51 GB of old copies filled the
+    Mac): dist/'s earlier Mac builds go before a new one. The installed app is in /Applications
+    and each published zip in the team folder. One that is open is left, and the build stops."""
+    if not dist.is_dir():
+        return []
+    if running is None:
+        running = subprocess.run(["ps", "-axo", "comm="], capture_output=True, text=True).stdout
+    removed = []
+    for old in sorted(dist.iterdir()):
+        if not old_build(old):
+            continue
+        inside = str(old.resolve()) + "/"
+        if any(line.strip().startswith(inside) for line in running.splitlines()):
+            raise SystemExit(f"{old} is open. Quit it, then build again.")
+        if old.is_dir() and not old.is_symlink():
+            shutil.rmtree(old)
+        else:
+            old.unlink()
+        removed.append(old.name)
+    return removed
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dmg", action="store_true", help="Also build dist/NoteCraft.dmg for drag-to-Applications installation.")
+    parser.add_argument("--without", choices=("upsc", "pw_books"), action="append", default=[],
+                        help="Leave out this engine, as the Windows builder does; repeat for both.")
+    parser.add_argument("--zip", action="store_true",
+                        help="Also write the update: dist/NoteCraft_Mac[_edition]_<version>.zip (a zip of the app).")
+    parser.add_argument("--publish", nargs="?", const="team", default="", metavar="FOLDER",
+                        help="Write the update and put it into the team release folder (the one every Mac and "
+                             "Windows install reads), or into this Drive folder link instead.")
+    parser.add_argument("--team-key", type=Path, default=None,
+                        help="The team's service-account key to build in (default: the one added in Settings, "
+                             "else ~/.config/qbg-toolkit/QBG-One-Service-Account.json).")
+    parser.add_argument("--no-team-key", action="store_true",
+                        help="Build without the team key: each Mac then reads the folder with its Google sign-in.")
+    parser.add_argument("--notes", default="", help="What changed, shown in the update pop-up ('; ' between fixes).")
+    args = parser.parse_args()
+    if sys.platform != "darwin":
+        raise SystemExit("Build macOS apps on macOS; use the existing Windows builder on Windows.")
+    runtime = Path(sys.base_prefix)
+    if not (runtime / "BUILD").exists() or "cpython-3.13" not in runtime.name:
+        raise SystemExit("Use a relocatable uv Python 3.13 environment (uv python install 3.13; recreate .venv).")
+    app = ROOT / "dist" / (NAME + ".app")
+    for name in clear_old_builds(ROOT / "dist"):
+        print(f"Removed the earlier build: dist/{name}")
+    disk_image = app.with_suffix(".dmg")
+    release = mac_release()
+    bundle = edition_release(release, args.without)       # what this app carries and reads updates from
+    if not bundle.get("releases"):
+        raise SystemExit(f"{build_version.RELEASE_FILE.relative_to(ROOT)} names no team release folder "
+                         "(\"releases\"), so the app would find no updates.")
+    publish_to = ""
+    if args.publish:
+        from note_studio.updater import drive_folder_id
+
+        publish_to = bundle["releases"] if args.publish == "team" else drive_folder_id(args.publish)
+    team_key, team_email = team_key_source(args.team_key, args.no_team_key)
+    print("Updates from the team release folder, read with "
+          + (f"the team's service account {team_email}" if team_key else "each Mac's Google sign-in (no team key)"))
+    package = ROOT / "dist" / f"{setup_name(bundle['edition'], mac=True)}_{release['version']}.zip"
+    print(f"Building {NAME} {release['version']} ({bundle['edition']}: {', '.join(bundle['engines'])})")
+    resources = app / "Contents/Resources"
+    macos = app / "Contents/MacOS"
+    resources.mkdir(parents=True)
+    macos.mkdir(parents=True)
+    build_app_icon(resources / ICON)
+    shutil.copytree(runtime, resources / "runtime", symlinks=True,
+                    ignore=shutil.ignore_patterns("__pycache__"))
+    libraries = Path(sysconfig.get_paths()["purelib"])
+    shutil.copytree(libraries, resources / "libs", symlinks=True,
+                    ignore=shutil.ignore_patterns("__pycache__", "pip", "pip-*", "pytest", "_pytest"))
+    files = subprocess.check_output(
+        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=ROOT).decode().split("\0")
+    for rel in files:
+        if not packaged(rel, bundle["engines"]):
+            continue
+        source = ROOT / rel
+        if not source.is_file():
+            continue
+        target = resources / "source" / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+    if team_key is not None:                               # where updater.team_key() finds it in the app
+        (resources / "source" / TEAM_KEY).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(team_key, resources / "source" / TEAM_KEY)
+    build_version.write_release(resources / "source/note_studio/static/release.json", bundle)
+    for engine in CHILD_ENGINES:
+        if engine not in bundle["engines"]:
+            continue
+        site = ROOT / "engines" / engine / ".venv/lib/python3.13/site-packages"
+        if not site.is_dir():
+            raise SystemExit(f"Missing environment: {site}. Run scripts/setup.py first.")
+        shutil.copytree(site, resources / "engine-libs" / engine, symlinks=True,
+                        ignore=shutil.ignore_patterns("__pycache__", "pip", "pip-*"))
+        wrapper = macos / engine
+        wrapper.write_text('#!/bin/sh\nset -eu\nBASE="$(CDPATH= cd -- "$(dirname -- "$0")/../Resources" && pwd)"\n'
+                           'export PYTHONPATH="$BASE/engine-libs/' + engine + '"\n'
+                           'exec "$BASE/runtime/bin/python3.13" "$@"\n', encoding="utf-8")
+        wrapper.chmod(0o755)
+    bootstrap = resources / "bootstrap.py"
+    bootstrap.write_text(BOOTSTRAP, encoding="utf-8")
+    launcher = macos / "launch"
+    launcher.write_text('#!/bin/sh\nset -eu\nBASE="$(CDPATH= cd -- "$(dirname -- "$0")/../Resources" && pwd)"\n'
+                        'export PYTHONPATH="$BASE/libs:$BASE/source"\n'
+                        'exec "$BASE/runtime/bin/python3.13" "$BASE/bootstrap.py" "$@"\n', encoding="utf-8")
+    launcher.chmod(0o755)
+    subprocess.run(["xcrun", "swiftc", "-framework", "AppKit",
+                    str(ROOT/"packaging/macos_launcher.swift"),
+                    "-o", str(macos/"DesktopLauncher")], check=True)
+    with (app / "Contents/Info.plist").open("wb") as stream:
+        plistlib.dump({"CFBundleName": NAME, "CFBundleDisplayName": NAME,
+                      "CFBundleIdentifier": "live.pw.NoteCraft", "CFBundleExecutable": "DesktopLauncher",
+                      "CFBundleIconFile": ICON, "CFBundleShortVersionString": release["version"],
+                      "CFBundleVersion": release["version"], "CFBundlePackageType": "APPL"}, stream)
+    with tempfile.TemporaryDirectory(prefix="mac-package-check-") as folder:
+        env = dict(os.environ, STUDIO_ROOT=folder, NOTE_STUDIO_HOME=folder,
+                   NOTE_STUDIO_OFFLINE="1", QBG_STUDIO_DB_PATH=str(Path(folder)/"qbg.db"),
+                   PW_AUTH_STATE_DIR=str(Path(folder)/"auth"), QBG_PORTAL_AUTH_PATH=str(Path(folder)/"portal.json"))
+        subprocess.run([str(launcher), "--check-package"], check=True, env=env)
+    print(f"Built and import-checked: {app} ({NAME} {release['version']}, {bundle['edition']})")
+    if args.dmg:
+        build_disk_image(app, disk_image)
+    if args.zip or args.publish:
+        subprocess.run(["ditto", "-c", "-k", "--keepParent", app, package], check=True)
+        digest = hashlib.sha256()
+        with package.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        print(f"Update: {package} ({package.stat().st_size:,} bytes, SHA-256 {digest.hexdigest()})")
+    build_version.write_release(build_version.RELEASE_FILE, release)   # the next build counts on from this one
+    print(f"Version {release['version']} written to {build_version.RELEASE_FILE.relative_to(ROOT)}")
+    if args.publish:
+        published = publish(package, release["version"], publish_to, args.notes, bundle["edition"])
+        if published["sha256"] != digest.hexdigest():
+            raise SystemExit("The uploaded file does not match the update that was built.")
+        print(f"Published: {published['link']}  Mac installs find it within five minutes.")
+    print("Unsigned local app. Launch from Terminal or Finder; distribute only after signing/notarizing.")
+
+
+SET_INSTALLER_ICON = '''import AppKit
+
+guard let icon = NSImage(contentsOfFile: CommandLine.arguments[2]),
+      NSWorkspace.shared.setIcon(icon, forFile: CommandLine.arguments[1], options: []) else {
+    FileHandle.standardError.write(Data("Could not set the installer icon.\\n".utf8))
+    exit(1)
+}
+'''
+
+
+BOOTSTRAP = r'''from pathlib import Path
+import os
+import runpy
+import sys
+
+resources = Path(__file__).resolve().parent
+source = resources / "source"
+os.environ["PATH"] = os.pathsep.join([str(Path.home()/".local/bin"), "/opt/homebrew/bin",
+                                     "/usr/local/bin", os.environ.get("PATH", "")])
+engines = [e for e in ("upsc", "pw_books", "notes_qc") if (resources.parent/"MacOS"/e).is_file()]  # this edition's
+for engine in engines:
+    os.environ["NOTE_STUDIO_"+engine.upper()+"_PYTHON"] = str(resources.parent/"MacOS"/engine)
+os.chdir(source)
+sys.path.insert(0, str(source))
+if "--check-package" in sys.argv:
+    from note_studio.app import app
+    assert app
+    import subprocess
+    for engine in engines:
+        subprocess.run([os.environ["NOTE_STUDIO_"+engine.upper()+"_PYTHON"], "-c", "import fitz,requests"], check=True)
+    print("PACKAGE_OK")
+else:
+    sys.argv = [str(source / "run_studio.py"), *sys.argv[1:]]
+    runpy.run_path(str(source / "run_studio.py"), run_name="__main__")
+'''
+
+
+if __name__ == "__main__":
+    main()

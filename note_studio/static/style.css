@@ -396,6 +396,10 @@ h2 { font-size: var(--t-18); letter-spacing: -.012em; line-height: var(--lh-snug
 .needs .nico.warn { color: var(--c-warn); }
 .needs .nico.danger { color: var(--c-danger); }
 .needs .nico.ok { color: var(--c-ok); }
+/* Audio notes: a player beside the audio file, and the script to fix on the run page. */
+.needs .run-audio { flex: 0 1 280px; min-width: 0; height: 34px; }
+.script-box textarea { font: 13px/1.6 var(--mono); min-height: 18em; }
+@media (max-width: 640px) { .needs > li { flex-wrap: wrap; } .needs .run-audio { flex-basis: 100%; } }
 .runrow { border: 1px solid var(--c-border); border-radius: var(--r); padding: var(--s-4); }
 .runrow + .runrow { margin-top: var(--s-3); }
 .runrow-head { margin-bottom: var(--s-3); }
@@ -781,6 +785,7 @@ form.inline { display: inline-block; margin: 0 2px; }
   .hero { padding: var(--s-6); }
   .hero h1 { font-size: 30px; }
   table.data th, table.data td { padding-left: var(--s-4); padding-right: var(--s-4); }
+  .page-head { flex-wrap: wrap; }          /* a page action goes under the title on a phone */
 }
 
 @keyframes rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }

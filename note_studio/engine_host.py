@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -50,9 +51,13 @@ def runtime(engine_id: str) -> tuple[str, str]:
     libs = paths.libs_dir()
     if libs is not None and (libs / engine_id).is_dir():
         return sys.executable, f"{paths.PROJECT_ROOT.name}'s Python with the engine's own libraries"
+    relative_python = Path("Scripts/python.exe") if os.name == "nt" else Path("bin/python")
+    local = paths.ENGINES_DIR / engine_id / ".venv" / relative_python
+    if local.is_file():
+        return str(local), "this engine's local virtual environment"
     original = paths.original(engine_id)
     if original is not None:
-        venv = original / ".venv" / "Scripts" / "python.exe"
+        venv = original / ".venv" / relative_python
         if venv.is_file():
             return str(venv), "the original app's own Python"
     return sys.executable, f"{paths.PROJECT_ROOT.name}'s Python"
@@ -105,7 +110,7 @@ def child_env(run_dir: Path, token: str = "", extra: dict | None = None) -> dict
     env.update(PYTHONUTF8="1", PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1", PYTHONDONTWRITEBYTECODE="1")
     temp = Path(run_dir) / "tmp"
     temp.mkdir(parents=True, exist_ok=True)
-    env["TEMP"] = env["TMP"] = str(temp)
+    env["TEMP"] = env["TMP"] = env["TMPDIR"] = str(temp)
     env.pop(TOKEN_ENV, None)
     if token:
         env[TOKEN_ENV] = token
@@ -193,7 +198,8 @@ def run(engine_id: str, run_id: int, run_dir: Path, request: dict, on_event, *, 
         _stopped.discard(run_id)
     proc = subprocess.Popen(argv, cwd=str(folder), env=child_env(run_dir, token, extra_env),
                             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            text=True, encoding="utf-8", errors="replace", bufsize=1, creationflags=flags)
+                            text=True, encoding="utf-8", errors="replace", bufsize=1, creationflags=flags,
+                            start_new_session=os.name != "nt")
     _Job.add(proc)
     with _lock:
         _running[run_id] = proc
@@ -244,10 +250,18 @@ def stop(run_id: int, wait: float = 10.0) -> bool:
         if os.name == "nt":
             subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)], capture_output=True, timeout=15)
         else:
-            proc.kill()
+            os.killpg(proc.pid, signal.SIGKILL)
     except Exception:
         log.exception("stopping run %s", run_id)
     deadline = time.time() + wait
     while time.time() < deadline and proc.poll() is None:
         time.sleep(0.1)
     return proc.poll() is not None
+
+
+def stop_all() -> None:
+    """Stop only children started by this application, including descendants."""
+    with _lock:
+        ids = list(_running)
+    for run_id in ids:
+        stop(run_id)

@@ -1,0 +1,32 @@
+A: Aaj toh sach mein is baat ki party banti hai yaar. Ek aisi feeling aa rahi hai jaise koi heavyweight marathon complete kar liya ho.
+B: haha Bilkul, kaafi lamba chapter tha ye.
+A: Shuru mein toh lag raha tha ki ye lamba sa chapter sach mein dimaag ka dahi kar dega, par Amit Sir ne kya mast tareeqe se bataya tha.
+B: Haan, unka padhane ka style hi alag hai.
+A: Mushkil aur dry topics ko unhone itne aasaan tareeqe se real-life examples deke break down kiya ki poore chapter ka darr hi khatam ho gaya.
+B: Hai na? Unka woh step-by-step concepts build karne ka flow ekdum top-notch hota hai.
+A: Ekdum smooth.
+B: Aur aaj hum isko kisi index ya uh notes ke panno ke hisaab se revise nahi karenge, balki hum track karenge ki lecture 1 se aakhri lecture tak concepts practically kaise build hue.
+A: Right.
+B: Hum dekhenge ki kaise fundamental forces motion create karte hain, woh motion aage chalkar work mein kaise badalta hai, aur energy wahaan se achanak kaise picture mein aati hai.
+A: Yeah.
+B: Kyunki dekho, ye sirf formulas ka ratteekaran nahi hai, ye practically poori physics ka ek basic foundation hai.
+A: True, true.
+B: Agar koi aur bhi hamare saath is process se revision kar raha hai, toh unke liye ye session exam mein perfectly phodne ka direct shortcut ban jaayega.
+A: Bhai phanda chamakna chahiye bas. haha
+B: haha
+A: Toh uh kahaani shuru hoti hai sabse fundamental cheez se yaani force.
+B: Force. Haan. Bina kisi force ya push ke toh universe mein kuch hilega hi nahi.
+A: Mujhe yaad hai lecture 1 mein humne mechanics ke basic fundamental laws revise kiye the. Woh acceleration aur velocity nikaalne ke liye integration wala part shuru mein thoda uh bouncer jaa raha tha.
+B: haha Integration sunte hi darr lagta hai.
+A: Wahi, par Amit Sir ne sahi time pe bacha liya.
+B: Mhm.
+A: Unhone bataya ki integration actually humein tab use karni hoti hai jab lagne wala force time ya distance ke saath lagataar badal raha ho.
+B: Exact point. Constant force har jagah toh hota nahi hai.
+A: Haan, toh un equations of motion mein jab acceleration variable ho, toh velocity aur displacement nikaalne ke liye integration hi kaam aati hai.
+B: Bilkul. Integration hamara asli savior ban jaata hai variable forces mein. Par um isse pehle ki hum actual work par jump karein, humein un situations ko dekhna hoga jahaan forces balance ho jaate hain.
+A: Accha, woh equilibrium wala part?
+B: Haan. Matlab kisi point par milne waale sabhi forces ka vector sum zero hota hai, jisko equation form mein sigma F is equal to zero bolte hain.
+A: Oh haan! Jahaan object wahin chain se baitha rehta hai.
+B: Right. Phir chahe forces horizontal lag rahe ho, vertical lag rahe ho, ya kisi random angle par.
+A: Unko bas geometry ka use karke components mein todna aana chahiye. Aur components mein todne ki jab baat aati hai toh inclined plane par rakhe block waali situation kaise bhool sakte hain?
+B: Ugh, woh toh test mein aati hi aati hai.

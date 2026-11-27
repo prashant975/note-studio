@@ -130,6 +130,17 @@
       zone.dataset.ready = "1";
       function show() {
         var names = Array.prototype.map.call(input.files || [], function (f) { return f.name; });
+        if (zone.hasAttribute("data-ordered")) {
+          /* Audio notes: shown in the lecture order they are joined in (Lecture 2 before Lecture 10). */
+          names.sort(function (a, b) { return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }); });
+          var zipped = names.some(function (n) { return /\.zip$/i.test(n); });
+          list.textContent = !names.length ? "" : zipped
+            ? names.length + " chosen: " + names.join(", ") + ". The app opens each ZIP and joins its lecture PDFs in lecture order."
+            : names.length + " chosen, joined in this order: " +
+              names.map(function (n, i) { return (i + 1) + ". " + n; }).join("  ");
+          zone.classList.toggle("has-files", names.length > 0);
+          return;
+        }
         list.textContent = names.length ? names.length + " chosen: " + names.join(", ") : "";
         zone.classList.toggle("has-files", names.length > 0);
       }

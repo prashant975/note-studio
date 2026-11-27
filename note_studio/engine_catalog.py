@@ -29,6 +29,10 @@ ENGINES = (
     {"id": "typeset", "label": "Typeset notes", "icon": "file-text", "builtin": True,
      "makes": "Typeset notes with boxes, tables and labelled figures from a lecture PDF",
      "runs": f"Inside {APP}", "for": "B.Sc."},
+    # Also NoteCraft's own (note_studio/audio): a finished chapter's revision podcast.
+    {"id": "audio", "label": "Audio notes", "icon": "message", "builtin": True,
+     "makes": "A two-friend Hinglish revision podcast (script and audio) from a chapter's lecture PDFs",
+     "runs": f"Inside {APP}", "for": "Every category"},
 )
 
 
@@ -37,9 +41,9 @@ def engine_dir(engine_id: str) -> Path:
 
 
 def available(engine_id: str) -> bool:
-    """Only copies present in this installation are offered; typeset is built in."""
-    if engine_id == "typeset":
-        return (paths.PACKAGE_DIR / "typeset").is_dir()
+    """Only copies present in this installation are offered; typeset and audio are built in."""
+    if engine_id in ("typeset", "audio"):
+        return (paths.PACKAGE_DIR / engine_id).is_dir()
     return engine_dir("shortnotes" if engine_id == "notesbot" else engine_id).is_dir()
 
 

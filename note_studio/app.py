@@ -59,6 +59,8 @@ async def _lifespan(_app):
         yield
     finally:
         update_delivery.stop_poller()
+        from . import engine_host
+        engine_host.stop_all()
 
 
 app = FastAPI(title=brand.APP_NAME, docs_url=None, redoc_url=None, openapi_url=None,

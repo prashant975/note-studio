@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 
 from . import categories, db, engine_host, job_queue, models, note_types, paths, requirements, signin
+from .engines import audio as audio_engine
 from .engines import pw_books as pw_books_engine
 from .engines import shortnotes as shortnotes_engine
 from .engines import typeset as typeset_engine
@@ -70,7 +71,7 @@ def check(category: str, note_type: str, subject: str, language: str, options: d
     if not pack or pack.get("enabled") is not True:
         raise FormError("Choose a category.")
     entry = note_types.get(note_type)
-    if not entry or note_type not in (pack.get("note_types") or []):
+    if not entry or note_type not in categories.type_ids(pack):
         raise FormError("Choose a note type this category offers.")
     if not note_types.available(note_type):
         raise FormError(f"{entry['label']} is not in this installation.")
@@ -213,20 +214,29 @@ def launch(entry: dict) -> tuple[str, str, int | None]:
         run_id = int(payload["run_id"])
     else:
         name = str(payload.get("file") or "")
-        source = next((p for p in job_queue.files(entry) if p.name == name), None) if name else None
-        if name and source is None:
+        # Audio notes queue a whole chapter: every lecture PDF, listed in options["files"].
+        names = [str(n) for n in payload["options"].get("files") or []] or ([name] if name else [])
+        queued = {p.name: p for p in job_queue.files(entry)}
+        if any(n not in queued for n in names):
             return "failed", "The file of this request is missing.", None
+        source = queued.get(name) if name else None
         engine = (note_types.get(payload["note_type"]) or {}).get("engine", "notesbot")
         resolved = requirements.resolve(payload["category"], payload["note_type"], payload["subject"],
                                         payload["language"], extra=payload["options"].get("instructions", ""))
+        linked = bool(payload["options"].get("source_id")) and not name      # a Google Doc link (typeset_gdoc)
+        kind = "gdoc" if linked else "audio" if engine == audio_engine.ENGINE else "upload"
         run_id = db.create_run(engine, title=entry["title"], note_type=payload["note_type"],
                                category=payload["category"], subject=payload["subject"], language=payload["language"],
-                               source="upload", options={**payload["options"], "file": name,
-                                                         "requirements": resolved.to_dict(), "queue_id": entry["id"]})
+                               source=kind, options={**payload["options"], "file": name,
+                                                     "requirements": resolved.to_dict(), "queue_id": entry["id"]})
         folder = run_dir(run_id)
         (folder / "input").mkdir(parents=True, exist_ok=True)
-        if source is not None:
-            shutil.copy2(source, folder / "input" / source.name)
+        for each in names:
+            shutil.copy2(queued[each], folder / "input" / each)
+        if engine == audio_engine.ENGINE:
+            from . import audio_service
+
+            audio_service.reuse(payload, folder, run_id)
         if engine == typeset_engine.ENGINE and payload.get("again_from") and source is not None:
             # A failed rendering/transcription retry keeps checked pages and paid
             # proposals, but only for the identical PDF and transcription prompt.
@@ -275,6 +285,16 @@ def execute(run: dict) -> None:
     """Make one run's notes with its engine."""
     if run["engine"] in CHILD_ENGINES:
         execute_child(run)
+        return
+    if run["note_type"] == "typeset_gdoc":
+        from . import gdoc_service
+
+        gdoc_service.execute(run)
+        return
+    if run["engine"] == audio_engine.ENGINE:
+        from . import audio_service
+
+        audio_service.execute(run)
         return
     if run["engine"] == typeset_engine.ENGINE:
         execute_typeset(run)
@@ -417,10 +437,23 @@ def stop(run_id: int) -> bool:
 def retry(run_id: int) -> int | None:
     """The same lecture with the same choices, added to the Smart Queue again."""
     rows = db.query("SELECT * FROM runs WHERE id=?", (run_id,))
-    if not rows or rows[0]["state"] in ("waiting", "running") or rows[0]["source"] != "upload":
+    if rows and rows[0]["engine"] == audio_engine.ENGINE:
+        from . import audio_service
+
+        return audio_service.retry(run_id)
+    if not rows or rows[0]["state"] in ("waiting", "running") or rows[0]["source"] not in ("upload", "gdoc"):
         return None
     run = rows[0]
     options = json.loads(run["options_json"] or "{}")
+    if run["source"] == "gdoc":
+        # A Google Doc link: the same link and choices, made again (a new Doc).
+        if not options.get("source_id"):
+            return None
+        kept = {k: v for k, v in options.items() if k not in ("file", "requirements", "queue_id", "sign_in_problem")}
+        payload = {"category": run["category"], "note_type": run["note_type"], "subject": run["subject"],
+                   "language": run["language"], "options": kept, "file": "", "again_from": run_id}
+        entry_id, _ = job_queue.submit("new_notes", run["title"], payload, key=f"again-{run_id}")
+        return entry_id
     name = str(options.get("file") or "")
     source = Path(run["run_dir"]) / "input" / name if name else None
     if (source is not None and not source.is_file()) or (source is None and run["engine"] != upsc_engine.ENGINE):

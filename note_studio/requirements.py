@@ -29,10 +29,13 @@ LAYERS = ("engine", "type", "category", "subject", "category_type", "profile", "
 # Engines that receive only some layers. PW Books: the NEET-JEE category's general
 # rule files are the hand-drawn notes engine's own format rules, so they are not
 # sent to it; its own rules go in rules/types/pw_books_handwritten.txt.
-APPLIED = {"pw_books": ("type", "category_type", "profile", "run")}
+# Audio notes: a category's notes rules are about written notes, not a spoken episode; its own
+# words for the episode go in rules/types/audio_notes.txt.
+APPLIED = {"pw_books": ("type", "category_type", "profile", "run"),
+           "audio": ("type", "category_type", "profile", "run")}
 ENGINE_PROMPTS = {"notesbot": "engines/shortnotes/notesbot/prompts.py", "upsc": "engines/upsc/prompts/",
                   "pw_books": "engines/pw_books/prompts/", "notes_qc": "engines/notes_qc/src/qc_prompts.py",
-                  "typeset": "note_studio/typeset/prompts.py"}
+                  "typeset": "note_studio/typeset/prompts.py", "audio": "note_studio/audio/prompt.txt"}
 _ALIASES = {"maths": "mathematics", "math": "mathematics", "sst": "social_science",
             "social science": "social_science", "social-science": "social_science"}
 

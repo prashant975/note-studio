@@ -66,7 +66,11 @@ ORIGINAL_FOLDERS = {
 
 def signin_registration() -> Path:
     """Where an installed NoteCraft keeps the Google sign-in registration (client id, no tokens)."""
-    return PROJECT_ROOT / "deployment" / "client_secret.json"
+    override = os.environ.get("NOTE_STUDIO_GOOGLE_CLIENT", "").strip()
+    if override:
+        return Path(override).expanduser()
+    local = home() / "google-client.json"
+    return local if local.is_file() else PROJECT_ROOT / "deployment" / "client_secret.json"
 
 
 def team_key_files() -> list[Path]:

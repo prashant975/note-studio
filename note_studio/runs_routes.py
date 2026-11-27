@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 
-from . import categories, check_service, db, engine_host, job_queue, make_service, note_types, older_runs
+from . import audio_service, categories, check_service, db, engine_host, job_queue, make_service, note_types, older_runs
 
 STATE_WORDS = {
     "waiting": ("Waiting", ""), "running": ("Making notes", "info"), "complete": ("Done", "ok"),
@@ -16,7 +16,9 @@ STATE_WORDS = {
 }
 FILTERS = {"active": ("waiting", "running"), "done": ("complete",),
            "attention": ("needs_attention", "failed", "stopped")}
-FILE_WORDS = {".pdf": "PDF", ".docx": "Word document", ".xlsx": "Excel workbook", ".md": "Text report"}
+FILE_WORDS = {".pdf": "PDF", ".docx": "Word document", ".xlsx": "Excel workbook", ".md": "Text report",
+              ".txt": "Text file", ".json": "Report", ".wav": "Audio (WAV)", ".mp3": "Audio (MP3)"}
+AUDIO_FILES = (".wav", ".mp3")
 
 
 def _decorate(run: dict) -> dict:
@@ -43,16 +45,23 @@ def _run(run_id: int) -> dict:
                              "ORDER BY id", (run_id,))
     run["files"] = db.query("SELECT * FROM run_items WHERE run_id=? ORDER BY position", (run_id,))
     for item in run["files"]:
-        item["kind_words"] = FILE_WORDS.get(Path(item["output_path"] or "").suffix.lower(), "File")
-    run["sheet"] = run["source"] == "sheet"
+        item["link"] = str(item["output_path"] or "").startswith("https://docs.google.com/")
+        item["kind_words"] = "Google Doc" if item["link"] else \
+            FILE_WORDS.get(Path(item["output_path"] or "").suffix.lower(), "File")
+        item["audio"] = not item["link"] and Path(item["output_path"] or "").suffix.lower() in AUDIO_FILES
+    run["audio_script"] = audio_service.script_for(run)
+    run["gdoc_sheet"] = run["source"] == "gdoc_sheet"
+    run["sheet"] = run["source"] in ("sheet", "gdoc_sheet")
     run["stoppable"] = run["state"] == "running" and engine_host.running(run_id)
     run["checkable"] = check_service.checkable_file(run) is not None
     run["log"] = []
     if run["sheet"]:
         from .automation_service import OUTCOME_WORDS
 
+        words = dict(OUTCOME_WORDS, planned=("Waiting", ""), running=("Making", "info")) if run["gdoc_sheet"] \
+            else OUTCOME_WORDS
         for item in run["files"]:
-            item["words"], item["cls"] = OUTCOME_WORDS.get(item["state"], (item["state"], ""))
+            item["words"], item["cls"] = words.get(item["state"], (item["state"], ""))
         logs = db.query("SELECT data_json FROM run_events WHERE run_id=? AND kind='log' ORDER BY id DESC LIMIT 1",
                         (run_id,))
         run["log"] = json.loads(logs[0]["data_json"]).get("lines", []) if logs else []
@@ -118,6 +127,8 @@ def register(app, render, go):
         rows = db.query("SELECT * FROM run_items WHERE id=? AND run_id=?", (item_id, run_id))
         if not rows or not rows[0]["output_path"]:
             raise HTTPException(404)
+        if rows[0]["output_path"].startswith("https://docs.google.com/document/d/"):
+            return RedirectResponse(rows[0]["output_path"], 303)     # a Google Doc made by the run
         path = Path(rows[0]["output_path"])
         root = make_service.runs_root().resolve()
         if not path.is_file() or root not in path.resolve().parents:
@@ -126,9 +137,30 @@ def register(app, render, go):
 
     @app.post("/runs/{run_id}/stop")
     def stop(run_id: int):
+        rows = db.query("SELECT source FROM runs WHERE id=?", (run_id,))
+        if rows and rows[0]["source"] == "gdoc_sheet":
+            from . import gdoc_service
+
+            if not gdoc_service.stop_sheet(run_id):
+                return go(f"/runs/{run_id}", "This sheet run is not running right now.", "info")
+            return go(f"/runs/{run_id}", "Stopping after the rows being made now. Rows not reached stay ready "
+                                         "for the next run.", "ok")
         if not make_service.stop(run_id):
             return go(f"/runs/{run_id}", "This run is not being made right now.", "info")
         return go(f"/runs/{run_id}", "Stopped. The Smart Queue holds until you press Continue.", "ok")
+
+    @app.post("/runs/{run_id}/audio")
+    async def speak_script(request: Request, run_id: int):
+        """Audio notes: the script as the team fixed it on this page, spoken in a new run."""
+        form = await request.form()
+        try:
+            _entry, created = audio_service.speak_script(run_id, str(form.get("script", "")))
+        except make_service.FormError as problem:
+            return go(f"/runs/{run_id}#script", str(problem), "warn")
+        if not created:
+            return go("/queue", "This script is already in the Smart Queue: it was not added twice.", "info")
+        return go("/queue", "Added to the Smart Queue: the audio is made from your script. Parts of the script you "
+                            "did not change reuse the audio already made.", "ok")
 
     @app.post("/runs/{run_id}/again")
     def again(run_id: int):
@@ -137,6 +169,15 @@ def register(app, render, go):
             if check_service.again(run_id) is None:
                 return go(f"/runs/{run_id}", "This check cannot be run again (its file is missing).", "warn")
             return go("/queue", "Added the check to the Smart Queue again.", "ok")
+        if rows and rows[0]["source"] == "gdoc_sheet":
+            from . import gdoc_service
+
+            again = gdoc_service.retry_sheet(run_id)
+            if again is None:
+                return go(f"/runs/{run_id}", "Every row of this run has its Google Doc: nothing to make again.", "info")
+            left = "1 row" if again[1] == 1 else f"{again[1]} rows"
+            return go("/queue", f"Added the {left} that did not finish to the Smart Queue. Work they saved is reused.",
+                      "ok")
         entry_id = make_service.retry(run_id)
         if entry_id is None:
             return go(f"/runs/{run_id}", "This run cannot be made again (its lecture file is missing).", "warn")

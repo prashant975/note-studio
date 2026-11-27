@@ -16,7 +16,7 @@ import time
 import uuid
 
 from . import db
-from .version import EDITION
+from .version import EDITION, MAC_APP
 
 SHOWINGS = 2
 STATE = "whats_new_state"            # {tour id: {shown, boots, done, at}}
@@ -26,6 +26,58 @@ BOOT = uuid.uuid4().hex              # this start: a tour is shown once per star
 OMITTED = (["UPSC notes, Mains practice and DPP"] if "noupsc" in EDITION else []) + (
     ["PW Books"] if "nopwbooks" in EDITION else [])
 TOURS = [
+    dict(id="2026-11-27-audio-zip", title="Audio notes from a ZIP of lectures", steps=[
+        dict(title="One ZIP for the chapter", href="/audio", icon="download",
+             text="Make notes → Audio notes: drop one ZIP of the chapter's lecture PDFs instead of each PDF. The app opens it, takes the PDFs inside in lecture order and leaves other files out. The ZIP's name becomes the chapter name when you leave that empty."),
+    ]),
+    dict(id="2026-11-27-csir-net", title="CSIR NET notes, with each PDF's own header and logo", steps=[
+        dict(title="CSIR NET in the B.Sc. template", href="/new", icon="file-text",
+             text="Make notes → CSIR NET: upload a lecture PDF. The notes come in the B.Sc. template, and the PDF's own header goes on every page: its name (e.g. CSIR NET - Life Sciences), its right-hand words (e.g. Unit 1: Biochemistry) and its logo when it has one."),
+        dict(title="For any category", href="/settings/categories", icon="layers",
+             text="Settings → Categories: set Header name and logo to Take them from each lecture PDF for any category with B.Sc.-style notes, or tick it when you add a category. A PDF without a header keeps the category's own words."),
+    ]),
+    *([dict(id="2026-11-25-mac-updates", title="NoteCraft updates itself on this Mac", steps=[
+        dict(title="Updates by itself", href="/settings/system#updates", icon="download",
+             text="A new NoteCraft for Mac downloads in the background and is checked. A pop-up then offers Install update: NoteCraft closes, puts the new version in Applications and opens again in about a minute. Your notes, runs and settings stay."),
+        dict(title="Never during a run", href="/settings/system#updates", icon="shield",
+             text="An update waits while notes are being made. The version you had is kept until the new one opens, so nothing is lost if an update does not finish; then it is removed to save space."),
+    ])] if MAC_APP else []),
+    dict(id="2026-11-26-audio-mp3", title="Audio notes: MP3, and the team's sound", steps=[
+        dict(title="MP3 audio", href="/audio", icon="download",
+             text="Audio notes now come as MP3: about 11 MB for a 15-minute episode, ready to play anywhere or share. Play it on the run page or download it."),
+        dict(title="Like the team's episode", href="/audio", icon="message",
+             text="Two friends, a young man (Raju) and a young woman (Riya), revise the chapter with short, quick turns at the pace of the team's reference episode. Change their names and voices under More options."),
+    ]),
+    dict(id="2026-11-25-audio-notes", title="Audio notes for a finished chapter", steps=[
+        dict(title="Every lecture of the chapter", href="/audio", icon="message",
+             text="Make notes → Audio notes: add the day-wise lecture PDFs of one finished chapter and the teacher's name. They are joined in lecture order into one PDF, and two friends revise the whole chapter in an energetic Hinglish conversation, written with the team's prompt. Uses PW AI credit."),
+        dict(title="Checked, then spoken", href="/runs", icon="shield",
+             text="Every line of the script is checked against the notes before PW AI speaks it in two voices. The run gives the audio (play it on the run page), its script and the merged PDF."),
+        dict(title="Fix a line, speak it again", href="/runs", icon="pen",
+             text="The run page shows the script. Fix any line and press Make the audio: only the voices are paid for, and parts you did not change reuse the audio already made. Choose \"After I check the script\" to read it before any audio is made."),
+    ]),
+    dict(id="2026-11-25-gdoc-again", title="Google Docs from a sheet: Try again", steps=[
+        dict(title="Try the unfinished rows again", href="/runs", icon="arrow-right",
+             text="A Google Docs sheet run with rows that did not finish has Try the unfinished rows again on its page. Only those rows are made; the formatting they already paid for and any Doc that passed its checks are reused, so nothing is made twice."),
+        dict(title="Why a row did not finish", href="/runs", icon="info",
+             text="Each row that did not finish says why in plain words, and how much PW AI credit it had already used."),
+        dict(title="Long notes finish", href="/automation#gdocs", icon="file-text",
+             text="Very long notes (a tab of a thousand paragraphs or more) are formatted in parts, and a PDF that Google sends back cut short is asked for again, so these rows finish instead of stopping part way."),
+    ]),
+    dict(id="2026-11-24-gdoc-bsc", title="B.Sc.-style Google Docs, from the app", steps=[
+        dict(title="Ready in Nursing", href="/settings/categories", icon="shield",
+             text="Nursing, and any category with the PW logo on its B.Sc.-style notes, offers Google Doc with tabs (B.Sc. style) by itself. Settings → Categories can switch it off, or on for B.Sc. Wallah."),
+        dict(title="From Google Doc links", href="/new", icon="file-text",
+             text="New notes: choose Google Doc with tabs and paste the final notes' Google Doc links. Each becomes an editable Google Doc in your Drive with the PW logo and watermark. Every word stays the source's; every tab is checked word for word. Uses PW AI credit."),
+        dict(title="From a sheet", href="/automation#gdocs", icon="sheet",
+             text="Sheet automation → Google Docs from a sheet: paste the sheet tab's link, press Check rows (free), then Make Google Docs. Each made Doc's link is written into its row's \"Google Doc (B.Sc. style)\" column; rows that already have one are skipped."),
+    ]),
+    dict(id="2026-11-04-nursing-pw-logo", title="PW logo on Nursing notes", steps=[
+        dict(title="PW logo and watermark", href="/new", icon="file-text",
+             text="Nursing notes in the B.Sc. template now have the PW logo in the top-right corner of every page and the faded PW logo watermark behind the text, as NEET/JEE notes do. Wording, tables and images are unchanged."),
+        dict(title="Choose per category", href="/settings/categories", icon="shield",
+             text="Settings → Categories: add or remove the PW logo for any category that makes B.Sc.-style notes. Categories you add get it; the built-in B.Sc. Wallah notes keep their own look."),
+    ]),
     dict(id="2026-10-30-word-reference", title="Full Word references in the B.Sc. template", steps=[
         dict(title="Keep the complete reference", href="/new", icon="file-text",
              text="B.Sc. style now accepts .docx references, including Nursing notes. AI chooses formatting while every source paragraph, table and embedded image stays locked. No shortening or invented content."),

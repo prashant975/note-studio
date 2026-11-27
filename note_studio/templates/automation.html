@@ -8,6 +8,7 @@
     <h1>Sheet automation</h1>
     <p class="sub">Notes for every new row of your Google Sheets, filed in Drive with the links written back: the same run as the Short Notes app.</p>
   </div>
+  <div class="acts"><a class="btn" href="#gdocs">{{ ico.i('file-text', 15) }} Google Docs from a sheet (B.Sc. style)</a></div>
 </div>
 
 {% include "_queue_strip.html" %}
@@ -76,6 +77,47 @@
 
   {% include "_automation_live.html" %}
 </div>
+
+<section class="card" id="gdocs">
+  <div class="hd"><div class="grow"><h2>Google Docs from a sheet (B.Sc. style)</h2>
+    <p class="d">For a sheet whose rows link final-notes Google Docs. Each row's Doc becomes an editable Google Doc in the B.Sc. template, with the PW logo and watermark. Every word stays as in the source; only the design is new. Its link is written into the row's "{{ 'Google Doc (B.Sc. style)' }}" column.</p></div></div>
+  {% if not gdoc_categories %}
+  <div class="bd"><p class="quiet-line">{{ ico.i('folder', 15) }} No category makes Google Docs yet. In <a href="/settings/categories">Settings → Categories</a>, add Nursing (or another category) with B.Sc.-style notes: it offers Google Docs by itself. For B.Sc. Wallah, press "Offer Google Docs" there.</p></div>
+  {% else %}
+  <form class="bd" method="post" action="/automation/docs/run" id="gdoc-form"
+        data-confirm="Make a Google Doc for every chosen row that does not have one yet? This uses PW AI credit for each row.">
+    <label class="field"><span>Sheet link</span>
+      <input type="text" inputmode="url" name="sheet_link" required maxlength="2000" autocomplete="off" data-remember="gdoc_sheet_link"
+             placeholder="Paste the link of the sheet tab, e.g. https://docs.google.com/spreadsheets/d/…/edit#gid=…">
+      <span class="hint">Open the tab that lists the notes and copy the address. Each row's downloadable_link must be a Google Doc.</span></label>
+    <div class="field-row">
+      <label class="field"><span>Category</span>
+        <select name="category">{% for c in gdoc_categories %}<option value="{{ c.id }}">{{ c.label }}</option>{% endfor %}</select>
+        <span class="hint">Its words go in the page header and footer.</span></label>
+      <label class="field"><span>Rows</span>
+        <input type="text" name="rows" maxlength="200" placeholder="All rows without a Google Doc" autocomplete="off">
+        <span class="hint">Optional, e.g. 16-21 or 16, 18, 20.</span></label>
+    </div>
+    <label class="row checkrow"><input type="checkbox" name="share" checked><span>Anyone at PW can edit each Doc (with the link)</span></label>
+    <div class="form-end">
+      <button class="btn" type="button" hx-post="/automation/docs/check" hx-include="#gdoc-form" hx-target="#gdoc-rows" hx-swap="innerHTML"
+              {% if signin.state != 'ready' %}disabled{% endif %}>{{ ico.i('eye', 15) }} Check rows</button>
+      <button class="btn primary" type="submit" data-busy {% if signin.state != 'ready' %}disabled{% endif %}>{{ ico.i('sparkles', 15) }} Make Google Docs</button>
+      <span class="hint">Check rows is free. Rows that already have a Google Doc are skipped.</span>
+    </div>
+    <div id="gdoc-rows"></div>
+  </form>
+  {% if gdoc_recent %}
+  <div class="ft"><ul class="needs">
+    {% for r in gdoc_recent %}
+    <li><span class="nico {{ {'complete': 'ok', 'failed': 'danger', 'needs_attention': 'warn', 'stopped': 'warn'}.get(r.state, '') }}">{{ ico.i('file-text', 15) }}</span>
+      <div class="grow"><a class="run-link" href="/runs/{{ r.id }}">{{ r.title }}</a><span class="small muted">{{ r.message }}</span></div>
+      <span class="small muted" data-time="{{ r.created_at }}"></span></li>
+    {% endfor %}
+  </ul></div>
+  {% endif %}
+  {% endif %}
+</section>
 
 <section class="card" id="sheets">
   <div class="hd"><div class="grow"><h2>Sheets</h2>

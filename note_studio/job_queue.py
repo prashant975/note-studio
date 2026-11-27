@@ -27,7 +27,8 @@ from . import db, paths
 
 log = logging.getLogger("note_studio.queue")
 LANES = {"notes": "Notes", "sheets": "Sheets"}
-KIND_LANE = {"new_notes": "notes", "sheet_run": "sheets", "practice": "notes", "check": "notes"}
+KIND_LANE = {"new_notes": "notes", "sheet_run": "sheets", "practice": "notes", "check": "notes",
+             "gdoc_sheet": "sheets"}           # Google Docs (B.Sc. style) from a sheet's rows
 HOLD_KEY = "queue_hold"
 HOLD_WORDS = {
     "update": "The queue is waiting while NoteCraft installs its update.",

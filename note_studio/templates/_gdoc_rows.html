@@ -1,0 +1,22 @@
+{#- Google Docs from a sheet: what Check rows found (free; the sheet is only read). -#}
+{% import "_icons.html" as ico with context %}
+{% if problem %}
+<div class="note warn" role="alert">{{ ico.state('warn', 16, 'nico') }}<div class="ntext"><div class="hd">{{ problem }}</div></div></div>
+{% else %}
+<div class="note {{ 'ok' if found.ready else 'info' }}">{{ ico.state('ok' if found.ready else 'info', 16, 'nico') }}<div class="ntext">
+  <div class="hd">Tab “{{ found.tab }}”: {{ found.ready | length }} row{{ '' if found.ready | length == 1 else 's' }} would be made</div>
+  <div class="bd">{{ found.rows | length }} chosen row{{ '' if found.rows | length == 1 else 's' }} link a Google Doc;
+    {{ found.done | length }} already {{ 'has' if found.done | length == 1 else 'have' }} one{% if found.column %} in column {{ found.column }}{% endif %} and {{ 'is' if found.done | length == 1 else 'are' }} skipped.
+    {% if not found.column %}The column “{{ found.header }}” is added after the last column in use.{% endif %}</div>
+</div></div>
+{% if found.ready %}
+<div class="tablewrap"><table class="data">
+  <thead><tr><th>Row</th><th>Subject</th><th>Topic</th><th>Source</th></tr></thead>
+  <tbody>{% for r in found.ready[:60] %}
+    <tr><td>{{ r.row }}</td><td>{{ r.subject }}</td><td>{{ r.topic }}</td>
+      <td><a href="https://docs.google.com/document/d/{{ r.source_id }}/edit" target="_blank" rel="noopener noreferrer">Open</a></td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% if found.ready | length > 60 %}<p class="small muted">…and {{ found.ready | length - 60 }} more.</p>{% endif %}
+{% endif %}
+{% endif %}

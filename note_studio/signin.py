@@ -8,9 +8,10 @@ pages only read the result (`snapshot`). Sign in opens the browser once.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import threading
 
-from . import old_app
+from . import old_app, paths
 
 _lock = threading.Lock()
 _state: dict = {"auth": None, "folder": None}
@@ -54,7 +55,28 @@ def warm() -> None:
         threading.Thread(target=current.status, name="signin-restore", daemon=True).start()
 
 
+def registration_ready() -> bool:
+    # Existing Windows/source installs may use the original app's registration
+    # or an explicit environment path rather than the new per-user location.
+    current = _state["auth"]
+    settings = getattr(current, "settings", None)
+    if settings is not None:
+        candidate = Path(settings.client_secret_path)
+        if not candidate.is_absolute():
+            candidate = Path(current._dir) / candidate
+        if candidate.is_file():
+            return True
+    configured = os.environ.get("SHEETS_BRIDGE_CLIENT_SECRET", "")
+    return bool((configured and Path(configured).expanduser().is_file()) or
+                (paths.shortnotes_original()/"client_secret.json").is_file() or
+                paths.signin_registration().is_file())
+
+
 def snapshot() -> dict:
+    return _snapshot() | {"configured": registration_ready()}
+
+
+def _snapshot() -> dict:
     """{'state': undecided|checking|pending|ready|signed_out|error, 'email', 'error'}."""
     if not old_app.choice():
         return {"state": "undecided", "email": "", "error": ""}
@@ -79,6 +101,21 @@ def start() -> None:
     if current is None:
         raise SignInNeeded("Choose first whether NoteCraft uses the old app's sign-in.")
     current.start_sign_in()
+
+
+def start_popup() -> str:
+    current = auth()
+    if current is None:
+        raise SignInNeeded("Choose a separate sign-in in Settings first.")
+    ready = threading.Event()
+    result = {}
+    def on_url(url):
+        result["url"] = url
+        ready.set()
+    current.start_sign_in(open_browser=False, on_url=on_url)
+    if not ready.wait(5):
+        raise SignInNeeded("Google sign-in could not start. Check registration and close any earlier sign-in.")
+    return result["url"]
 
 
 def sign_out() -> None:

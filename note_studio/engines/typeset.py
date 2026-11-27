@@ -48,6 +48,7 @@ class Settings:
     brand: str = "B.Sc. Wallah"
     audience: str = "B.Sc."
     branding: dict = field(default_factory=dict)
+    branding_from_pdf: bool = False     # the header name and logo come from each lecture PDF (source_brand)
     models: dict = field(default_factory=dict)
 
 
@@ -68,6 +69,8 @@ class Result:
 def run_settings(options: dict, pack: dict, subject: str, language: str, instructions: str,
                  models: dict) -> Settings:
     """Settings from a run's saved options and its category pack (its branding is data)."""
+    from .. import categories
+
     branding = dict((pack or {}).get("branding") or {})
     label = str((pack or {}).get("label") or "B.Sc.")
     brand = str(branding.get("header_left") or label)
@@ -83,7 +86,41 @@ def run_settings(options: dict, pack: dict, subject: str, language: str, instruc
                     brand=brand, audience=str(branding.get("audience") or label), models=models,
                     branding={"header_left": brand, "header_right": str(branding.get("header_right") or f"{label} Notes"),
                               "footer_left": str(branding.get("footer_left") or brand),
-                              "footer_right": str(branding.get("footer_right") or "Concept • Understand • Apply")})
+                              "footer_right": str(branding.get("footer_right") or "Concept • Understand • Apply"),
+                              "pw_logo": categories.pw_logo(pack)},
+                    branding_from_pdf=categories.branding_from_pdf(pack))
+
+
+HEADER_CHECK = "Header name and logo"
+
+
+def _brand_from_pdf(pdf_bytes: bytes, out_dir: Path, settings: Settings) -> tuple[dict, dict]:
+    """The lecture PDF's own running header and logo on the notes (a category with "from_pdf").
+    Returns the quality report's check and what to leave out of the notes' content (source_brand.furniture).
+    What the PDF does not have stays the category's: its name, and its PW logo choice."""
+    from ..typeset import source_brand
+
+    found = source_brand.read(pdf_bytes)
+    name, right, said = found["left"], found["right"], []
+    if name or right:
+        name = name or settings.branding.get("header_left", "")
+        settings.branding.update(header_left=name, header_right=right, footer_left=name)
+        settings.brand = name
+        said.append(f"the header “{name}”" + (f" | “{right}”" if right else ""))
+    if found["logo"]:
+        out_dir = Path(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "lecture_logo.png").write_bytes(found["logo"])
+        settings.branding["logo"] = str(out_dir / "lecture_logo.png")
+        said.append("its logo (in the corner and as the watermark)")
+    if not said:
+        detail = ("The lecture PDF repeats no header words or logo at the top of its pages, so the category's own "
+                  f"header “{settings.branding.get('header_left', '')}” is used.")
+    else:
+        detail = "Taken from the lecture PDF: " + " and ".join(said) + "."
+        if not found["logo"]:
+            detail += " It has no logo" + (", so the PW logo is used." if settings.branding.get("pw_logo") else ".")
+    return {"check": HEADER_CHECK, "result": "ok", "detail": detail}, source_brand.furniture(found)
 
 
 def output_name(source_name: str) -> str:
@@ -304,7 +341,8 @@ def _make_word_notes(data: bytes, source_name: str, out_dir: Path, settings: Set
         return result
 
 
-def _make_source_notes(pdf_bytes: bytes, source_name: str, out_dir: Path, settings: Settings, say, token_provider) -> Result:
+def _make_source_notes(pdf_bytes: bytes, source_name: str, out_dir: Path, settings: Settings, say, token_provider,
+                       furniture: dict | None = None) -> Result:
     from ..typeset import ai, render, source, source_quality, transcribe
 
     result = Result(state="failed", failure="source", message=FAILURE_WORDS["source"])
@@ -346,7 +384,8 @@ def _make_source_notes(pdf_bytes: bytes, source_name: str, out_dir: Path, settin
             read_pages(pending)
         while True:
             try:
-                doc, manifest = source.extract(pdf_bytes, assets, title=settings.title, transcriptions=transcripts)
+                doc, manifest = source.extract(pdf_bytes, assets, title=settings.title, transcriptions=transcripts,
+                                               furniture=furniture)
                 break
             except source.LayoutRequired as problem:
                 if problem.page in transcripts:
@@ -425,19 +464,44 @@ def _make_source_notes(pdf_bytes: bytes, source_name: str, out_dir: Path, settin
 def make_notes(pdf_bytes: bytes, source_name: str, out_dir: Path, settings: Settings, *,
                token_provider: Callable[[], Callable[[], str]],
                step: Callable[[str, int | None], None] | None = None) -> Result:
-    """Make typeset notes for one lecture PDF into ``out_dir``."""
+    """Make typeset notes for one lecture PDF into ``out_dir``. A category whose header comes from
+    each lecture ("from_pdf") reads the PDF's own header name and logo first (source_brand)."""
     say = step or (lambda text, pct=None: None)
+    header, furniture = None, None
+    if settings.branding_from_pdf:
+        if source_name.lower().endswith(".docx"):
+            header = {"check": HEADER_CHECK, "result": "ok", "detail": "A Word file's own header is not read, so "
+                      f"the category's header “{settings.branding.get('header_left', '')}” is used."}
+        else:
+            say("Reading the lecture PDF's header name and logo", 4)
+            try:
+                header, furniture = _brand_from_pdf(pdf_bytes, out_dir, settings)
+            except Exception as problem:            # noqa: BLE001 - the notes go on with the category's words
+                header = {"check": HEADER_CHECK, "result": "attention",
+                          "detail": "The lecture PDF's header could not be read, so the category's own header "
+                                    f"“{settings.branding.get('header_left', '')}” is used ({type(problem).__name__})."}
+    result = _make_notes(pdf_bytes, source_name, out_dir, settings, say, token_provider, furniture)
+    if header and result.state == "complete" and isinstance(result.quality_report, dict):
+        result.quality_report.setdefault("checks", []).insert(0, header)
+        result.quality_report["header_from_pdf"] = {k: settings.branding.get(k, "") for k in
+                                                    ("header_left", "header_right", "footer_left", "logo")}
+        if header["result"] == "attention":
+            result.quality_report["verdict"] = "needs_attention"
+    return result
+
+
+def _make_notes(pdf_bytes: bytes, source_name: str, out_dir: Path, settings: Settings, say, token_provider,
+                furniture: dict | None) -> Result:
     if source_name.lower().endswith(".docx"):
         return _make_word_notes(pdf_bytes, source_name, out_dir, settings, say, token_provider)
     if settings.content_mode != "rewrite":
-        return _make_source_notes(pdf_bytes, source_name, out_dir, settings, say, token_provider)
+        return _make_source_notes(pdf_bytes, source_name, out_dir, settings, say, token_provider, furniture)
     from .. import engine_catalog
     from ..typeset import ai, document, prompts, quality, render
 
     engine_catalog.put_shortnotes_on_path()                 # pw_access, as for the hand-drawn notes
     import pw_access
 
-    say = step or (lambda text, pct=None: None)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     result = Result(state="failed")

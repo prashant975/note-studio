@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import Request
 
 from . import automation_service as auto
-from . import categories, job_queue, models, note_types, sheet_list, signin
+from . import categories, db, gdoc_service, gdoc_sheet, job_queue, models, note_types, sheet_list, signin
 
 SUBJECT_WORDS = {"sheet": "From the sheet (column D)", "auto": "Auto Detect", "chemistry": "Chemistry",
                  "physics": "Physics", "biology": "Biology", "mathematics": "Maths", "sanskrit": "Sanskrit",
@@ -92,7 +92,10 @@ def _page_context(problem: str = "") -> dict:
             "categories": handdrawn, "types": [t for t in note_types.all_types() if t["engine"] == "notesbot"],
             "subjects": SUBJECT_WORDS, "models": _model_choices(),
             "outcome_words": auto.OUTCOME_WORDS, "recent": auto.recent_runs(), "run_id": auto.current_run_id(),
-            "sheet_file": sheet_file}
+            "sheet_file": sheet_file,
+            # Google Docs (B.Sc. style) from a sheet's rows (gdoc_service)
+            "gdoc_categories": [p for p in categories.all_packs(include_disabled=False) if categories.gdoc_offered(p)],
+            "gdoc_recent": db.query("SELECT * FROM runs WHERE source='gdoc_sheet' ORDER BY id DESC LIMIT 5")}
 
 
 def register(app, render, go):
@@ -132,6 +135,35 @@ def register(app, render, go):
         dry = form.get("mode") == "dry"
         return go("/automation#live", ("Dry run added: nothing is made or written." if dry
                                        else "Added to the Smart Queue: it starts when the Sheets lane is free."), "ok")
+
+    @app.post("/automation/docs/check")
+    async def gdoc_check(request: Request):
+        """Google Docs from a sheet: read the tab (free) and show which rows would be made."""
+        form = await request.form()
+        if signin.snapshot()["state"] != "ready":
+            return render(request, "_gdoc_rows.html", problem="Sign in with Google in Settings first.")
+        try:
+            found = gdoc_service.sheet_rows(str(form.get("sheet_link") or ""), str(form.get("rows") or ""))
+        except (gdoc_sheet.SheetError, signin.SignInNeeded) as problem:
+            return render(request, "_gdoc_rows.html", problem=str(problem))
+        return render(request, "_gdoc_rows.html", found=found)
+
+    @app.post("/automation/docs/run")
+    async def gdoc_run(request: Request):
+        form = await request.form()
+        if signin.snapshot()["state"] != "ready":
+            return go("/automation#gdocs", "Sign in with Google in Settings first.", "warn")
+        try:
+            _entry, created, count = gdoc_service.enqueue_sheet(
+                str(form.get("category") or ""), str(form.get("sheet_link") or ""), str(form.get("rows") or ""),
+                share=form.get("share") == "on")
+        except (gdoc_sheet.SheetError, signin.SignInNeeded) as problem:
+            return go("/automation#gdocs", str(problem), "warn")
+        if not created:
+            return go("/queue", "That sheet run is already in the Smart Queue.", "info")
+        rows = "1 row" if count == 1 else f"{count} rows"
+        return go("/queue", f"Added Google Docs for {rows} to the Smart Queue: it starts when the Sheets lane is free.",
+                  "ok")
 
     @app.post("/automation/stop")
     def stop():

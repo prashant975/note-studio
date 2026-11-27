@@ -6,8 +6,17 @@ from fastapi import Request
 from . import categories, job_queue, make_service, note_types, requirements, setup_check, signin
 
 
-def _form_context(category: str = "", note_type: str = "", values: dict | None = None) -> dict:
+AUDIO = categories.AUDIO_TYPE
+
+
+def _form_context(category: str = "", note_type: str = "", values: dict | None = None,
+                  audio_page: bool = False) -> dict:
+    """The New notes form. The Audio notes page (/audio) is the same form with its type fixed,
+    over the categories that offer it."""
     packs = [p for p in categories.all_packs(include_disabled=False) if categories.offered_types(p)]
+    if audio_page:
+        packs = [p for p in packs if any(t["id"] == AUDIO for t in categories.offered_types(p))]
+        note_type = AUDIO
     pack = next((p for p in packs if p["id"] == category), None) or (packs[0] if packs else None)
     types = categories.offered_types(pack) if pack else []
     # Practice types are made from finished notes, on the Practice page.
@@ -23,14 +32,14 @@ def _form_context(category: str = "", note_type: str = "", values: dict | None =
                                        values.get("language", "auto"))
     options = [(name,spec) for name,spec in ((chosen or {}).get("options") or {}).items() if not spec.get("hidden")]
     advanced = [(name, spec) for name, spec in options if spec.get("advanced")]
-    return {"queue_counts": job_queue.counts(), "hold_words": job_queue.hold_words(),
+    return {"queue_counts": job_queue.counts(), "hold_words": job_queue.hold_words(), "audio_page": audio_page,
             "packs": packs, "pack": pack, "types": types, "chosen": chosen,
             "subjects": categories.subject_choices(pack, chosen) if pack else [],
             "languages": categories.language_choices(pack, chosen) if pack and chosen else [],
             "values": {**defaults, **values}, "preview": preview, "signin": signin.snapshot(),
             "basic_options": [(name, spec) for name, spec in options if not spec.get("advanced")],
             "advanced_options": advanced, "advanced_open": any(values.get(name) for name, _spec in advanced),
-            "no_pdf_maker": bool(chosen and "pdf" in (chosen.get("outputs") or []) and chosen.get("engine") == "upsc"
+            "no_pdf_maker": bool(chosen and "pdf" in (chosen.get("outputs") or []) and chosen.get("engine") == "pw_books"
                                  and not setup_check.office())}
 
 
@@ -38,6 +47,10 @@ def register(app, render, go):
     @app.get("/new")
     def new_notes(request: Request, category: str = "", type: str = ""):
         return render(request, "new.html", **_form_context(category, type))
+
+    @app.get("/audio")
+    def audio_notes(request: Request, category: str = ""):
+        return render(request, "new.html", **_form_context(category, AUDIO, audio_page=True))
 
     @app.get("/new/rules")
     def rules_card(request: Request, category: str = "", note_type: str = "", subject: str = "auto"):
@@ -56,8 +69,19 @@ def register(app, render, go):
         for name, spec in (entry.get("options") or {}).items():
             options[name] = form.get(name) == "on" if spec.get("type") == "bool" else str(form.get(name, "")).strip()
         values = {"subject": str(form.get("subject", "auto")), "language": str(form.get("language", "auto")),
-                  "video_url": str(form.get("video_url", "")).strip(), **options}
+                  "video_url": str(form.get("video_url", "")).strip(),
+                  "doc_links": str(form.get("doc_links", "")).strip()[:20000], **options}
         try:
+            if "gdoc_link" in (entry.get("inputs") or []):
+                from . import gdoc_service
+
+                added = gdoc_service.submit_links(category, note_type, values["subject"], values["language"], options,
+                                                  values["doc_links"])
+                new = sum(1 for _id, created in added if created)
+                if not new:
+                    return go("/queue", "Already in the Smart Queue: it was not added twice.", "info")
+                words = "1 Google Doc" if new == 1 else f"{new} Google Docs"
+                return go("/queue", f"Added {words} to the Smart Queue; each is made in turn.", "ok")
             if "video_link" in (entry.get("inputs") or []):
                 slides = form.get("slides")
                 upload = (slides.filename, await slides.read()) if hasattr(slides, "read") and slides.filename else None
@@ -70,10 +94,21 @@ def register(app, render, go):
             for item in form.getlist("files"):
                 if hasattr(item, "read") and getattr(item, "filename", ""):
                     uploads.append((item.filename, await item.read()))
+            if "chapter_pdfs" in (entry.get("inputs") or []):
+                from . import audio_service
+
+                _id, created, count = audio_service.submit_chapter(category, note_type, values["subject"],
+                                                                   values["language"], options, uploads)
+                if not created:
+                    return go("/queue", "Already in the Smart Queue: it was not added twice.", "info")
+                lectures = "1 lecture" if count == 1 else f"{count} lectures"
+                return go("/queue", f"Added the chapter ({lectures}) to the Smart Queue: it becomes one audio episode.",
+                          "ok")
             added = make_service.submit(category, note_type, values["subject"], values["language"], options, uploads)
         except make_service.FormError as problem:
             return render(request, "new.html", status_code=400, problem=str(problem),
-                          **_form_context(category, note_type, values))
+                          **_form_context(category, note_type, values,
+                                          audio_page=str(form.get("from_page", "")) == "audio"))
         new = sum(1 for _id, created in added if created)
         if not new:
             return go("/queue", "Already in the Smart Queue: it was not added twice.", "info")

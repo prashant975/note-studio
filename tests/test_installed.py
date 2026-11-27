@@ -177,3 +177,25 @@ def test_versions_count_the_builds_of_a_day(tmp_path):
     second = build_version.next_release(release)
     assert first["version"].rsplit(".", 1)[1] == "1" and second["version"].rsplit(".", 1)[1] == "2"
     assert json.loads(release.read_text(encoding="utf-8"))["version"] == first["version"]
+
+
+def test_a_mac_build_counts_on_from_the_project_version_and_keeps_its_release_folder(tmp_path):
+    import build_macos
+
+    release = tmp_path / "release.json"
+    prefix = build_version.next_release(release)["version"].rsplit(".", 1)[0]
+    build_version.write_release(release, {"version": prefix + ".3", "updated_at": "x", "releases": "1TeamFolder"})
+    assert build_macos.mac_release(release) | {"updated_at": "x"} == {
+        "version": prefix + ".4", "updated_at": "x", "releases": "1TeamFolder"}
+    build_version.write_release(release, {"version": "2000.1.1.9", "updated_at": "x"})
+    assert build_macos.mac_release(release)["version"] == prefix + ".1"
+    assert "releases" not in build_macos.mac_release(release)
+
+
+def test_the_mac_app_is_told_apart_by_its_own_runtime(tmp_path):
+    from note_studio import version
+
+    resources = tmp_path / "NoteCraft.app" / "Contents" / "Resources"
+    assert version.mac_app(str(resources / "runtime" / "bin" / "python3.13"))
+    assert not version.mac_app(str(resources / "engine-libs" / "upsc" / "python"))
+    assert not version.mac_app(str(tmp_path / "note-studio" / ".venv" / "bin" / "python"))
