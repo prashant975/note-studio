@@ -38,6 +38,20 @@ TOURS = [
         dict(title="Never during a run", href="/settings/system#updates", icon="shield",
              text="An update waits while notes are being made. The version you had is kept, so nothing is lost if an update does not finish."),
     ])] if MAC_APP else []),
+    dict(id="2026-11-26-audio-mp3", title="Audio notes: MP3, and the team's sound", steps=[
+        dict(title="MP3 audio", href="/audio", icon="download",
+             text="Audio notes now come as MP3: about 11 MB for a 15-minute episode, ready to play anywhere or share. Play it on the run page or download it."),
+        dict(title="Like the team's episode", href="/audio", icon="message",
+             text="Two friends, a young man (Raju) and a young woman (Riya), revise the chapter with short, quick turns at the pace of the team's reference episode. Change their names and voices under More options."),
+    ]),
+    dict(id="2026-11-25-audio-notes", title="Audio notes for a finished chapter", steps=[
+        dict(title="Every lecture of the chapter", href="/audio", icon="message",
+             text="Make notes → Audio notes: add the day-wise lecture PDFs of one finished chapter and the teacher's name. They are joined in lecture order into one PDF, and two friends revise the whole chapter in an energetic Hinglish conversation, written with the team's prompt. Uses PW AI credit."),
+        dict(title="Checked, then spoken", href="/runs", icon="shield",
+             text="Every line of the script is checked against the notes before PW AI speaks it in two voices. The run gives the audio (play it on the run page), its script and the merged PDF."),
+        dict(title="Fix a line, speak it again", href="/runs", icon="pen",
+             text="The run page shows the script. Fix any line and press Make the audio: only the voices are paid for, and parts you did not change reuse the audio already made. Choose \"After I check the script\" to read it before any audio is made."),
+    ]),
     dict(id="2026-11-25-gdoc-again", title="Google Docs from a sheet: Try again", steps=[
         dict(title="Try the unfinished rows again", href="/runs", icon="arrow-right",
              text="A Google Docs sheet run with rows that did not finish has Try the unfinished rows again on its page. Only those rows are made; the formatting they already paid for and any Doc that passed its checks are reused, so nothing is made twice."),

@@ -2,7 +2,7 @@
 {% import "_icons.html" as ico with context %}
 {% block title %}{{ run.title or 'Notes' }} - {{ brand.APP_NAME }}{% endblock %}
 {% block crumb %}<a href="/runs">{{ ico.i('arrow-left', 13) }} Runs</a>{% endblock %}
-{% block topacts %}<a class="btn sm" href="{{ '/automation' if run.source == 'sheet' else '/automation#gdocs' if run.source == 'gdoc_sheet' else '/new?category=' ~ run.category ~ '&type=' ~ run.note_type }}">{{ ico.i('plus', 13) }} Start another</a>{% endblock %}
+{% block topacts %}<a class="btn sm" href="{{ '/automation' if run.source == 'sheet' else '/automation#gdocs' if run.source == 'gdoc_sheet' else '/audio?category=' ~ run.category if run.engine == 'audio' else '/new?category=' ~ run.category ~ '&type=' ~ run.note_type }}">{{ ico.i('plus', 13) }} Start another</a>{% endblock %}
 
 {% block body %}
 <div class="page-head">
@@ -25,6 +25,18 @@
 </div>
 
 {% include "_run_card.html" %}
+
+{% if run.engine == 'audio' and run.audio_script %}
+<section class="card script-box" id="script">
+  <div class="hd"><div class="grow"><h2>The script</h2>
+    <p class="small muted">One line per turn, each starting with the friend's name and a colon. Fix any line, then press Make the audio: only the voices are paid for, and parts you did not change reuse the audio already made. Lines starting with # are notes and are not spoken.</p></div></div>
+  <form class="bd stack" method="post" action="/runs/{{ run.id }}/audio" data-confirm="Make the audio from this script? This uses PW AI credit for the voices.">
+    <label class="field"><span>Script</span>
+      <textarea name="script" rows="18" maxlength="60000" spellcheck="false">{{ run.audio_script }}</textarea></label>
+    <div class="btn-row"><button class="btn primary sm" type="submit" data-busy>{{ ico.i('message', 13) }} Make the audio</button></div>
+  </form>
+</section>
+{% endif %}
 
 {% set reqs = run.options.requirements %}
 {% set followed = (reqs.layers | selectattr('text') | list | rejectattr('layer', 'equalto', 'engine') | list) if reqs else [] %}

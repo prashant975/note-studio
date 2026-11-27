@@ -1,12 +1,18 @@
 {% extends "base.html" %}
 {% import "_icons.html" as ico with context %}
-{% block title %}New notes - {{ brand.APP_NAME }}{% endblock %}
+{% block title %}{{ 'Audio notes' if audio_page else 'New notes' }} - {{ brand.APP_NAME }}{% endblock %}
 
 {% block body %}
+{% set off = 1 if audio_page else 0 %}
 <div class="page-head">
   <div class="grow">
+    {% if audio_page %}
+    <h1>Audio notes</h1>
+    <p class="sub">When a chapter is finished, add its day-wise lecture PDFs. Two friends revise the whole chapter in an energetic Hinglish podcast; you get the audio, its script and the merged PDF. The whole chapter becomes one run.</p>
+    {% else %}
     <h1>New notes</h1>
     <p class="sub">Choose what you are making, add the lecture (PDFs, or a class recording link), and press Make notes. Each lecture becomes its own run.</p>
+    {% endif %}
   </div>
 </div>
 
@@ -18,6 +24,11 @@
 <div class="note info">{{ ico.i('file-text', 16, 'nico') }}<div class="ntext">
   <div class="hd">Final notes in a Google Doc, designed in the B.Sc. template</div>
   <div class="bd">Paste the links of Google Docs that hold final notes. Each becomes a new, editable Google Doc in your Drive with one tab per source tab, the PW logo and the PW watermark. Every word, table and picture stays exactly as in the source; only the design is new. Every tab is checked word for word, and the NEET/JEE quality checks review every page. Uses PW AI credit.</div>
+</div></div>
+{% elif chosen and 'chapter_pdfs' in (chosen.inputs or []) %}
+<div class="note info">{{ ico.i('message', 16, 'nico') }}<div class="ntext">
+  <div class="hd">A finished chapter becomes a revision podcast</div>
+  <div class="bd">Add every day's lecture notes of one chapter (PDFs). They are joined in lecture order into one PDF. PW AI writes an energetic Hinglish conversation between two friends with the team's prompt, checks every line against the notes, and speaks it in two voices. You get the audio, its script and the merged PDF; fix any line of the script on the run page and have it spoken again. Uses PW AI credit and Google sign-in.</div>
 </div></div>
 {% elif chosen and chosen.engine == 'typeset' %}
 <div class="note info">{{ ico.i('file-text', 16, 'nico') }}<div class="ntext">
@@ -33,7 +44,11 @@
 
 {% if not pack %}
   <div class="card"><div class="empty"><div class="eico">{{ ico.i('folder', 20) }}</div>
+    {% if audio_page %}
+    <div class="big">No category offers audio notes</div><p>Switch them on for a category in <a href="/settings/categories">Settings → Categories</a>, then come back here.</p></div></div>
+    {% else %}
     <div class="big">No category is switched on</div><p>Turn one on in Settings, then come back here.</p></div></div>
+    {% endif %}
 {% else %}
 <div class="make-grid">
 <form class="card make-form" method="post" action="/new" enctype="multipart/form-data" data-make-form>
@@ -45,7 +60,7 @@
       <h2>Category</h2>
       <div class="choice-cards" role="list">
         {% for p in packs %}
-        <a role="listitem" class="choice-card {{ 'on' if p.id == pack.id }}" href="/new?category={{ p.id }}"
+        <a role="listitem" class="choice-card {{ 'on' if p.id == pack.id }}" href="{{ '/audio' if audio_page else '/new' }}?category={{ p.id }}"
            {% if p.id == pack.id %}aria-current="true"{% endif %}>
           <span class="cc-name">{{ p.label }}</span>
           <span class="cc-about">{{ p.summary or '' }}</span>
@@ -55,6 +70,10 @@
     </div>
   </div>
 
+  {% if audio_page %}
+  <input type="hidden" name="note_type" value="{{ chosen.id }}">
+  <input type="hidden" name="from_page" value="audio">
+  {% else %}
   <div class="make-step">
     <div class="step-n">2</div>
     <div class="step-body">
@@ -80,10 +99,11 @@
       </div>
     </div>
   </div>
+  {% endif %}
 
   {% if chosen %}
   <div class="make-step">
-    <div class="step-n">3</div>
+    <div class="step-n">{{ 3 - off }}</div>
     <div class="step-body">
       <h2>Subject and language</h2>
       <div class="field-row">
@@ -105,8 +125,9 @@
 
   {% set is_class = 'video_link' in (chosen.inputs or []) %}
   {% set is_gdoc = 'gdoc_link' in (chosen.inputs or []) %}
+  {% set is_audio = 'chapter_pdfs' in (chosen.inputs or []) %}
   <div class="make-step">
-    <div class="step-n">4</div>
+    <div class="step-n">{{ 4 - off }}</div>
     <div class="step-body">
       {% if is_gdoc %}
       <h2>Google Doc links</h2>
@@ -128,6 +149,15 @@
         <span class="dz-ico">{{ ico.i('download', 22) }}</span>
         <span class="dz-main">Slides (optional): drop the class PDF or PowerPoint here, or <u>choose a file</u></span>
         <span class="dz-sub">One file, up to {{ chosen.max_file_mb or 200 }} MB. Without slides the notes are written from the recording alone, with no slide diagrams.</span>
+        <span class="dz-list" data-file-list></span>
+      </label>
+      {% elif is_audio %}
+      <h2>The chapter's lecture PDFs</h2>
+      <label class="dropzone" data-dropzone data-ordered>
+        <input type="file" name="files" accept="application/pdf,.pdf" multiple required data-files>
+        <span class="dz-ico">{{ ico.i('download', 22) }}</span>
+        <span class="dz-main">Drop every lecture PDF of one chapter here, or <u>choose files</u></span>
+        <span class="dz-sub">Up to 20 PDFs, {{ chosen.max_file_mb or 100 }} MB each, or one PDF that is already merged. They are joined in the order of their names (Lecture 1, Lecture 2 … Lecture 10), so name them by lecture. The whole chapter becomes one audio episode.</span>
         <span class="dz-list" data-file-list></span>
       </label>
       {% else %}
@@ -167,9 +197,9 @@
     {% endif %}
   {%- endmacro %}
   <div class="make-step">
-    <div class="step-n">5</div>
+    <div class="step-n">{{ 5 - off }}</div>
     <div class="step-body">
-      <h2>On the notes</h2>
+      <h2>{{ 'On the episode' if is_audio else 'On the notes' }}</h2>
       {% for name, spec in basic_options %}{{ option_field(name, spec) }}{% endfor %}
       {% if advanced_options %}
       <details class="more-options" {% if advanced_open %}open{% endif %}>
@@ -183,8 +213,8 @@
   </div>
 
   <div class="form-end">
-    <button class="btn primary lg" type="submit" data-busy>{{ ico.i('sparkles', 16) }} Make notes</button>
-    <span class="hint">This uses PW AI credit {{ 'for the class' if is_class else 'for each Google Doc' if is_gdoc else 'for each lecture' }}.</span>
+    <button class="btn primary lg" type="submit" data-busy>{{ ico.i('sparkles', 16) }} {{ 'Make audio notes' if is_audio else 'Make notes' }}</button>
+    <span class="hint">This uses PW AI credit {{ 'for the class' if is_class else 'for each Google Doc' if is_gdoc else 'for the chapter' if is_audio else 'for each lecture' }}.</span>
   </div>
   {% endif %}
 </form>

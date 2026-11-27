@@ -64,10 +64,13 @@
   {% elif run.files %}
   <ul class="needs files">
     {% for f in run.files %}
-    <li><span class="nico ok">{{ ico.i('file-text', 16) }}</span>
+    <li><span class="nico ok">{{ ico.i('message' if f.audio else 'file-text', 16) }}</span>
       <div class="grow"><strong>{{ f.label }}</strong><span class="small muted">{{ f.kind_words }} &middot; {{ 'in your Google Drive' if f.link else 'ready' }}</span></div>
       {% if f.link %}
       <a class="btn primary sm" href="{{ f.output_path }}" target="_blank" rel="noopener noreferrer">{{ ico.i('arrow-right', 13) }} Open the Google Doc</a></li>
+      {% elif f.audio %}
+      <audio class="run-audio" controls preload="none" src="/runs/{{ run.id }}/files/{{ f.id }}" aria-label="Listen to {{ f.label }}"></audio>
+      <a class="btn primary sm" href="/runs/{{ run.id }}/files/{{ f.id }}">{{ ico.i('download', 13) }} Download</a></li>
       {% else %}
       <a class="btn primary sm" href="/runs/{{ run.id }}/files/{{ f.id }}">{{ ico.i('download', 13) }} Download</a></li>
       {% endif %}

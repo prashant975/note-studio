@@ -48,6 +48,40 @@ folder, the team key in the Mac app, and build, install, publish, commit and pus
   - Drift (`--project . --baseline-ref HEAD`) is clean.
 - Committed: this change only. The audio session's work stays uncommitted.
 
+## First real audio note (run 18), and the voice fix in 2026.11.27.1 — 27 November 2026 (01:30)
+
+The user: "make a test audio note from my lecture pdfs" → "foundation notes which i make today", Rahul Sir, 15 minutes.
+- **Input:** the two Concise Notes PDFs from runs 15–16 (`chapter-16-loci`, 3 pages; `chapter-22-heights-and-distances`,
+  2 pages), sent to the running app (POST /new, category foundation) as one chapter, "Loci and Heights and Distances".
+- **Run 17 (00:34):** the script was made and checked (₹3.10). It then stopped at voice part 1: "This Google account is
+  not on the PW list".
+- **Cause:** PW AI's `/api/gemini/native` refuses both speech models for the app's key, with 403
+  `key_model_access_denied`. The account is allowed: the allowlist answered "allowed" and the script calls worked.
+  `/api/gemini/tts` (one voice per call) works for both models and answers WAV. `ai.py` read every 403 as the account.
+- **Fix (in 2026.11.27.1, built and installed by the CSIR NET session):**
+  - `typeset/ai.py` `_model_refused()`: that 403 is no longer a sign-in stop. Speech falls back to one line at a time;
+    a JSON call tries the next model.
+  - `audio/voice.py` `line_text()`: each line spoken alone is led by "Say this as Raju, a young Indian man chatting
+    with a college friend: natural, lively spoken Hinglish … urban Indian accent:". It was tried on one line and
+    transcribed back: followed, not read out. REVISION `audio-voice-v3`.
+  - Tests: `test_audio_notes.py` 23 (+2). The real 403 completes line by line, and a refused account still stops in
+    plain words. Full suite 484 passed, 19 skipped (the one failure then was the CSIR NET session's test, since fixed).
+- **The episode:**
+  - Spoken from the fixed source into a scratch copy of run 17: 94 calls, ₹26.02, 37 min.
+  - Parts 2 and 3 took 18 and 13 min: PW AI requests that hung until the 300 s timeout, then asked again.
+  - The parts were copied into run 17's `audio_parts`, then **Try again** in the app made **run 18**: complete, ₹0,
+    every part reused.
+  - Result: 9 min 12 s, MP3 6.6 MB, quality report "passed".
+  - Gemini listening check (₹1.28): no instruction read aloud, a male and a female voice taking turns, natural Hindi,
+    no glitches.
+  - Total paid: **₹30.41** (script 3.10, voice 26.02, check 1.28; tiny probes besides, under ₹2).
+- **Short episode:** 15 minutes asked, but the 5 pages gave a 1,374-word script, about 7 minutes of words.
+- **Not done:** speaking lines in parallel or with a shorter speech timeout, which would shorten the 37 minutes.
+- **Gates:** compare `_build/after_csir_net_20261127.json` → `after_audio_test_20261127.json`: nothing lost, no
+  original touched. Only `note_studio.db`, the sheet token, run 17's new `audio_parts` and run 18 changed or are new.
+  Drift is clean.
+- Audio files stay uncommitted: the user has not asked for a commit.
+
 ## CSIR NET category: B.Sc.-style notes with each lecture PDF's own header name and logo; Mac 2026.11.27.1 — 27 November 2026
 
 The user asked for "more categories for notes generation which follow the B.Sc. style, but the name and logo come by
@@ -150,6 +184,22 @@ message, 13:00: 466 passed, 19 skipped; no file changed after 12:57).
   the 2026.11.26.1 one, by design); otherwise only `note_studio.db` changed, nothing lost, no original touched,
   engines have no diff against HEAD. Not committed (the tree still holds both sessions' uncommitted work).
 
+## Audio notes as MP3 — 26 November 2026
+
+The user: "okay give me mp3", after being offered the `lameenc` library (an install, no program) or an MP3 voice route.
+- `lameenc` 1.9.0 (LGPL; a 126 kB wheel with LAME inside) was installed into `.venv`; the Mac build bundles
+  `.venv`'s packages. It is in `requirements.txt` for the Windows builder's environment. No ffmpeg or other program.
+- `audio/voice.py`:
+  - `mp3_of()` writes the joined PCM as MP3: mono, 44.1 kHz (MPEG-1, like the reference episode), 96 kbps,
+    quality 2. That is about 11 MB for 15 minutes; the sample was 14.6 MB at 128 kbps stereo.
+  - `join(..., mp3=True)` is used for the episode only. Saved parts stay lossless WAV, so a reused part is never
+    encoded twice.
+  - Without the library the episode is a WAV, and the quality report says so.
+- Registry "You get" says MP3. Tour `2026-11-26-audio-mp3`: MP3 audio, and the reference sound (Raju and Riya).
+- Tests: `test_audio_notes.py` 21 (+1: MP3 frames, size at 96 kbps, the WAV fallback). Full suite **466 passed,
+  19 skipped**.
+- The installed app (2026.11.26.1) still writes WAV until the next build.
+
 ## "Bsc Nursing Notes": 16 more rows made on 2026.11.26.1 (853 of 878 rows have a Doc) — 26 November 2026 (midday)
 
 The user shared the 14 unreadable sources and said to make the remaining rows once the other session had built and
@@ -170,6 +220,56 @@ installed 2026.11.26.1 (it has the link retry, code-block marker and Drive rate-
     are the sources' own text. 462 is a real layout point: the "Dysplasia (Pre-malignant)" table row splits across the
     page and leaves page 2 almost empty.
 - The old unlinked failed-check Docs for these two code-block rows (made in run 11/12) are still in Drive; trash them only if the user says so.
+
+## Audio notes follow the team's reference episode — 26 November 2026
+
+The user downloaded their audio-notes sample ("WhatsApp Audio 2026-11-25 at 5.13.21 PM.mpeg") and asked to take it as
+the reference.
+- **The file, read for free:** MP3, 15 min 14 s, 128 kbps, 44.1 kHz stereo, 14.6 MB. Its tag shows an M4A
+  converted by ffmpeg (Lavf), likely a NotebookLM download sent over WhatsApp.
+- **Heard once** by PW AI (Gemini 3.7, the NoteCraft sign-in; the user approved; ₹4.79):
+  `_build/audio_reference_20261126.py` → `.json` (transcript, speakers, segments, delivery) and `.txt`.
+  - A is a young man: he opens and asks, recaps with analogies. B is a young woman: she explains most and sums up
+    lectures. Names are never said; the teacher is "Amit Sir".
+  - 170 turns, 2,823 words (about 185 a minute), a median of 16 words a turn, with many 1–3-word reactions
+    ("Wahi toh.", "Sahi baat.", "Mhm."), fillers and laughs.
+  - Formulas are said "W is equal to F dot s", "F is equal to minus dU by dx".
+  - The flow goes lecture by lecture and ends with praise of the teacher's notes and a confident wrap-up.
+
+**Changed** (code; tests pass; not built)
+- `audio/script.py` (`audio-script-v2`):
+  - each friend's gender, with Hindi verb agreement;
+  - roles from the sample;
+  - short turns with quick reactions in between;
+  - fillers, and laughs written as "haha";
+  - formulas said the classroom way;
+  - which lecture each idea came from;
+  - 185 words a minute and 16.6 words a turn, so 15 min is about 2,775 words in about 167 turns.
+- `audio/reference_excerpt.txt`: 31 turns of the sample (the banter, the teacher's praise, lecture 1 and a formula).
+  They are sent as manner only ("Never copy its content, sentences or opening"), with the run's friends and
+  teacher in place of A, B and "Amit Sir".
+  The team's prompt is unchanged; only its example names are swapped, as before.
+- `audio/voice.py` (`audio-voice-v2`): the speaking style names each friend as a young man or woman (from the voice),
+  with a brisk natural pace, quick reactions, light laughs and an urban Indian Hinglish accent.
+- Defaults: Raju (Puck, male) and Riya (Kore, female). The prompt's "Raju aur Ram" were examples ("jaise"), and a
+  woman's voice needs a woman's name. Both are editable under More options, with hints.
+- Tests: `test_audio_notes.py` 20 (+1). Full suite **465 passed, 19 skipped**.
+- **Not changed:** the audio is still WAV (about 43 MB for 15 min, against the sample's 14.6 MB MP3). MP3 without
+  ffmpeg would need the `lameenc` library bundled into the app (an install), or a voice route that answers MP3
+  (ElevenLabs or OpenAI, one line per call). This is the user's call.
+- **Built and installed 2026.11.26.1, No UPSC** (the user: "build and install"). It also carries the Nursing
+  session's three Google Docs fixes below.
+  - The .4 build was moved to `dist/kept-20261125-4-noupsc/`.
+  - `build_macos.py --without upsc --dmg --zip` → PACKAGE_OK. Log: `_build/build_macos_20261126_audio_ref.log`.
+    - dmg: 956,334,044 bytes, SHA-256 `e930720a…599d4`.
+    - zip: `NoteCraft_Mac_NoUPSC_2026.11.26.1.zip`, 691,499,534 bytes, SHA-256 `11df0859…ffd9a4`. Not published.
+  - NoteCraft was idle (13 runs, nothing waiting or running) and was quit by a normal Quit.
+  - Backups in `~/NoteStudio_backups/`: `note_studio-before-install-20261126-124634.db` (integrity ok),
+    `categories-before-install-20261126-124634`, and the old app `NoteCraft-installed-20261125-4-noupsc.app`.
+  - `ditto` → identical to the build. Reopened: v2026.11.26.1, signed in; `/audio` shows Riya and Kore.
+  - Gate: nothing lost, no original touched. Changed: the database (app start). Drift clean; `engines/` no diff.
+  - Note: other apps on this Mac (QBG One, Doubt Desk, QBG Data, Doubt Desk Data) also run a program named
+    `DesktopLauncher`. Check that NoteCraft has quit by its PID or path, never by that name.
 
 ## "Bsc Nursing Notes" rows 108–879 made (837 of 877 rows have a Doc); 3 fixes in code — 26 November 2026 (night)
 
@@ -216,6 +316,92 @@ Everything below ran from the installed app (2026.11.25.3, No UPSC), 3 rows at a
   - Tests: +1 in `test_gdoc_app.py`, +2 in `test_typeset_gdoc.py`.
 - Gate: nothing lost, no original touched. Changed: the database and token. New: 8,071 run files.
 - Claude kept the Mac awake with `caffeinate -i -t 36000` during the run, and stopped it afterwards.
+
+## Audio notes: a finished chapter's revision podcast — 25 November 2026 (evening)
+
+The user wants audio notes once a chapter is finished: the day-wise lecture notes are merged, and two friends
+revise the chapter in a podcast. The team does this today in NotebookLM, with the prompt in
+`~/Downloads/Voice Note.docx`. The user's choices:
+- Later the lectures come from a sheet; for now they are uploaded by hand in the app.
+- "dont use local ffmpeg use ai for this".
+- An "Audio notes" section in the Make notes menu (the user sent a screenshot).
+
+**Built** (code only: not committed, not built, nothing paid; the user will test it)
+- `note_studio/audio/`:
+  - `prompt.txt`: the docx text word for word (SHA-256 `e45783f0…`, pinned by a test). Only its example names
+    change per run: "Rahul Sir" becomes the Teacher name, "Raju aur Ram" the friends' names.
+  - `chapter.py`: PDFs joined in lecture order (Lecture 2 before 10) with a bookmark each. PW AI gets a lighter
+    copy when the join is over 40 MB.
+  - `script.py`: the system text asks only for a voice-readable form (two speakers, spoken words only) and the
+    length. Gemini 3.7 writes JSON lines, then a second call checks every line against the notes. A correction
+    is placed only where it fits; topics left out are listed. The script is also plain text ("Raju: …").
+  - `voice.py`: groups of about 1,800 characters, each spoken in one native Gemini call with two voices
+    (`gemini_native`, `speechConfig.multiSpeakerVoiceConfig`).
+    - If PW AI refuses that request (4xx), the rest is spoken line by line through `gemini_tts`.
+    - PCM is joined into one WAV with Python's `wave` module; an MP3 answer is joined as frames. No ffmpeg.
+    - Parts are saved under a fingerprint of their lines and voices, so Try again or a fixed script pays only
+      for changed parts.
+- `typeset/ai.py`: `Session.speech()` / `speech_line()` (same retries, budget and sign-in stops) and `audio_of()`.
+- `engines/audio.py`: join → script → check → voice.
+  - "After I check the script" stops after the check.
+  - A run stopped at the voice keeps its script, and Try again reuses it.
+  - Outputs: `<chapter> Audio notes.wav`, `… Audio script.txt`, `… merged notes.pdf`, `Quality report.json`.
+- `audio_service.py`: the whole chapter is one queue item and one run (source `audio`). Also: Make the audio
+  from a fixed script (a new voice-only run, which reuses unchanged parts), and Try again.
+- Registry `audio_notes` (engine `audio`):
+  - Models: Gemini 3.7 for the script and check; voice `gemini-3.1-flash-tts-preview` then `gemini-2.5-flash-preview-tts`.
+  - Hinglish only (`own_languages`).
+  - Form options: teacher name, chapter, length 10/15/25 min, when the audio is made; under More options the
+    friends' names and voices (12 Gemini voices).
+- Categories: every category offers it by itself (last in its list). Settings → Categories can stop offering it
+  (`"offer_audio": false`, `.bak` first). A category whose own types are all missing (UPSC in the smaller
+  installer) offers nothing.
+- Pages:
+  - Make notes menu → Audio notes (`/audio`, the New notes form with the type fixed); also a type card on New notes.
+  - Run page: an audio player, the script in a box with Make the audio, and Start another goes to `/audio`.
+  - Settings → AI models has the "Speaking the script" stage.
+  - Tour `2026-11-25-audio-notes`; guides for `/audio`, `/new`, `/runs` and `/settings`.
+
+**Tests and gates**
+- 461 passed, 19 skipped (the baseline this afternoon was 440). `tests/test_audio_notes.py` is new (19).
+  `test_note_types`, `test_gdoc_app` updated: types now end with `audio_notes`, and the newest tour is the audio one.
+- Looked at in a scratch copy (port 3299, scratch data, fake PW AI): `/audio` and a finished run's page.
+- `data_guard` compare (`_build/before_audio_notes_20261125.json` → `after_…`): nothing lost, no original touched.
+  - New: 29,421 files, all `~/.note_studio/update_backups/NoteCraft-2026.11.25.2.app`. The installed app updated
+    itself to 2026.11.25.3 during the session.
+  - Changed: the database and the token (the running app). Drift clean; `engines/` no diff.
+
+**Not known until the first real run** (needs the user's go: it is paid)
+- Does the proxy's `/api/gemini/native` route accept the speech models with `speechConfig`? If not, the line-by-line
+  route is used, if `/api/gemini/tts` answers. Its answer shape is guessed (`result.audio_base64`); `audio_of`
+  also reads Gemini's inline data.
+- How Gemini's voices sound reading romanised Hinglish. Sarvam and ElevenLabs routes exist in `pw_access`, but
+  are not wired.
+- Size: WAV at 24 kHz is about 2.9 MB a minute (15 minutes ≈ 43 MB). MP3 needs a route that answers MP3.
+- Next: the sheet as the source of a chapter's lectures.
+
+**Built and installed 2026.11.25.4, No UPSC** (the user: "build and install"; then "Quit it and install")
+- The .3 build was moved to `dist/kept-20261125-3-noupsc/` (app, dmg, zip).
+- `build_macos.py --without upsc --dmg --zip` → PACKAGE_OK. Log: `_build/build_macos_20261125_audio.log`.
+  - `dist/NoteCraft.dmg`: 962,225,163 bytes, SHA-256 `d3c3d16f…a23e8e6`.
+  - `dist/NoteCraft_Mac_NoUPSC_2026.11.25.4.zip`: 691,491,826 bytes, SHA-256 `94f4da1a…3052c`, carrying the
+    update pop-up notes.
+  - The built app holds `note_studio/audio/` (prompt byte-identical) and `audio_service.py`.
+- **Not published.** `--publish` was refused by the permission check (an upload the user had not asked for), so the
+  Mac release folder still holds .3. To publish later: `build_macos.py --publish` per the section below, or upload
+  that zip.
+- Install:
+  - The user's NoteCraft .3 was idle (no run or queue item waiting or running). It was quit with their OK, by
+    a normal Quit (`osascript … quit`).
+  - Backups in `~/NoteStudio_backups/`: `note_studio-before-install-20261125-182025.db` (integrity ok, 10 runs),
+    `categories-before-install-20261125-182025`, and the old app `NoteCraft-installed-20261125-3-noupsc.app`.
+  - `ditto` → `/Applications/NoteCraft.app`; `diff -rq` shows it identical to the build. Opened: port 3100 answers
+    v2026.11.25.4 and is still signed in.
+  - The live app shows Make notes → Audio notes; `/audio` offers B.Sc., Foundation, NEET-JEE and Nursing (no UPSC
+    in this edition). Settings has the switch and the "Speaking the script" stage.
+- Gate (`_build/before_install_audio_20261125.json` → `after_…`): nothing lost, no original touched, nothing new.
+  Changed: the database and the token (app start). Drift clean; `engines/` no diff.
+- Nothing was committed. The tree also holds the other session's uncommitted Mac-update work (see the next section).
 
 ## Mac app: No UPSC edition that updates itself (2026.11.25.2 → .3 proven) — 25 November 2026 (evening)
 

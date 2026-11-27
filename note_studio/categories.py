@@ -222,18 +222,37 @@ def gdoc_offered(pack: dict | None) -> bool:
     return "typeset_notes" in listed and pack.get("offer_gdoc") is not False and pw_logo(pack)
 
 
+AUDIO_TYPE = "audio_notes"
+
+
+def audio_offered(pack: dict | None) -> bool:
+    """Whether the category offers Audio notes (a chapter's revision podcast). Every category does by
+    itself, since it is made from any lecture notes PDFs, unless Settings switched it off ("offer_audio": false)."""
+    if not pack:
+        return False
+    return AUDIO_TYPE in (pack.get("note_types") or []) or pack.get("offer_audio") is not False
+
+
 def type_ids(pack: dict) -> list[str]:
-    """The pack's note type ids, with Google Docs right after the B.Sc.-style notes when it is offered."""
+    """The pack's note type ids, with Google Docs right after the B.Sc.-style notes when it is offered,
+    and Audio notes last when it is offered."""
     ids = list(pack.get("note_types") or [])
     if GDOC_TYPE not in ids and gdoc_offered(pack):
         ids.insert(ids.index("typeset_notes") + 1, GDOC_TYPE)
+    if AUDIO_TYPE not in ids and audio_offered(pack):
+        ids.append(AUDIO_TYPE)
     return ids
 
 
 def offered_types(pack: dict) -> list[dict]:
-    """The pack's note types that exist in the registry, in the pack's order."""
+    """The pack's note types that exist in the registry, in the pack's order. Audio notes come with a
+    category's own notes: a category none of whose own types is in this installation (UPSC in the
+    smaller installer) offers nothing, unless the category itself lists Audio notes."""
     found = [note_types.get(t) for t in type_ids(pack)]
-    return [t for t in found if t and note_types.available(t["id"])]
+    found = [t for t in found if t and note_types.available(t["id"])]
+    if all(t["id"] == AUDIO_TYPE for t in found) and AUDIO_TYPE not in (pack.get("note_types") or []):
+        return []
+    return found
 
 
 def subject_choices(pack: dict, type_entry: dict | None = None) -> list[dict]:
@@ -251,7 +270,10 @@ def subject_choices(pack: dict, type_entry: dict | None = None) -> list[dict]:
 
 
 def language_choices(pack: dict, type_entry: dict) -> list[dict]:
-    """The languages both the category and the note type allow, in the category's order."""
+    """The languages both the category and the note type allow, in the category's order. A type
+    whose language is part of what it is ("own_languages", e.g. the Hinglish audio notes) keeps its own."""
+    if type_entry.get("own_languages"):
+        return [{"id": code, "label": note_types.language_label(code)} for code in type_entry.get("languages") or []]
     allowed = set(type_entry.get("languages") or [])
     return [{"id": code, "label": note_types.language_label(code)}
             for code in pack.get("languages") or [] if code in allowed]

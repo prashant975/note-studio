@@ -6,6 +6,9 @@ uvicorn>=0.29
 jinja2>=3.1
 python-multipart>=0.0.9
 PyMuPDF>=1.24.11
+# Audio notes write their episode as MP3 with it (a library in the app, no program needed; the user's
+# go on 26 Nov 2026). Without it the episode is a WAV.
+lameenc>=1.7
 # The hand-drawn notes engine runs inside NoteCraft, so its packages come too:
 -r engines/shortnotes/requirements.txt
 # Tests

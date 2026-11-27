@@ -130,6 +130,12 @@
             <button class="btn ghost sm" type="submit">{{ 'Stop offering Google Docs' if p.gdoc else 'Offer Google Docs' }}</button>
           </form>
           {% endif %}
+          <form method="post" action="/settings/categories/{{ p.id }}/audio" class="btn-row">
+            <input type="hidden" name="on" value="{{ '0' if p.audio else '1' }}">
+            <span class="small">Audio notes (a chapter's revision podcast, from its lecture PDFs):
+              {% if p.audio %}<span class="chip ok xs"><span class="dot"></span> Offered</span>{% else %}<span class="chip xs">Not offered</span>{% endif %}</span>
+            <button class="btn ghost sm" type="submit">{{ 'Stop offering audio notes' if p.audio else 'Offer audio notes' }}</button>
+          </form>
 
           <h3 class="sub-h">Rules</h3>
           {% for r in p.rules %}

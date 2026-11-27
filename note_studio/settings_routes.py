@@ -68,6 +68,7 @@ def _packs() -> list[dict]:
                      "subject_choices": categories.subject_choices(pack),
                      "typeset": "typeset_notes" in (pack.get("note_types") or []),
                      "gdoc": categories.gdoc_offered(pack),
+                     "audio": categories.audio_offered(pack),
                      "pw_logo": categories.pw_logo(pack), "from_pdf": categories.branding_from_pdf(pack)})
     return rows
 
@@ -218,6 +219,18 @@ def register(app, render, go):
         return go(f"/settings/categories?open={category_id}#cat-{category_id}",
                   "Google Docs (B.Sc. style) are now offered on New notes and Sheet automation." if on else
                   "Google Docs (B.Sc. style) are no longer offered in this category.", "ok")
+
+    @app.post("/settings/categories/{category_id}/audio")
+    async def switch_audio(request: Request, category_id: str):
+        form = await request.form()
+        on = form.get("on") == "1"
+        try:
+            category_admin.set_audio(category_id, on)
+        except category_admin.CategoryError as problem:
+            return go(f"/settings/categories?open={category_id}#cat-{category_id}", str(problem), "warn")
+        return go(f"/settings/categories?open={category_id}#cat-{category_id}",
+                  "Audio notes are now offered on New notes in this category." if on else
+                  "Audio notes are no longer offered in this category.", "ok")
 
     @app.get("/settings/categories/{category_id}/check")
     def check(request: Request, category_id: str):

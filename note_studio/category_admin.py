@@ -136,6 +136,28 @@ def set_gdoc(category_id: str, on: bool) -> None:
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def set_audio(category_id: str, on: bool) -> None:
+    """Offer (or stop offering) Audio notes in this category (a backup first). Every category offers
+    them by itself, so on is the absence of "offer_audio": false."""
+    pack = categories.get(category_id)
+    if not pack:
+        raise CategoryError("That category no longer exists.")
+    meta_path = Path(pack["folder"]) / "category.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    offered = [t for t in meta.get("note_types") or [] if t != categories.AUDIO_TYPE]
+    if not on and not offered:
+        raise CategoryError("A category needs at least one note type.")
+    shutil.copy2(meta_path, meta_path.with_name("category.json.bak"))
+    meta["note_types"] = offered
+    if on:
+        meta.pop("offer_audio", None)
+    else:
+        meta["offer_audio"] = False
+    if meta.get("default_note_type") not in offered and offered:
+        meta["default_note_type"] = offered[0]
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def check(category_id: str) -> list[dict]:
     """What is right and wrong with one category, in plain words."""
     found: list[dict] = []

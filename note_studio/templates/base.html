@@ -12,6 +12,7 @@
 {%- set ABOUT = {
   '/new': 'Lecture PDFs or a class recording, any category',
   '/automation': 'Notes for every new row of a Google Sheet',
+  '/audio': 'A finished chapter becomes a Hinglish revision podcast',
   '/runs': 'Everything made, with files, cost and log',
   '/practice': 'Mains practice and DPP from finished notes',
   '/check': 'A check report for any finished notes'
@@ -28,7 +29,7 @@
   </a>
 {%- endmacro -%}
 
-{%- set in_make = here.startswith('/new') or here.startswith('/automation') -%}
+{%- set in_make = here.startswith('/new') or here.startswith('/automation') or here.startswith('/audio') -%}
 {%- set in_results = here.startswith('/runs') or here.startswith('/practice') or here.startswith('/check') -%}
 {%- set chev = '<svg class="ico gn-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6"/></svg>' -%}
 <!doctype html>
@@ -68,6 +69,7 @@
             <div class="gn-items">
               {{ navlink('/new', 'New notes', 'plus') }}
               {{ navlink('/automation', 'Sheet automation', 'sheet') }}
+              {{ navlink('/audio', 'Audio notes', 'message') }}
             </div>
           </div>
         </div>

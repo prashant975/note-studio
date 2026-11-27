@@ -29,9 +29,25 @@ GUIDES = {
             "editable Google Doc in your Drive, one tab per source tab, with the PW logo and watermark; every word stays "
             "the source's and every tab is checked word for word. Open it from its run. "
             "Nursing and other categories with the PW logo offer it by themselves; B.Sc. Wallah once switched on in Settings.",
+            "Audio notes: when a chapter is finished, add all its day-wise lecture PDFs (named by lecture, so they "
+            "join in order) and the teacher's name. Two friends revise the chapter in Hinglish with the team's prompt; "
+            "every line is checked against the notes, then spoken by PW AI. You get the audio, its script and the merged PDF.",
             "UPSC notes: paste the class recording link and, if there is one, add the slides. "
             "If Drive's transcript cannot be read, paste its full text under More options to skip audio extraction.",
             "Press Make notes. It waits in the Smart Queue and uses PW AI credit. Hand-drawn notes use automation quality checks by default. Gujarati checks include source chapter order, repetitions and terminology; inspect the PDF and quality report in its finished run.",
+        ],
+    },
+    "/audio": {
+        "title": "How Audio notes work",
+        "steps": [
+            "When a chapter is finished, pick its category and add every day's lecture notes (PDFs), named by lecture "
+            "so they join in order: Lecture 1, Lecture 2 … Lecture 10. One merged PDF works too.",
+            "Write the teacher's name: the two friends thank them, as the team's prompt does with \"Rahul Sir\". "
+            "More options: the friends' names, their voices, and extra instructions.",
+            "Press Make audio notes. PW AI writes the Hinglish script, checks every line against the notes and speaks "
+            "it in two voices. It waits in the Smart Queue and uses PW AI credit.",
+            "Open the run to play the audio and read the script. Fix any line and press Make the audio; parts you did "
+            "not change reuse the audio already made. Choose \"After I check the script\" to read it before any audio is made.",
         ],
     },
     "/automation": {
@@ -66,6 +82,8 @@ GUIDES = {
             "A run that did not finish says why in plain words; Try again makes it with the same choices.",
             "A Google Docs sheet run lists each row with its Doc. Try the unfinished rows again makes only the rows "
             "that did not finish, reusing the formatting and any checked Doc they already have.",
+            "Audio notes: play the audio on its run page. Fix any line of the script below it and press Make the audio; "
+            "parts you did not change reuse the audio already made.",
             "From older apps lists the UPSC Notes app's own runs, read where they are.",
         ],
     },
@@ -98,7 +116,7 @@ GUIDES = {
             "Categories: add a new exam, write its rules in plain sentences, check it, or switch it off. "
             "For B.Sc.-style notes, add or remove the PW logo and watermark per category, take the header name and "
             "logo from each lecture PDF (as CSIR NET does) or use the category's own words, and offer Google Docs "
-            "with tabs (made from final notes in a Google Doc).",
+            "with tabs (made from final notes in a Google Doc). Every category offers Audio notes; switch them off there.",
             "Values: the numbers the notes engine starts with. System: engines, Check setup and where your work is kept.",
             f"System → Updates: your version, Check for updates and the team's release folder. A newer {APP} shows "
             "the download progress beside Smart Queue. After it finishes and is checked, a pop-up offers Install update.",

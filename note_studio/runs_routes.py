@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi import HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 
-from . import categories, check_service, db, engine_host, job_queue, make_service, note_types, older_runs
+from . import audio_service, categories, check_service, db, engine_host, job_queue, make_service, note_types, older_runs
 
 STATE_WORDS = {
     "waiting": ("Waiting", ""), "running": ("Making notes", "info"), "complete": ("Done", "ok"),
@@ -16,7 +16,9 @@ STATE_WORDS = {
 }
 FILTERS = {"active": ("waiting", "running"), "done": ("complete",),
            "attention": ("needs_attention", "failed", "stopped")}
-FILE_WORDS = {".pdf": "PDF", ".docx": "Word document", ".xlsx": "Excel workbook", ".md": "Text report"}
+FILE_WORDS = {".pdf": "PDF", ".docx": "Word document", ".xlsx": "Excel workbook", ".md": "Text report",
+              ".txt": "Text file", ".json": "Report", ".wav": "Audio (WAV)", ".mp3": "Audio (MP3)"}
+AUDIO_FILES = (".wav", ".mp3")
 
 
 def _decorate(run: dict) -> dict:
@@ -46,6 +48,8 @@ def _run(run_id: int) -> dict:
         item["link"] = str(item["output_path"] or "").startswith("https://docs.google.com/")
         item["kind_words"] = "Google Doc" if item["link"] else \
             FILE_WORDS.get(Path(item["output_path"] or "").suffix.lower(), "File")
+        item["audio"] = not item["link"] and Path(item["output_path"] or "").suffix.lower() in AUDIO_FILES
+    run["audio_script"] = audio_service.script_for(run)
     run["gdoc_sheet"] = run["source"] == "gdoc_sheet"
     run["sheet"] = run["source"] in ("sheet", "gdoc_sheet")
     run["stoppable"] = run["state"] == "running" and engine_host.running(run_id)
@@ -144,6 +148,19 @@ def register(app, render, go):
         if not make_service.stop(run_id):
             return go(f"/runs/{run_id}", "This run is not being made right now.", "info")
         return go(f"/runs/{run_id}", "Stopped. The Smart Queue holds until you press Continue.", "ok")
+
+    @app.post("/runs/{run_id}/audio")
+    async def speak_script(request: Request, run_id: int):
+        """Audio notes: the script as the team fixed it on this page, spoken in a new run."""
+        form = await request.form()
+        try:
+            _entry, created = audio_service.speak_script(run_id, str(form.get("script", "")))
+        except make_service.FormError as problem:
+            return go(f"/runs/{run_id}#script", str(problem), "warn")
+        if not created:
+            return go("/queue", "This script is already in the Smart Queue: it was not added twice.", "info")
+        return go("/queue", "Added to the Smart Queue: the audio is made from your script. Parts of the script you "
+                            "did not change reuse the audio already made.", "ok")
 
     @app.post("/runs/{run_id}/again")
     def again(run_id: int):

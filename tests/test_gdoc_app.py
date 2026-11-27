@@ -152,7 +152,8 @@ def test_a_category_with_the_pw_logo_offers_google_docs_without_a_settings_step(
     cid = nursing(client)
     assert categories.get(cid)["note_types"] == ["typeset_notes"]
     assert categories.gdoc_offered(categories.get(cid)) and not categories.gdoc_offered(categories.get("bsc"))
-    assert [t["id"] for t in categories.offered_types(categories.get(cid))] == ["typeset_notes", "typeset_gdoc"]
+    assert [t["id"] for t in categories.offered_types(categories.get(cid))] == [
+        "typeset_notes", "typeset_gdoc", "audio_notes"]                # Audio notes: every category, last
     assert "Google Doc with tabs (B.Sc. style)" in client.get(f"/new?category={cid}").text
     auto = client.get("/automation").text
     assert 'href="#gdocs"' in auto and f'<option value="{cid}">Nursing</option>' in auto
@@ -417,7 +418,7 @@ def test_the_guides_and_the_tour_name_it():
     assert any("Try the unfinished rows again" in s for s in guides.GUIDES["/runs"]["steps"])
     tours = {tour["id"]: tour for tour in whats_new.TOURS}
     ids = [tour["id"] for tour in whats_new.TOURS]
-    assert ids.index("2026-11-25-gdoc-again") == ids.index("2026-11-27-csir-net") + 1   # newest first
+    assert ids.index("2026-11-25-gdoc-again") == ids.index("2026-11-25-audio-notes") + 1   # newest first
     assert {s["href"] for s in tours["2026-11-25-gdoc-again"]["steps"]} == {"/runs", "/automation#gdocs"}
     assert {s["href"] for s in tours["2026-11-24-gdoc-bsc"]["steps"]} == {"/settings/categories", "/new", "/automation#gdocs"}
 
